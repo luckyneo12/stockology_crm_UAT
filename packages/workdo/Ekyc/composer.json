@@ -1,0 +1,23 @@
+{
+    "name": "workdo/ekyc",
+    "description": "eKYC Module for DashSaaS",
+    "authors": [
+        {
+            "name": "Workdo",
+            "email": "support@workdo.io"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Workdo\\Ekyc\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Workdo\\Ekyc\\Providers\\EkycServiceProvider"
+            ],
+            "aliases": {}
+        }
+    }
+}
