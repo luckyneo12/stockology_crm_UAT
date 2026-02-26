@@ -1,0 +1,70 @@
+/* Premium UI Enhancements */
+
+/* Soft Badges */
+.badge-soft-primary {
+    background-color: rgba(94, 114, 228, 0.1);
+    color: #5e72e4;
+}
+
+.badge-soft-success {
+    background-color: rgba(45, 206, 137, 0.1);
+    color: #2dce89;
+}
+
+.badge-soft-danger {
+    background-color: rgba(245, 54, 92, 0.1);
+    color: #f5365c;
+}
+
+.badge-soft-warning {
+    background-color: rgba(251, 99, 64, 0.1);
+    color: #fb6340;
+}
+
+.badge-soft-info {
+    background-color: rgba(17, 205, 239, 0.1);
+    color: #11cdef;
+}
+
+/* Table Enhancements */
+.table.dataTable.no-footer {
+    border-bottom: 0 !important;
+}
+
+.table.dataTable thead th {
+    background: #f8f9fe;
+    color: #8898aa;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-top: 1px solid #e9ecef !important;
+    border-bottom: 1px solid #e9ecef !important;
+}
+
+.table.dataTable tr {
+    transition: all 0.2s ease;
+}
+
+.table.dataTable tr:hover {
+    background-color: #f6f9fc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Filter Toolbar */
+.filter-toolbar {
+    background: #fff;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-bottom: 1.5rem !important;
+}
+
+.filter-toolbar .choices__inner {
+    border: 1px solid #dcdfe6;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    min-height: 40px;
+    padding: 5px 10px;
+}

@@ -1,0 +1,262 @@
+/*app scroll - Enhanced*/
+.app-scroll::-webkit-scrollbar-thumb,
+.app-scroll-thin::-webkit-scrollbar-thumb {
+    background: #323232;
+}
+
+.app-scroll-thin::-webkit-scrollbar {
+    background: #2c2c2c;
+}
+
+.app-scroll::-webkit-scrollbar:hover,
+.app-scroll-thin::-webkit-scrollbar:hover {
+    background: #2c2c2c;
+}
+
+.messenger-search {
+    background: #2a2d35;
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.messenger-search:focus {
+    border-color: #0CAF60;
+    background: #323742;
+    box-shadow: 0 4px 12px rgba(12, 175, 96, 0.2);
+}
+
+.messenger-listView {
+    background: #22242c;
+    border: 1px solid #323232;
+}
+
+.messenger-listView .m-header {
+    background: #22242c;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.messenger-listView-tabs {
+    border-bottom: 1px solid #323232;
+}
+
+.messenger-listView-tabs a:hover,
+.messenger-listView-tabs a:focus {
+    background-color: #323232;
+}
+
+.messenger-favorites div.avatar {
+    border: 3px solid #272727;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.messenger-list-item:hover {
+    background: #2a2d35;
+}
+
+.messenger-list-item::before {
+    background: linear-gradient(to bottom, #0CAF60, #0CAF60);
+}
+
+.m-list-active {
+    background: linear-gradient(135deg, rgba(12, 175, 96, 0.15) 0%, rgba(12, 175, 96, 0.08) 100%);
+    box-shadow: 0 2px 8px rgba(12, 175, 96, 0.2);
+}
+
+.messenger-messagingView {
+    border-top: 1px solid #323232;
+    border-bottom: 1px solid #323232;
+    background: #1a1d24;
+}
+
+.messenger-messagingView .m-body {
+    background: linear-gradient(to bottom, #1a1d24 0%, #22242c 100%);
+}
+
+.m-header-messaging {
+    background: #22242c;
+    box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid #323232;
+}
+
+.messenger-infoView {
+    background: #22242c;
+    border: 1px solid #323232;
+}
+
+.messenger-infoView>p {
+    color: #fff;
+}
+
+.divider {
+    border-top: 1px solid #2f2f2f;
+}
+
+.messenger-sendCard {
+    background: #22242c;
+    border-top: 1px solid #323232;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.m-send {
+    background: #2a2d35;
+    color: #fff;
+}
+
+.m-send:focus {
+    background: #323742;
+    box-shadow: 0 0 0 2px rgba(12, 175, 96, 0.3);
+}
+
+.attachment-preview {
+    background: #2a2d35;
+}
+
+.attachment-preview>p {
+    color: #fff;
+}
+
+.message-card p {
+    background: #2a3f5a;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.message-card p:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mc-sender p {
+    background: linear-gradient(135deg, #0CAF60 0%, #0CAF60 100%);
+}
+
+.m-li-divider {
+    border-bottom: 1px solid #323232;
+}
+
+.m-header a,
+.m-header a:hover,
+.m-header a:focus {
+    text-decoration: none;
+    color: #fff;
+}
+
+.messenger-list-item td p {
+    color: #fff;
+}
+
+.activeStatus {
+    border: 2px solid #272727;
+    z-index: 9;
+    box-shadow: 0 2px 6px rgba(76, 175, 80, 0.5);
+}
+
+.messenger-list-item:hover .activeStatus {
+    border-color: #2a2d35;
+}
+
+.messenger-favorites>div p {
+    color: #ffffff;
+}
+
+.avatar {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.avatar:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.shared-photo {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.shared-photo:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.message-hint span {
+    background: rgba(154, 161, 170, 0.2);
+    color: rgb(180, 190, 200);
+}
+
+/*
+***********************************************
+* Placeholder loading
+***********************************************
+*/
+.loadingPlaceholder-body div,
+.loadingPlaceholder-header tr td div {
+    background: #323232;
+    background-image: -webkit-linear-gradient(left, #323232 0%, #3a3a3a 20%, #323232 40%, #323232 100%);
+}
+
+/*
+***********************************************
+* App Modal
+***********************************************
+*/
+
+.app-modal {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+}
+
+.app-modal-card {
+    background: rgba(50, 50, 50, 0.98);
+    box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.app-modal-header {
+    color: #fff;
+}
+
+.app-modal-body {
+    color: #fff;
+}
+
+/* custom css */
+.messenger-listView-tabs a,
+.messenger-listView-tabs a:hover,
+.messenger-listView-tabs a:focus {
+    color: #ffffff !important;
+}
+
+.active-tab {
+    background: rgba(12, 175, 96, 0.12);
+}
+
+.messenger-sendCard label:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.messenger-sendCard label i {
+    color: #999;
+}
+
+.messenger-sendCard label:hover i {
+    color: #0CAF60;
+}
+
+.update-messengerColor a {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.update-messengerColor a:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.imageModal {
+    backdrop-filter: blur(12px);
+}
+
+.app-btn {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.app-btn:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.chat-time {
+    color: #888;
+}
