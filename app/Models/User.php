@@ -103,8 +103,9 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
     public static $superadmin_activated_module = [
         'ProductService',
         'LandingPage',
-        'Ekyc'
+        'Ekyc',
     ];
+
 
     public static $not_edit_role = [
         'super admin',
@@ -143,7 +144,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
     ];
     public function plan()
     {
-        return $this->hasOne(Plan::class , 'id', 'active_plan');
+        return $this->hasOne(Plan::class, 'id', 'active_plan');
     }
     public function scopeEmp($query)
     {
@@ -157,8 +158,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
             $r = hexdec(substr($hex, 0, 1) . substr($hex, 0, 1));
             $g = hexdec(substr($hex, 1, 1) . substr($hex, 1, 1));
             $b = hexdec(substr($hex, 2, 1) . substr($hex, 2, 1));
-        }
-        else {
+        } else {
             $r = hexdec(substr($hex, 0, 2));
             $g = hexdec(substr($hex, 2, 2));
             $b = hexdec(substr($hex, 4, 2));
@@ -190,8 +190,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
         for ($i = 0; $i < count($C); ++$i) {
             if ($C[$i] <= 0.03928) {
                 $C[$i] = $C[$i] / 12.92;
-            }
-            else {
+            } else {
                 $C[$i] = pow(($C[$i] + 0.055) / 1.055, 2.4);
             }
         }
@@ -200,8 +199,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
 
         if ($L > 0.179) {
             $color = 'black';
-        }
-        else {
+        } else {
             $color = 'white';
         }
 
@@ -262,11 +260,11 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
     }
     public function musicStudent()
     {
-        return $this->hasOne(MusicStudent::class , 'user_id');
+        return $this->hasOne(MusicStudent::class, 'user_id');
     }
     public function musicTeacher()
     {
-        return $this->hasOne(MusicTeacher::class , 'user_id');
+        return $this->hasOne(MusicTeacher::class, 'user_id');
     }
     public static function CompanySetting($id = null, $workspace_id = null)
     {
@@ -349,16 +347,14 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
     {
         if ($user_id != null) {
             $user = User::find($user_id);
-        }
-        else {
+        } else {
             $user = User::find(Auth::user()->id);
         }
 
         if ($plan_id != null) {
 
             $plan = Plan::find($plan_id);
-        }
-        else {
+        } else {
             $plan = Plan::where('is_free_plan', 1)->first();
         }
         $oldplan = Plan::where('id', $user->active_plan)->first();
@@ -369,24 +365,20 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
             if (!empty($duration)) {
                 if ($duration == 'Month') {
                     $user->plan_expire_date = Carbon::now()->addMonths(1)->isoFormat('YYYY-MM-DD');
-                }
-                elseif ($duration == 'Year') {
+                } elseif ($duration == 'Year') {
                     $user->plan_expire_date = Carbon::now()->addYears(1)->isoFormat('YYYY-MM-DD');
-                }
-                elseif ($duration == 'Trial') {
-                    $user->trial_expire_date = Carbon::now()->addDays((int)$plan->trial_days)->isoFormat('YYYY-MM-DD');
+                } elseif ($duration == 'Trial') {
+                    $user->trial_expire_date = Carbon::now()->addDays((int) $plan->trial_days)->isoFormat('YYYY-MM-DD');
                     if ($user->plan_expire_date) {
                         $user->plan_expire_date = null;
                     }
-                }
-                else {
+                } else {
                     $user->plan_expire_date = null;
                 }
-            }
-            else {
+            } else {
                 $user->plan_expire_date = null;
-            // for days
-            // $this->plan_expire_date = Carbon::now()->addDays($duration)->isoFormat('YYYY-MM-DD');
+                // for days
+                // $this->plan_expire_date = Carbon::now()->addDays($duration)->isoFormat('YYYY-MM-DD');
             }
             if (!empty($modules)) {
                 $modules_array = explode(',', $modules);
@@ -406,8 +398,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
                             'module' => $moduleName,
                         ]);
                     }
-                }
-                else {
+                } else {
                     userActiveModule::where('user_id', $user->id)->delete();
 
                     $user_module = $modules_array;
@@ -453,8 +444,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
             if ($counter != null && !empty($oldplan->custom_plan) == 1 && !empty($plan->custom_plan) == 1) {
                 $plan->number_of_workspace = ($user->total_workspace == -1) ? $counter['workspace_counter'] : $counter['workspace_counter'] + $user->total_workspace;
                 $plan->number_of_user = ($user->total_user == -1) ? $counter['user_counter'] : $counter['user_counter'] + $user->total_user;
-            }
-            elseif ($counter != null && $plan->custom_plan == 1) {
+            } elseif ($counter != null && $plan->custom_plan == 1) {
 
                 $plan->number_of_workspace = $counter['workspace_counter'];
                 $plan->number_of_user = $counter['user_counter'];
@@ -484,8 +474,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
                             $this->Usercount($active->id, $plan);
                         }
                     }
-                }
-                else {
+                } else {
                     foreach ($workspace as $item) {
                         $this->Usercount($item->id, $plan);
                     }
@@ -498,8 +487,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
                     }
                 }
 
-            }
-            elseif ($plan->number_of_workspace == -1) {
+            } elseif ($plan->number_of_workspace == -1) {
                 $workspace = WorkSpace::where('created_by', $user->id)->get();
                 foreach ($workspace as $item) {
                     $item->is_disable = 1;
@@ -517,8 +505,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
                 sideMenuCacheForget('company', $user->id);
             }
             return ['is_success' => true];
-        }
-        else {
+        } else {
             return [
                 'is_success' => false,
                 'error' => 'Plan is deleted.',
@@ -540,8 +527,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
                         $item->is_disable = 0;
                         $item->save();
                     }
-                }
-                else {
+                } else {
                     $count_user = $plan->number_of_user - $total_users;
                     $users = User::where('workspace_id', $id)->where('is_disable', 0)->where('type', '!=', 'company')->take($count_user)->get();
                     foreach ($users as $item) {
@@ -549,8 +535,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
                         $item->save();
                     }
                 }
-            }
-            elseif ($plan->number_of_user == -1) {
+            } elseif ($plan->number_of_user == -1) {
                 $users = User::where('workspace_id', $id)->get();
                 foreach ($users as $item) {
                     $item->is_disable = 1;
@@ -567,7 +552,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
 
     public function admission()
     {
-        return $this->hasOne(\Workdo\School\Entities\Admission::class , 'converted_student_id');
+        return $this->hasOne(\Workdo\School\Entities\Admission::class, 'converted_student_id');
     }
 
     public function getAccessibleUserIds()
