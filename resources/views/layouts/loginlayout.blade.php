@@ -33,23 +33,23 @@
 <head>
 
     <title>@yield('page-title') |
-        {{ !empty($company_settings['title_text']) ? $company_settings['title_text'] : config('app.name', 'WorkDo') }}
+        {{ !empty($company_settings['title_text']) ? $company_settings['title_text'] : config('app.name', 'Stockology') }}
     </title>
 
     <meta name="title"
-        content="{{ !empty($admin_settings['meta_title']) ? $admin_settings['meta_title'] : 'WOrkdo Dash' }}">
+        content="{{ !empty($admin_settings['meta_title']) ? $admin_settings['meta_title'] : 'Stockology CRM' }}">
     <meta name="keywords"
-        content="{{ !empty($admin_settings['meta_keywords']) ? $admin_settings['meta_keywords'] : 'WorkDo Dash,SaaS solution,Multi-workspace' }}">
+        content="{{ !empty($admin_settings['meta_keywords']) ? $admin_settings['meta_keywords'] : 'Stockology CRM, Securities Trading' }}">
     <meta name="description"
-        content="{{ !empty($admin_settings['meta_description']) ? $admin_settings['meta_description'] : 'Discover the efficiency of Dash, a user-friendly web application by WorkDo.' }}">
+        content="{{ !empty($admin_settings['meta_description']) ? $admin_settings['meta_description'] : 'Empower your financial growth with Stockology - The most efficient CRM for securities.' }}">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ env('APP_URL') }}">
     <meta property="og:title"
-        content="{{ !empty($admin_settings['meta_title']) ? $admin_settings['meta_title'] : 'WOrkdo Dash' }}">
+        content="{{ !empty($admin_settings['meta_title']) ? $admin_settings['meta_title'] : 'Stockology CRM' }}">
     <meta property="og:description"
-        content="{{ !empty($admin_settings['meta_description']) ? $admin_settings['meta_description'] : 'Discover the efficiency of Dash, a user-friendly web application by WorkDo.' }} ">
+        content="{{ !empty($admin_settings['meta_description']) ? $admin_settings['meta_description'] : 'Empower your financial growth with Stockology - The most efficient CRM for securities.' }} ">
     <meta property="og:image"
         content="{{ get_file(!empty($admin_settings['meta_image']) ? (check_file($admin_settings['meta_image']) ? $admin_settings['meta_image'] : 'uploads/meta/meta_image.png') : 'uploads/meta/meta_image.png') }}{{ '?' . time() }}">
 
@@ -57,13 +57,13 @@
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="{{ env('APP_URL') }}">
     <meta property="twitter:title"
-        content="{{ !empty($admin_settings['meta_title']) ? $admin_settings['meta_title'] : 'WOrkdo Dash' }}">
+        content="{{ !empty($admin_settings['meta_title']) ? $admin_settings['meta_title'] : 'Stockology CRM' }}">
     <meta property="twitter:description"
-        content="{{ !empty($admin_settings['meta_description']) ? $admin_settings['meta_description'] : 'Discover the efficiency of Dash, a user-friendly web application by WorkDo.' }} ">
+        content="{{ !empty($admin_settings['meta_description']) ? $admin_settings['meta_description'] : 'Empower your financial growth with Stockology - The most efficient CRM for securities.' }} ">
     <meta property="twitter:image"
         content="{{ get_file(!empty($admin_settings['meta_image']) ? (check_file($admin_settings['meta_image']) ? $admin_settings['meta_image'] : 'uploads/meta/meta_image.png') : 'uploads/meta/meta_image.png') }}{{ '?' . time() }}">
 
-    <meta name="author" content="Workdo.io">
+    <meta name="author" content="Stockology">
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -85,7 +85,9 @@
     <link rel="stylesheet" href="{{ asset('css/custome.css') }}">
     <style>
         :root {
-            --color-customColor: <?=$color ?>;
+            --color-customColor:
+                <?=$color ?>
+            ;
         }
     </style>
 
@@ -148,8 +150,7 @@
                                         }
                                     }
                                 @endphp
-                                <img src="{{ $logo }}{{ '?' . time() }}"
-                                    alt="{{ config('app.name', 'WorkDo') }}"
+                                <img src="{{ $logo }}{{ '?' . time() }}" alt="{{ config('app.name', 'Stockology') }}"
                                     class="navbar-brand-img auth-navbar-brand">
                             </a>
                         </div>
@@ -181,8 +182,8 @@
                             <div class="col-12">
                                 <span>
                                     @if (!empty($company_settings['footer_text']))
-                                        {{ $company_settings['footer_text'] }} @else{{ __('Copyright') }} &copy;
-                                        {{ config('app.name', 'WorkDo') }}
+                                    {{ $company_settings['footer_text'] }} @else{{ __('Copyright') }} &copy;
+                                        {{ config('app.name', 'Stockology') }}
                                     @endif{{ date('Y') }}
                                 </span>
                             </div>

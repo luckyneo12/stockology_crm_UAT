@@ -30,10 +30,11 @@ class LeadApiController extends Controller
     public function leadboard(Request $request)
     {
         $validator = \Validator::make(
-            $request->all(), [
-            'workspace_id' => 'required',
-            'pipeline_id' => 'required|exists:pipelines,id',
-        ]
+            $request->all(),
+            [
+                'workspace_id' => 'required',
+                'pipeline_id' => 'required|exists:pipelines,id',
+            ]
         );
 
         if ($validator->fails()) {
@@ -54,10 +55,10 @@ class LeadApiController extends Controller
                 ->first();
 
             $leadStages = $pipeline->leadStages->map(function ($stage) {
-                return (object)[
-                'id' => $stage->id,
-                'name' => $stage->name,
-                'order' => $stage->order,
+                return (object) [
+                    'id' => $stage->id,
+                    'name' => $stage->name,
+                    'order' => $stage->order,
                 ];
             });
             ;
@@ -71,59 +72,59 @@ class LeadApiController extends Controller
 
                 if (Auth::user()->type == 'company') {
                     $lead = $lead->where('created_by', '=', creatorId());
-                }
-                else {
+                } else {
                     $lead = $lead->where('user_id', Auth::user()->id);
                 }
                 $lead = $lead->get();
                 $stage->leads = $lead->map(function ($lead) use ($key, $leadStages) {
 
                     return [
-                    'id' => $lead->id,
-                    'name' => $lead->name,
-                    'order' => $lead->order,
-                    'email' => $lead->email,
-                    'subject' => $lead->subject,
-                    'phone' => $lead->phone,
-                    'previous_stage' => isset($leadStages[$key - 1]) ? $leadStages[$key - 1]->id : 0,
-                    'current_stage' => $leadStages[$key]->id,
-                    'next_stage' => isset($leadStages[$key + 1]) ? $leadStages[$key + 1]->id : 0,
-                    'follow_up_date' => $lead->follow_up_date,
-                    'total_tasks' => $lead->tasks->count() . '/' . $lead->tasks->where('status', 0)->count(),
-                    'total_products' => !empty($lead->products) ? count(explode(',', $lead->products)) : 0,
-                    'total_sources' => !empty($lead->sources) ? count(explode(',', $lead->sources)) : 0,
-                    'labels' => $lead->labels() ? $lead->labels()->map(function ($label) {
-                            return [
-                            'id' => $label->id,
-                            'name' => $label->name,
-                            'color' => Label::$colorCode[$label->color],
-                            ];
-                        }
+                        'id' => $lead->id,
+                        'name' => $lead->name,
+                        'order' => $lead->order,
+                        'email' => $lead->email,
+                        'subject' => $lead->subject,
+                        'phone' => $lead->phone,
+                        'previous_stage' => isset($leadStages[$key - 1]) ? $leadStages[$key - 1]->id : 0,
+                        'current_stage' => $leadStages[$key]->id,
+                        'next_stage' => isset($leadStages[$key + 1]) ? $leadStages[$key + 1]->id : 0,
+                        'follow_up_date' => $lead->follow_up_date,
+                        'total_tasks' => $lead->tasks->count() . '/' . $lead->tasks->where('status', 0)->count(),
+                        'total_products' => !empty($lead->products) ? count(explode(',', $lead->products)) : 0,
+                        'total_sources' => !empty($lead->sources) ? count(explode(',', $lead->sources)) : 0,
+                        'labels' => $lead->labels() ? $lead->labels()->map(
+                            function ($label) {
+                                return [
+                                    'id' => $label->id,
+                                    'name' => $label->name,
+                                    'color' => Label::$colorCode[$label->color],
+                                ];
+                            }
                         ) : [],
                         // 'assign_user'       => $lead->assign_user()->pluck('user_id')->first(),
                         // 'users'             => $lead->assign_user->map(function($user){
-                        'users' => $lead->users->map(function ($user) {
-                            // if ($user->type != 'company') {
-                            return [
-                            'id' => $user->id,
-                            'name' => $user->name,
-                            'avatar' => check_file($user->avatar) ? get_file($user->avatar) : get_file('uploads/users-avatar/avatar.png'),
-                            ];
-                        // 	}
-                        // 	return null;
-                        // })->filter(function($user) {
-                        // 	return !is_null($user); // Filter out null values
-                        // })->values(),
-                        }
+                        'users' => $lead->users->map(
+                            function ($user) {
+                                // if ($user->type != 'company') {
+                                return [
+                                    'id' => $user->id,
+                                    'name' => $user->name,
+                                    'avatar' => check_file($user->avatar) ? get_file($user->avatar) : get_file('uploads/users-avatar/avatar.png'),
+                                ];
+                                // 	}
+                                // 	return null;
+                                // })->filter(function($user) {
+                                // 	return !is_null($user); // Filter out null values
+                                // })->values(),
+                            }
                         ),
-                        ];
-                    });
+                    ];
+                });
             }
 
             return response()->json(['status' => 1, 'data' => $leadStages], 200);
 
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json(['status' => 0, 'message' => 'something went wrong!!!']);
         }
     }
@@ -144,6 +145,10 @@ class LeadApiController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->has('phone')) {
+            $request->merge(['phone' => str_replace(' ', '', $request->phone)]);
+        }
+
         $validation = [
             'workspace_id' => 'required|exists:work_spaces,id',
             'pipeline_id' => 'required|exists:pipelines,id',
@@ -160,7 +165,8 @@ class LeadApiController extends Controller
         }
 
         $validator = \Validator::make(
-            $request->all(), $validation
+            $request->all(),
+            $validation
         );
 
         if ($validator->fails()) {
@@ -196,19 +202,16 @@ class LeadApiController extends Controller
                 $stage = LeadStage::where('pipeline_id', '=', $pipelineId)
                     ->where('workspace_id', $currentWorkspace)
                     ->first();
-            }
-            else {
+            } else {
                 return response()->json(['status' => 0, 'message' => 'Please Create Pipeline.'], 403);
             }
 
             if (empty($stage)) {
                 return response()->json(['status' => 0, 'message' => 'Please Create Stage for This Pipeline'], 403);
-            }
-            else {
+            } else {
                 if ($objUser->type == 'company') {
                     $user_id = $request->user;
-                }
-                else {
+                } else {
                     $user_id = $request->user_id;
                 }
 
@@ -232,8 +235,7 @@ class LeadApiController extends Controller
                             $objUser->id,
                             $user_id,
                         ];
-                    }
-                    else {
+                    } else {
                         $usrLeads = [
                             creatorId(),
                             $user_id,
@@ -242,16 +244,15 @@ class LeadApiController extends Controller
 
                     foreach ($usrLeads as $usrLead) {
                         UserLead::create(
-                        [
-                            'user_id' => $usrLead,
-                            'lead_id' => $lead->id,
-                        ]
+                            [
+                                'user_id' => $usrLead,
+                                'lead_id' => $lead->id,
+                            ]
                         );
                     }
 
                     return response()->json(['status' => 1, 'message' => 'Lead created Successfully.'], 200);
-                }
-                else {
+                } else {
 
                     $lead = Lead::where('created_by', '=', creatorId())
                         ->where('workspace_id', $currentWorkspace)
@@ -277,8 +278,7 @@ class LeadApiController extends Controller
                                 $user_id,
                             ];
 
-                        }
-                        else {
+                        } else {
                             $usrLeads = [
                                 creatorId(),
                                 $user_id,
@@ -295,15 +295,14 @@ class LeadApiController extends Controller
 
                         foreach ($usrLeads as $usrLead) {
                             UserLead::updateOrCreate(
-                            [
-                                'user_id' => $usrLead,
-                                'lead_id' => $lead->id,
-                            ]
+                                [
+                                    'user_id' => $usrLead,
+                                    'lead_id' => $lead->id,
+                                ]
                             );
                         }
 
-                    }
-                    else {
+                    } else {
 
                         return response()->json(['status' => 0, 'message' => 'Lead not found!!!']);
                     }
@@ -314,8 +313,7 @@ class LeadApiController extends Controller
 
             return response()->json(['status' => 1, 'data' => $pipeline], 200);
 
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json(['status' => 0, 'message' => 'something went wrong!!!']);
         }
     }
@@ -323,11 +321,12 @@ class LeadApiController extends Controller
     public function leadDetails(Request $request)
     {
         $validator = \Validator::make(
-            $request->all(), [
-            'workspace_id' => 'required|exists:work_spaces,id',
-            'pipeline_id' => 'required|exists:pipelines,id',
-            'lead_id' => 'required|exists:leads,id',
-        ]
+            $request->all(),
+            [
+                'workspace_id' => 'required|exists:work_spaces,id',
+                'pipeline_id' => 'required|exists:pipelines,id',
+                'lead_id' => 'required|exists:leads,id',
+            ]
         );
 
         if ($validator->fails()) {
@@ -371,30 +370,29 @@ class LeadApiController extends Controller
                 'follow_up_date' => $lead->follow_up_date != 'null' ? $lead->follow_up_date : '-',
                 'percentage' => $percentage . '%',
                 'tasks_list' => $lead->tasks->map(function ($task) {
-                return [
-                'id' => $task->id,
-                'name' => $task->name,
-                'date' => $task->date,
-                'time' => $task->time,
-                'priority' => LeadTask::$priorities[$task->priority],
-                'status' => LeadTask::$status[$task->status],
-                ];
-            }),
+                    return [
+                        'id' => $task->id,
+                        'name' => $task->name,
+                        'date' => $task->date,
+                        'time' => $task->time,
+                        'priority' => LeadTask::$priorities[$task->priority],
+                        'status' => LeadTask::$status[$task->status],
+                    ];
+                }),
 
                 'lead_activity' => $lead->activities->map(function ($activity) {
-                return [
-                'id' => $activity->id,
-                // 'log_type'  => $activity->log_type,
-                'remark' => strip_tags($activity->getLeadRemark()),
-                'time' => $activity->created_at->diffForHumans(),
-                ];
-            }),
+                    return [
+                        'id' => $activity->id,
+                        // 'log_type'  => $activity->log_type,
+                        'remark' => strip_tags($activity->getLeadRemark()),
+                        'time' => $activity->created_at->diffForHumans(),
+                    ];
+                }),
             ];
 
             return response()->json(['status' => 1, 'data' => $data], 200);
 
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json(['status' => 0, 'message' => 'something went wrong!!!']);
         }
     }
@@ -402,13 +400,14 @@ class LeadApiController extends Controller
     public function leadStageUpdate(Request $request)
     {
         $validator = \Validator::make(
-            $request->all(), [
-            'workspace_id' => 'required|exists:work_spaces,id',
-            'pipeline_id' => 'required|exists:pipelines,id',
-            'lead_id' => 'required|exists:leads,id',
-            'new_status' => 'required|exists:lead_stages,id',
-            // 'old_status'    => 'required',
-        ]
+            $request->all(),
+            [
+                'workspace_id' => 'required|exists:work_spaces,id',
+                'pipeline_id' => 'required|exists:pipelines,id',
+                'lead_id' => 'required|exists:leads,id',
+                'new_status' => 'required|exists:lead_stages,id',
+                // 'old_status'    => 'required',
+            ]
         );
 
         if ($validator->fails()) {
@@ -433,8 +432,7 @@ class LeadApiController extends Controller
             }
             return response()->json(['status' => 1, 'message' => 'Lead stage update successfully.']);
 
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json(['status' => 0, 'message' => 'something went wrong!!!']);
         }
     }
@@ -443,11 +441,12 @@ class LeadApiController extends Controller
     public function destroy(Request $request)
     {
         $validator = \Validator::make(
-            $request->all(), [
-            'workspace_id' => 'required|exists:work_spaces,id',
-            'pipeline_id' => 'required|exists:pipelines,id',
-            'lead_id' => 'required|exists:leads,id',
-        ]
+            $request->all(),
+            [
+                'workspace_id' => 'required|exists:work_spaces,id',
+                'pipeline_id' => 'required|exists:pipelines,id',
+                'lead_id' => 'required|exists:leads,id',
+            ]
         );
 
         if ($validator->fails()) {
@@ -480,8 +479,7 @@ class LeadApiController extends Controller
 
             return response()->json(['status' => 1, 'message' => 'Lead Delete Successfully.'], 200);
 
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json(['status' => 0, 'message' => 'something went wrong!!!']);
         }
     }

@@ -26,28 +26,29 @@ if (!function_exists('getMenu')) {
     {
         $user = auth()->user();
         return Cache::rememberForever(
-            'sidebar_menu_' . $user->id,
+            'sidebar_menu_v2_' . $user->id,
             function () use ($user) {
-            $role = $user->roles->first();
-            $menu = new \App\Classes\Menu($user);
+                $role = $user->roles->first();
+                $menu = new \App\Classes\Menu($user);
 
 
-            if ($role->name == 'super admin') {
-                event(new \App\Events\SuperAdminMenuEvent($menu));
-            }
-            else {
-                event(new \App\Events\CompanyMenuEvent($menu));
-            }
-            $collection = collect($menu->menu);
-            $grouped = $collection->groupBy('category')->toArray();
-
-            $categoryIcon = categoryIcon();
-
-            uksort($grouped, function ($a, $b) use ($categoryIcon) {
-                    $indexA = array_search($a, array_keys($categoryIcon));
-                    $indexB = array_search($b, array_keys($categoryIcon));
-                    return $indexA <=> $indexB;
+                if ($role->name == 'super admin') {
+                    event(new \App\Events\SuperAdminMenuEvent($menu));
+                } else {
+                    event(new \App\Events\CompanyMenuEvent($menu));
                 }
+                $collection = collect($menu->menu);
+                $grouped = $collection->groupBy('category')->toArray();
+
+                $categoryIcon = categoryIcon();
+
+                uksort(
+                    $grouped,
+                    function ($a, $b) use ($categoryIcon) {
+                        $indexA = array_search($a, array_keys($categoryIcon));
+                        $indexB = array_search($b, array_keys($categoryIcon));
+                        return $indexA <=> $indexB;
+                    }
                 );
                 return generateMenu($grouped, null);
             }
@@ -94,8 +95,7 @@ if (!function_exists('generateSubMenu')) {
             $hasChildren = hasChildren($menuItems, $item['name']);
             if ($item['parent'] == null) {
                 $html .= '<li class="dash-item dash-hasmenu">';
-            }
-            else {
+            } else {
                 $html .= '<li class="dash-item">';
             }
             $html .= '<a href="' . (!empty($item['route']) ? route($item['route']) : '#!') . '" class="dash-link">';
@@ -103,8 +103,7 @@ if (!function_exists('generateSubMenu')) {
             if ($item['parent'] == null) {
                 $html .= ' <span class="dash-micon"><i class="ti ti-' . $item['icon'] . '"></i></span>
                 <span class="dash-mtext">' . __($item['title']) . '</span>';
-            }
-            else {
+            } else {
                 $html .= __($item['title']);
             }
 
@@ -113,8 +112,7 @@ if (!function_exists('generateSubMenu')) {
                 $html .= '<ul class="dash-submenu">';
                 $html .= generateSubMenu($menuItems, $item['name']);
                 $html .= '</ul>';
-            }
-            else {
+            } else {
                 $html .= '</a>';
             }
 
@@ -141,8 +139,10 @@ if (!function_exists('categoryIcon')) {
             'Medical' => 'ambulance',
             'Vehicle' => 'bike',
             'AI' => 'brand-gitlab',
+            'Stock' => 'chart-candle',
             'Settings' => 'adjustments-horizontal',
         ];
+
 
         return $categoryIcon;
     }
@@ -169,8 +169,7 @@ if (!function_exists('getSettingMenu')) {
         $menu = new \App\Classes\Menu($user);
         if ($role->name == 'super admin') {
             event(new \App\Events\SuperAdminSettingMenuEvent($menu));
-        }
-        else {
+        } else {
             event(new \App\Events\CompanySettingMenuEvent($menu));
         }
 
@@ -203,8 +202,7 @@ if (!function_exists('getSettings')) {
             $settings = getAdminAllSetting();
             $html = new \App\Classes\Setting($user, $settings);
             event(new \App\Events\SuperAdminSettingEvent($html));
-        }
-        else {
+        } else {
             $settings = getCompanyAllSetting();
             $html = new \App\Classes\Setting($user, $settings);
             event(new \App\Events\CompanySettingEvent($html));
@@ -248,8 +246,7 @@ if (!function_exists('getCompanyAllSetting')) {
     {
         if (!empty($user_id)) {
             $user = User::find($user_id);
-        }
-        else {
+        } else {
             $user = auth()->user();
         }
 
@@ -307,8 +304,7 @@ if (!function_exists('AdminSettingCacheForget')) {
     {
         try {
             Cache::forget('admin_settings');
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             \Log::error('AdminSettingCacheForget :' . $e->getMessage());
         }
     }
@@ -326,8 +322,7 @@ if (!function_exists('comapnySettingCacheForget')) {
             }
             $key = 'company_settings_' . $workspace . '_' . $user_id;
             Cache::forget($key);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             \Log::error('comapnySettingCacheForget :' . $e->getMessage());
         }
     }
@@ -354,8 +349,7 @@ if (!function_exists('sideMenuCacheForget')) {
 
         if (!empty($user_id)) {
             $user = User::find($user_id);
-        }
-        else {
+        } else {
             $user = auth()->user();
         }
 
@@ -365,16 +359,14 @@ if (!function_exists('sideMenuCacheForget')) {
                 try {
                     $key = 'sidebar_menu_' . $id;
                     Cache::forget($key);
-                }
-                catch (\Exception $e) {
+                } catch (\Exception $e) {
                     \Log::error('comapnySettingCacheForget :' . $e->getMessage());
                 }
             }
             try {
                 $key = 'sidebar_menu_' . $user->id;
                 Cache::forget($key);
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 \Log::error('comapnySettingCacheForget :' . $e->getMessage());
             }
             return true;
@@ -383,8 +375,7 @@ if (!function_exists('sideMenuCacheForget')) {
         try {
             $key = 'sidebar_menu_' . $user->id;
             Cache::forget($key);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             \Log::error('comapnySettingCacheForget :' . $e->getMessage());
         }
 
@@ -397,20 +388,17 @@ if (!function_exists('getActiveWorkSpace')) {
     {
         if (!empty($user_id)) {
             $user = User::find($user_id);
-        }
-        else {
+        } else {
             $user = auth()->user();
         }
 
         if ($user) {
             if (!empty($user->active_workspace)) {
                 return $user->active_workspace;
-            }
-            else {
+            } else {
                 if ($user->type == 'super admin') {
                     return 0;
-                }
-                else {
+                } else {
                     static $WorkSpace = null;
                     if ($WorkSpace == null) {
                         $workspace = WorkSpace::where('created_by', $user->id)->first();
@@ -437,8 +425,7 @@ if (!function_exists('getWorkspace')) {
                 $WorkSpace = WorkSpace::whereIn('id', $users->pluck('workspace_id')->toArray())->orWhereIn('created_by', $users->pluck('id')->toArray())->get();
             }
             return $WorkSpace;
-        }
-        else {
+        } else {
             return $data;
         }
     }
@@ -449,8 +436,7 @@ if (!function_exists('creatorId')) {
     {
         if (Auth::user()->type == 'super admin' || Auth::user()->type == 'company') {
             return Auth::user()->id;
-        }
-        else {
+        } else {
             return Auth::user()->created_by;
         }
     }
@@ -492,16 +478,14 @@ if (!function_exists('module_is_active')) {
             }
             if (Auth::check()) {
                 $user = Auth::user();
-            }
-            else {
+            } else {
                 $user = User::find($user_id);
             }
             if (!empty($user)) {
 
                 if ($user->type == 'super admin') {
                     return true;
-                }
-                else {
+                } else {
                     $active_module = ActivatedModule($user->id);
                     if ((count($active_module) > 0 && in_array($module, $active_module))) {
                         return true;
@@ -510,8 +494,7 @@ if (!function_exists('module_is_active')) {
                 }
             }
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
@@ -523,8 +506,7 @@ if (!function_exists('ActivatedModule')) {
 
         if ($user_id != null) {
             $user = User::find($user_id);
-        }
-        elseif (Auth::check()) {
+        } elseif (Auth::check()) {
             $user = Auth::user();
         }
         if (!empty($user)) {
@@ -532,8 +514,7 @@ if (!function_exists('ActivatedModule')) {
 
             if ($user->type == 'super admin') {
                 $user_active_module = $available_modules;
-            }
-            else {
+            } else {
                 static $active_module = null;
                 if ($user->type != 'company') {
                     $user_not_com = User::find($user->created_by);
@@ -543,8 +524,7 @@ if (!function_exists('ActivatedModule')) {
                             $active_module = userActiveModule::where('user_id', $user_not_com->id)->pluck('module')->toArray();
                         }
                     }
-                }
-                else {
+                } else {
                     if ($active_module == null) {
                         $active_module = userActiveModule::where('user_id', $user->id)->pluck('module')->toArray();
                     }
@@ -582,8 +562,7 @@ if (!function_exists('Module_Alias_Name')) {
         $module = Module::find($module_name);
         if (isset($resultArray)) {
             $module_name = array_key_exists($module_name, $resultArray) ? $resultArray[$module_name] : (!empty($module) ? $module->alias : $module_name);
-        }
-        elseif (!empty($module)) {
+        } elseif (!empty($module)) {
             $module_name = $module->alias;
         }
         return $module_name;
@@ -597,8 +576,7 @@ if (!function_exists('get_permission_by_module')) {
 
         if ($user->type == 'super admin') {
             $permissions = Permission::where('module', $mudule)->orderBy('name')->get();
-        }
-        else {
+        } else {
             $permissions = new Collection();
             foreach ($user->roles as $role) {
                 $permissions = $permissions->merge($role->permissions);
@@ -615,8 +593,7 @@ if (!function_exists('getActiveLanguage')) {
     {
         if ((Auth::check()) && (!empty(Auth::user()->lang))) {
             return Auth::user()->lang;
-        }
-        else {
+        } else {
             $admin_settings = getAdminAllSetting();
             return !empty($admin_settings['defult_language']) ? $admin_settings['defult_language'] : 'en';
         }
@@ -629,8 +606,7 @@ if (!function_exists('languages')) {
 
         try {
             $arrLang = Language::where('status', 1)->get()->pluck('name', 'code')->toArray();
-        }
-        catch (\Throwable $th) {
+        } catch (\Throwable $th) {
             $arrLang = [
                 "ar" => "Arabic",
                 "da" => "Danish",
@@ -660,33 +636,29 @@ if (!function_exists('SetConfigEmail')) {
 
             if (!empty($user_id)) {
                 $company_settings = getCompanyAllSetting($user_id);
-            }
-            elseif (!empty($user_id) && !empty($workspace_id)) {
+            } elseif (!empty($user_id) && !empty($workspace_id)) {
                 $company_settings = getCompanyAllSetting($user_id, $workspace_id);
-            }
-            else if (Auth::check()) {
+            } else if (Auth::check()) {
                 $company_settings = getCompanyAllSetting();
-            }
-            else {
+            } else {
                 $user_id = User::where('type', 'super admin')->first()->id;
                 $company_settings = getCompanyAllSetting($user_id);
             }
 
             config(
-            [
-                'mail.driver' => $company_settings['mail_driver'],
-                'mail.host' => $company_settings['mail_host'],
-                'mail.port' => $company_settings['mail_port'],
-                'mail.encryption' => $company_settings['mail_encryption'],
-                'mail.username' => $company_settings['mail_username'],
-                'mail.password' => $company_settings['mail_password'],
-                'mail.from.address' => $company_settings['mail_from_address'],
-                'mail.from.name' => $company_settings['mail_from_name'],
-            ]
+                [
+                    'mail.driver' => $company_settings['mail_driver'],
+                    'mail.host' => $company_settings['mail_host'],
+                    'mail.port' => $company_settings['mail_port'],
+                    'mail.encryption' => $company_settings['mail_encryption'],
+                    'mail.username' => $company_settings['mail_username'],
+                    'mail.password' => $company_settings['mail_password'],
+                    'mail.from.address' => $company_settings['mail_from_address'],
+                    'mail.from.name' => $company_settings['mail_from_name'],
+                ]
             );
             return true;
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
 
             return false;
         }
@@ -704,33 +676,31 @@ if (!function_exists('upload_file')) {
             if (isset($storage_settings['storage_setting'])) {
                 if ($storage_settings['storage_setting'] == 'wasabi') {
                     config(
-                    [
-                        'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
-                        'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
-                        'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
-                        'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
-                        'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
-                        'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
-                    ]
+                        [
+                            'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
+                            'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
+                            'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
+                            'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
+                            'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
+                            'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
+                        ]
                     );
                     $max_size = !empty($storage_settings['wasabi_max_upload_size']) ? $storage_settings['wasabi_max_upload_size'] : '2048';
                     $mimes = !empty($storage_settings['wasabi_storage_validation']) ? $storage_settings['wasabi_storage_validation'] : 'jpeg,jpg,png,svg,zip,txt,gif,docx';
-                }
-                else if ($storage_settings['storage_setting'] == 's3') {
+                } else if ($storage_settings['storage_setting'] == 's3') {
                     config(
-                    [
-                        'filesystems.disks.s3.key' => $storage_settings['s3_key'],
-                        'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
-                        'filesystems.disks.s3.region' => $storage_settings['s3_region'],
-                        'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
-                        // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
-                        // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
-                    ]
+                        [
+                            'filesystems.disks.s3.key' => $storage_settings['s3_key'],
+                            'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
+                            'filesystems.disks.s3.region' => $storage_settings['s3_region'],
+                            'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
+                            // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
+                            // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
+                        ]
                     );
                     $max_size = !empty($storage_settings['s3_max_upload_size']) ? $storage_settings['s3_max_upload_size'] : '2048';
                     $mimes = !empty($storage_settings['s3_storage_validation']) ? $storage_settings['s3_storage_validation'] : 'jpeg,jpg,png,svg,zip,txt,gif,docx';
-                }
-                else {
+                } else {
                     $max_size = !empty($storage_settings['local_storage_max_upload_size']) ? $storage_settings['local_storage_max_upload_size'] : '2048';
                     $mimes = !empty($storage_settings['local_storage_validation']) ? $storage_settings['local_storage_validation'] : 'jpeg,jpg,png,svg,zip,txt,gif,docx';
                 }
@@ -747,8 +717,7 @@ if (!function_exists('upload_file')) {
 
                 if (count($custom_validation) > 0) {
                     $validation = $custom_validation;
-                }
-                else {
+                } else {
                     $validation = [
                         'mimes:' . $mimes,
                         'max:' . $max_size,
@@ -763,8 +732,7 @@ if (!function_exists('upload_file')) {
                         'msg' => $validator->messages()->first(),
                     ];
                     return $res;
-                }
-                else {
+                } else {
                     $name = $name;
                     $save = Storage::disk($storage_settings['storage_setting'])->putFileAs(
                         $path,
@@ -773,11 +741,9 @@ if (!function_exists('upload_file')) {
                     );
                     if ($storage_settings['storage_setting'] == 'wasabi') {
                         $url = $save;
-                    }
-                    elseif ($storage_settings['storage_setting'] == 's3') {
+                    } elseif ($storage_settings['storage_setting'] == 's3') {
                         $url = $save;
-                    }
-                    else {
+                    } else {
                         $url = 'uploads/' . $save;
                     }
                     $res = [
@@ -787,16 +753,14 @@ if (!function_exists('upload_file')) {
                     ];
                     return $res;
                 }
-            }
-            else {
+            } else {
                 $res = [
                     'flag' => 0,
                     'msg' => __('Not set configurations'),
                 ];
                 return $res;
             }
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             $res = [
                 'flag' => 0,
                 'msg' => $e->getMessage(),
@@ -815,33 +779,31 @@ if (!function_exists('multi_upload_file')) {
             if (isset($storage_settings['storage_setting'])) {
                 if ($storage_settings['storage_setting'] == 'wasabi') {
                     config(
-                    [
-                        'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
-                        'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
-                        'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
-                        'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
-                        'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
-                        'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
-                    ]
+                        [
+                            'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
+                            'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
+                            'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
+                            'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
+                            'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
+                            'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
+                        ]
                     );
                     $max_size = !empty($storage_settings['wasabi_max_upload_size']) ? $storage_settings['wasabi_max_upload_size'] : '2048';
                     $mimes = !empty($storage_settings['wasabi_storage_validation']) ? $storage_settings['wasabi_storage_validation'] : 'jpeg,jpg,png,svg,zip,txt,gif,docx';
-                }
-                else if ($storage_settings['storage_setting'] == 's3') {
+                } else if ($storage_settings['storage_setting'] == 's3') {
                     config(
-                    [
-                        'filesystems.disks.s3.key' => $storage_settings['s3_key'],
-                        'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
-                        'filesystems.disks.s3.region' => $storage_settings['s3_region'],
-                        'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
-                        // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
-                        // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
-                    ]
+                        [
+                            'filesystems.disks.s3.key' => $storage_settings['s3_key'],
+                            'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
+                            'filesystems.disks.s3.region' => $storage_settings['s3_region'],
+                            'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
+                            // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
+                            // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
+                        ]
                     );
                     $max_size = !empty($storage_settings['s3_max_upload_size']) ? $storage_settings['s3_max_upload_size'] : '2048';
                     $mimes = !empty($storage_settings['s3_storage_validation']) ? $storage_settings['s3_storage_validation'] : 'jpeg,jpg,png,svg,zip,txt,gif,docx';
-                }
-                else {
+                } else {
                     $max_size = !empty($storage_settings['local_storage_max_upload_size']) ? $storage_settings['local_storage_max_upload_size'] : '2048';
                     $mimes = !empty($storage_settings['local_storage_validation']) ? $storage_settings['local_storage_validation'] : 'jpeg,jpg,png,svg,zip,txt,gif,docx';
                 }
@@ -860,8 +822,7 @@ if (!function_exists('multi_upload_file')) {
                 $key_validation = $key_name . '*';
                 if (count($custom_validation) > 0) {
                     $validation = $custom_validation;
-                }
-                else {
+                } else {
                     $validation = [
                         'mimes:' . $mimes,
                         'max:' . $max_size,
@@ -876,8 +837,7 @@ if (!function_exists('multi_upload_file')) {
                         'msg' => $validator->messages()->first(),
                     ];
                     return $res;
-                }
-                else {
+                } else {
 
                     $name = $name;
 
@@ -889,11 +849,9 @@ if (!function_exists('multi_upload_file')) {
 
                     if ($storage_settings['storage_setting'] == 'wasabi') {
                         $url = $save;
-                    }
-                    elseif ($storage_settings['storage_setting'] == 's3') {
+                    } elseif ($storage_settings['storage_setting'] == 's3') {
                         $url = $save;
-                    }
-                    else {
+                    } else {
                         $url = 'uploads/' . $save;
                     }
                     $res = [
@@ -903,16 +861,14 @@ if (!function_exists('multi_upload_file')) {
                     ];
                     return $res;
                 }
-            }
-            else {
+            } else {
                 $res = [
                     'flag' => 0,
                     'msg' => __('Not set configurations'),
                 ];
                 return $res;
             }
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             $res = [
                 'flag' => 0,
                 'msg' => $e->getMessage(),
@@ -933,42 +889,38 @@ if (!function_exists('check_file')) {
             if ($storage_settings['storage_setting'] == null || $storage_settings['storage_setting'] == 'local') {
 
                 return file_exists(base_path($path));
-            }
-            else {
+            } else {
 
                 if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 's3') {
                     config(
-                    [
-                        'filesystems.disks.s3.key' => $storage_settings['s3_key'],
-                        'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
-                        'filesystems.disks.s3.region' => $storage_settings['s3_region'],
-                        'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
-                        // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
-                        // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
-                    ]
+                        [
+                            'filesystems.disks.s3.key' => $storage_settings['s3_key'],
+                            'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
+                            'filesystems.disks.s3.region' => $storage_settings['s3_region'],
+                            'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
+                            // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
+                            // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
+                        ]
                     );
-                }
-                else if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 'wasabi') {
+                } else if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 'wasabi') {
                     config(
-                    [
-                        'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
-                        'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
-                        'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
-                        'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
-                        'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
-                        'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
-                    ]
+                        [
+                            'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
+                            'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
+                            'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
+                            'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
+                            'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
+                            'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
+                        ]
                     );
                 }
                 try {
                     return Storage::disk($storage_settings['storage_setting'])->exists($path);
-                }
-                catch (\Throwable $th) {
+                } catch (\Throwable $th) {
                     return 0;
                 }
             }
-        }
-        else {
+        } else {
             return 0;
         }
     }
@@ -982,33 +934,31 @@ if (!function_exists('get_file')) {
 
         if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 's3') {
             config(
-            [
-                'filesystems.disks.s3.key' => $storage_settings['s3_key'],
-                'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
-                'filesystems.disks.s3.region' => $storage_settings['s3_region'],
-                'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
-                // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
-                // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
-            ]
+                [
+                    'filesystems.disks.s3.key' => $storage_settings['s3_key'],
+                    'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
+                    'filesystems.disks.s3.region' => $storage_settings['s3_region'],
+                    'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
+                    // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
+                    // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
+                ]
             );
             return Storage::disk('s3')->url($path);
-        }
-        else if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 'wasabi') {
+        } else if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 'wasabi') {
 
             config(
-            [
-                'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
-                'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
-                'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
-                'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
-                'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
-                'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
-            ]
+                [
+                    'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
+                    'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
+                    'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
+                    'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
+                    'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
+                    'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
+                ]
             );
 
             return Storage::disk('wasabi')->url($path);
-        }
-        else {
+        } else {
             return asset($path);
         }
     }
@@ -1019,32 +969,30 @@ if (!function_exists('get_base_file')) {
         $admin_settings = getAdminAllSetting();
         if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 's3') {
             config(
-            [
-                'filesystems.disks.s3.key' => $admin_settings['s3_key'],
-                'filesystems.disks.s3.secret' => $admin_settings['s3_secret'],
-                'filesystems.disks.s3.region' => $admin_settings['s3_region'],
-                'filesystems.disks.s3.bucket' => $admin_settings['s3_bucket'],
-                // 'filesystems.disks.s3.url' => $admin_settings['s3_url'],
-                // 'filesystems.disks.s3.endpoint' => $admin_settings['s3_endpoint'],
-            ]
+                [
+                    'filesystems.disks.s3.key' => $admin_settings['s3_key'],
+                    'filesystems.disks.s3.secret' => $admin_settings['s3_secret'],
+                    'filesystems.disks.s3.region' => $admin_settings['s3_region'],
+                    'filesystems.disks.s3.bucket' => $admin_settings['s3_bucket'],
+                    // 'filesystems.disks.s3.url' => $admin_settings['s3_url'],
+                    // 'filesystems.disks.s3.endpoint' => $admin_settings['s3_endpoint'],
+                ]
             );
 
             return Storage::disk('s3')->url($path);
-        }
-        else if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 'wasabi') {
+        } else if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 'wasabi') {
             config(
-            [
-                'filesystems.disks.wasabi.key' => $admin_settings['wasabi_key'],
-                'filesystems.disks.wasabi.secret' => $admin_settings['wasabi_secret'],
-                'filesystems.disks.wasabi.region' => $admin_settings['wasabi_region'],
-                'filesystems.disks.wasabi.bucket' => $admin_settings['wasabi_bucket'],
-                'filesystems.disks.wasabi.root' => $admin_settings['wasabi_root'],
-                'filesystems.disks.wasabi.endpoint' => $admin_settings['wasabi_url']
-            ]
+                [
+                    'filesystems.disks.wasabi.key' => $admin_settings['wasabi_key'],
+                    'filesystems.disks.wasabi.secret' => $admin_settings['wasabi_secret'],
+                    'filesystems.disks.wasabi.region' => $admin_settings['wasabi_region'],
+                    'filesystems.disks.wasabi.bucket' => $admin_settings['wasabi_bucket'],
+                    'filesystems.disks.wasabi.root' => $admin_settings['wasabi_root'],
+                    'filesystems.disks.wasabi.endpoint' => $admin_settings['wasabi_url']
+                ]
             );
             return Storage::disk('wasabi')->url($path);
-        }
-        else {
+        } else {
             return base_path($path);
         }
     }
@@ -1057,30 +1005,28 @@ if (!function_exists('delete_file')) {
             if (isset($storage_settings['storage_setting'])) {
                 if ($storage_settings['storage_setting'] == 'local') {
                     return File::delete($path);
-                }
-                else {
+                } else {
                     if ($storage_settings['storage_setting'] == 's3') {
                         config(
-                        [
-                            'filesystems.disks.s3.key' => $storage_settings['s3_key'],
-                            'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
-                            'filesystems.disks.s3.region' => $storage_settings['s3_region'],
-                            'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
-                            // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
-                            // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
-                        ]
-                        );
-                    }
-                    else if ($storage_settings['storage_setting'] == 'wasabi') { {
-                            config(
                             [
-                                'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
-                                'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
-                                'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
-                                'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
-                                'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
-                                'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
+                                'filesystems.disks.s3.key' => $storage_settings['s3_key'],
+                                'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
+                                'filesystems.disks.s3.region' => $storage_settings['s3_region'],
+                                'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
+                                // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
+                                // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
                             ]
+                        );
+                    } else if ($storage_settings['storage_setting'] == 'wasabi') { {
+                            config(
+                                [
+                                    'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
+                                    'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
+                                    'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
+                                    'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
+                                    'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
+                                    'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
+                                ]
                             );
                         }
                         return Storage::disk($storage_settings['storage_setting'])->delete($path);
@@ -1118,30 +1064,28 @@ if (!function_exists('delete_folder')) {
                 if (is_dir(Storage::path($path))) {
                     return \File::deleteDirectory(Storage::path($path));
                 }
-            }
-            else {
+            } else {
                 if ($storage_settings['storage_setting'] == 's3') {
                     config(
-                    [
-                        'filesystems.disks.s3.key' => $storage_settings['s3_key'],
-                        'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
-                        'filesystems.disks.s3.region' => $storage_settings['s3_region'],
-                        'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
-                        // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
-                        // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
-                    ]
+                        [
+                            'filesystems.disks.s3.key' => $storage_settings['s3_key'],
+                            'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
+                            'filesystems.disks.s3.region' => $storage_settings['s3_region'],
+                            'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
+                            // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
+                            // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
+                        ]
                     );
-                }
-                else if ($storage_settings['storage_setting'] == 'wasabi') {
+                } else if ($storage_settings['storage_setting'] == 'wasabi') {
                     config(
-                    [
-                        'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
-                        'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
-                        'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
-                        'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
-                        'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
-                        'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
-                    ]
+                        [
+                            'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
+                            'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
+                            'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
+                            'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
+                            'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
+                            'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
+                        ]
                     );
                 }
                 return Storage::disk($storage_settings['storage_setting'])->deleteDirectory($path);
@@ -1178,8 +1122,7 @@ if (!function_exists('currency')) {
     {
         if ($code == null) {
             $c = Currency::get();
-        }
-        else {
+        } else {
             $c = Currency::where('code', $code)->first();
         }
         return $c;
@@ -1194,8 +1137,7 @@ if (!function_exists('SubscriptionDetails')) {
         $data['status'] = false;
         if ($user_id != null) {
             $user = User::find($user_id);
-        }
-        elseif (\Auth::check()) {
+        } elseif (\Auth::check()) {
             $user = \Auth::user();
         }
 
@@ -1229,18 +1171,15 @@ if (!function_exists('PlanCheck')) {
             $user = User::where('id', $id)->first();
             if ($user->type == 'company') {
                 $id = $user->id;
-            }
-            else {
+            } else {
                 $user = User::where('id', $user->created_by)->first();
                 $id = $user->id;
             }
-        }
-        else {
+        } else {
             $user = \Auth::user();
             if ($user->type == 'company') {
                 $id = $user->id;
-            }
-            else {
+            } else {
                 $user = User::where('id', $user->created_by)->first();
                 $id = $user->id;
             }
@@ -1249,18 +1188,15 @@ if (!function_exists('PlanCheck')) {
             if ($user->total_user >= 0) {
                 if ($user->type == 'company') {
                     $users = User::where('created_by', $id)->where('workspace_id', getActiveWorkSpace())->get();
-                }
-                else {
+                } else {
                     $users = User::where('created_by', $user->created_by)->get();
                 }
                 if ($users->count() >= $user->total_user) {
                     return false;
-                }
-                else {
+                } else {
                     return true;
                 }
-            }
-            elseif ($user->total_user < 0) {
+            } elseif ($user->total_user < 0) {
                 return true;
             }
         }
@@ -1270,12 +1206,10 @@ if (!function_exists('PlanCheck')) {
 
                 if ($workspace->count() >= $user->total_workspace) {
                     return false;
-                }
-                else {
+                } else {
                     return true;
                 }
-            }
-            elseif ($user->total_workspace < 0) {
+            } elseif ($user->total_workspace < 0) {
                 return true;
             }
         }
@@ -1300,11 +1234,11 @@ if (!function_exists('CheckCoupon')) {
         $userUsedCoupon = \Auth::user()->user_coupon_user($coupon);
 
         if (
-        $usedCoupon >= $coupon->limit ||
-        $userUsedCoupon >= $coupon->limit_per_user ||
-        $coupon->minimum_spend > $price ||
-        $coupon->maximum_spend < $price ||
-        $coupon->expiry_date < date('Y-m-d')
+            $usedCoupon >= $coupon->limit ||
+            $userUsedCoupon >= $coupon->limit_per_user ||
+            $coupon->minimum_spend > $price ||
+            $coupon->maximum_spend < $price ||
+            $coupon->expiry_date < date('Y-m-d')
         ) {
             return $price;
         }
@@ -1318,12 +1252,12 @@ if (!function_exists('CheckCoupon')) {
                 $finalPrice = $price - $coupon->discount;
                 break;
             case 'fixed':
-                if ((!empty($coupon->included_module) && in_array($plan_id, explode(',', $coupon->included_module))) ||
-                (empty($coupon->included_module) && !in_array($plan_id, explode(',', $coupon->excluded_module)))
+                if (
+                    (!empty($coupon->included_module) && in_array($plan_id, explode(',', $coupon->included_module))) ||
+                    (empty($coupon->included_module) && !in_array($plan_id, explode(',', $coupon->excluded_module)))
                 ) {
                     $finalPrice = $price - $coupon->discount;
-                }
-                else {
+                } else {
                     return $price;
                 }
                 break;
@@ -1342,8 +1276,7 @@ if (!function_exists('UserCoupon')) {
             $coupons = Coupon::where('code', strtoupper($code))->where('is_active', '1')->first();
             if ($user_id) {
                 $user = User::find($user_id);
-            }
-            else {
+            } else {
                 $user = \Auth::user();
             }
             if (!empty($coupons)) {
@@ -1376,31 +1309,30 @@ if (!function_exists('DirectAssignPlan')) {
         $assignPlan = $user->assignPlan($plan->id, $duration, $user_module, $counter, $user_id);
         if ($assignPlan['is_success']) {
             $order = Order::create(
-            [
-                'order_id' => $orderID,
-                'name' => null,
-                'email' => null,
-                'card_number' => null,
-                'card_exp_month' => null,
-                'card_exp_year' => null,
-                'plan_name' => !empty($plan->name) ? $plan->name : 'Basic Package',
-                'plan_id' => $plan->id,
-                'price' => 0,
-                'price_currency' => admin_setting('defult_currancy'),
-                'txn_id' => '',
-                'payment_type' => !empty($type) ? $type : "STRIPE",
-                'payment_status' => 'succeeded',
-                'receipt' => null,
-                'user_id' => $user_id,
-            ]
+                [
+                    'order_id' => $orderID,
+                    'name' => null,
+                    'email' => null,
+                    'card_number' => null,
+                    'card_exp_month' => null,
+                    'card_exp_year' => null,
+                    'plan_name' => !empty($plan->name) ? $plan->name : 'Basic Package',
+                    'plan_id' => $plan->id,
+                    'price' => 0,
+                    'price_currency' => admin_setting('defult_currancy'),
+                    'txn_id' => '',
+                    'payment_type' => !empty($type) ? $type : "STRIPE",
+                    'payment_status' => 'succeeded',
+                    'receipt' => null,
+                    'user_id' => $user_id,
+                ]
             );
             if ($coupon_code) {
 
                 UserCoupon($coupon_code, $order);
             }
             return ['is_success' => true];
-        }
-        else {
+        } else {
             return ['is_success' => false];
         }
     }
@@ -1459,12 +1391,10 @@ if (!function_exists('GetDeviceType')) {
         $tablet_regex = '/(?:ipad|playbook|(?:android|bb\d+|meego|silk)(?! .+? mobile))/i';
         if (preg_match_all($mobile_regex, $user_agent)) {
             return 'mobile';
-        }
-        else {
+        } else {
             if (preg_match_all($tablet_regex, $user_agent)) {
                 return 'tablet';
-            }
-            else {
+            } else {
                 return 'desktop';
             }
         }
@@ -1505,73 +1435,58 @@ if (!function_exists('sidebar_logo')) {
                 if (!empty($company_settings['logo_light'])) {
                     if (check_file($company_settings['logo_light'])) {
                         return $company_settings['logo_light'];
-                    }
-                    else {
+                    } else {
                         return 'uploads/logo/logo_light.png';
                     }
-                }
-                else {
+                } else {
                     if (!empty($admin_settings['logo_light'])) {
                         if (check_file($admin_settings['logo_light'])) {
                             return $admin_settings['logo_light'];
-                        }
-                        else {
+                        } else {
                             return 'uploads/logo/logo_light.png';
                         }
-                    }
-                    else {
+                    } else {
                         return 'uploads/logo/logo_light.png';
                     }
                 }
-            }
-            else {
+            } else {
                 if (!empty($company_settings['logo_dark'])) {
                     if (check_file($company_settings['logo_dark'])) {
                         return $company_settings['logo_dark'];
-                    }
-                    else {
+                    } else {
                         return 'uploads/logo/logo_dark.png';
                     }
-                }
-                else {
+                } else {
                     if (!empty($admin_settings['logo_dark'])) {
                         if (check_file($admin_settings['logo_dark'])) {
                             return $admin_settings['logo_dark'];
-                        }
-                        else {
+                        } else {
                             return 'uploads/logo/logo_dark.png';
                         }
-                    }
-                    else {
+                    } else {
                         return 'uploads/logo/logo_dark.png';
                     }
                 }
             }
-        }
-        else {
+        } else {
             if ((isset($admin_settings['cust_darklayout']) ? $admin_settings['cust_darklayout'] : 'off') == 'on') {
                 if (!empty($admin_settings['logo_light'])) {
                     if (check_file($admin_settings['logo_light'])) {
                         return $admin_settings['logo_light'];
-                    }
-                    else {
+                    } else {
                         return 'uploads/logo/logo_light.png';
                     }
-                }
-                else {
+                } else {
                     return 'uploads/logo/logo_light.png';
                 }
-            }
-            else {
+            } else {
                 if (!empty($admin_settings['logo_dark'])) {
                     if (check_file($admin_settings['logo_dark'])) {
                         return $admin_settings['logo_dark'];
-                    }
-                    else {
+                    } else {
                         return 'uploads/logo/logo_dark.png';
                     }
-                }
-                else {
+                } else {
                     return 'uploads/logo/logo_dark.png';
                 }
             }
@@ -1585,15 +1500,13 @@ if (!function_exists('light_logo')) {
         if (\Auth::check()) {
             $company_settings = getCompanyAllSetting();
             $logo_light = isset($company_settings['logo_light']) ? $company_settings['logo_light'] : 'uploads/logo/logo_light.png';
-        }
-        else {
+        } else {
             $admin_settings = getAdminAllSetting();
             $logo_light = isset($admin_settings['logo_light']) ? $admin_settings['logo_light'] : 'uploads/logo/logo_light.png';
         }
         if (check_file($logo_light)) {
             return $logo_light;
-        }
-        else {
+        } else {
             return 'uploads/logo/logo_dark.png';
         }
     }
@@ -1605,15 +1518,13 @@ if (!function_exists('dark_logo')) {
         if (\Auth::check()) {
             $company_settings = getCompanyAllSetting();
             $logo_dark = isset($company_settings['logo_dark']) ? $company_settings['logo_dark'] : 'uploads/logo/logo_dark.png';
-        }
-        else {
+        } else {
             $admin_settings = getAdminAllSetting();
             $logo_dark = isset($admin_settings['logo_dark']) ? $admin_settings['logo_dark'] : 'uploads/logo/logo_dark.png';
         }
         if (check_file($logo_dark)) {
             return $logo_dark;
-        }
-        else {
+        } else {
             return 'uploads/logo/logo_dark.png';
         }
     }
@@ -1633,11 +1544,9 @@ if (!function_exists('currency_format_with_sym')) {
     {
         if (!empty($company_id) && empty($workspace)) {
             $company_settings = getCompanyAllSetting($company_id);
-        }
-        elseif (!empty($company_id) && !empty($workspace)) {
+        } elseif (!empty($company_id) && !empty($workspace)) {
             $company_settings = getCompanyAllSetting($company_id, $workspace);
-        }
-        else {
+        } else {
             $company_settings = getCompanyAllSetting();
         }
         $symbol_position = 'pre';
@@ -1651,8 +1560,7 @@ if (!function_exists('currency_format_with_sym')) {
         if ($length > 3) {
             $decimal_separator = isset($company_settings['decimal_separator']) && $company_settings['decimal_separator'] === 'dot' ? ',' : ',';
             $thousand_separator = isset($company_settings['thousand_separator']) && $company_settings['thousand_separator'] === 'dot' ? '.' : ',';
-        }
-        else {
+        } else {
             $decimal_separator = isset($company_settings['decimal_separator']) == 'dot' ? '.' : ',';
             $thousand_separator = isset($company_settings['thousand_separator']) == 'dot' ? '.' : ',';
         }
@@ -1677,8 +1585,7 @@ if (!function_exists('currency_format_with_sym')) {
 
         if ($float_number == 'dot') {
             $price = preg_replace('/' . preg_quote($thousand_separator, '/') . '([^' . preg_quote($thousand_separator, '/') . ']*)$/', $float_number . '$1', $price);
-        }
-        else {
+        } else {
             $price = preg_replace('/' . preg_quote($decimal_separator, '/') . '([^' . preg_quote($decimal_separator, '/') . ']*)$/', $float_number . '$1', $price);
         }
 
@@ -1692,11 +1599,9 @@ if (!function_exists('company_date_formate')) {
 
         if (!empty($company_id) && empty($workspace)) {
             $company_settings = getCompanyAllSetting($company_id);
-        }
-        elseif (!empty($company_id) && !empty($workspace)) {
+        } elseif (!empty($company_id) && !empty($workspace)) {
             $company_settings = getCompanyAllSetting($company_id, $workspace);
-        }
-        else {
+        } else {
             $company_settings = getCompanyAllSetting();
         }
         $date_formate = !empty($company_settings['site_date_format']) ? $company_settings['site_date_format'] : 'd-m-y';
@@ -1721,8 +1626,7 @@ if (!function_exists('super_currency_format_with_sym')) {
         if ($length > 3) {
             $decimal_separator = isset($admin_settings['decimal_separator']) && $admin_settings['decimal_separator'] === 'dot' ? '.' : ',';
             $thousand_separator = isset($admin_settings['thousand_separator']) && $admin_settings['thousand_separator'] === 'dot' ? '.' : ',';
-        }
-        else {
+        } else {
             $decimal_separator = isset($admin_settings['decimal_separator']) && $admin_settings['decimal_separator'] === 'dot' ? '.' : ',';
             $thousand_separator = isset($admin_settings['thousand_separator']) && $admin_settings['thousand_separator'] === 'dot' ? '.' : ',';
         }
@@ -1776,11 +1680,9 @@ if (!function_exists('company_Time_formate')) {
     {
         if (!empty($company_id) && empty($workspace)) {
             $company_settings = getCompanyAllSetting($company_id);
-        }
-        elseif (!empty($company_id) && !empty($workspace)) {
+        } elseif (!empty($company_id) && !empty($workspace)) {
             $company_settings = getCompanyAllSetting($company_id, $workspace);
-        }
-        else {
+        } else {
             $company_settings = getCompanyAllSetting();
         }
         $time_formate = !empty($company_settings['site_time_format']) ? $company_settings['site_time_format'] : 'H:i';

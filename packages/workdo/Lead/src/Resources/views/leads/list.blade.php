@@ -16,24 +16,34 @@
             left: 50%;
             transform: translateX(-50%);
             background: #fff;
-            box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
+            box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.15);
             padding: 15px 25px;
             border-radius: 50px;
             z-index: 9999;
             align-items: center;
-            border: 1px solid rgba(0,0,0,0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             animation: slideUp 0.3s ease-out;
         }
+
         @keyframes slideUp {
-            from { bottom: -100px; opacity: 0; }
-            to { bottom: 20px; opacity: 1; }
+            from {
+                bottom: -100px;
+                opacity: 0;
+            }
+
+            to {
+                bottom: 20px;
+                opacity: 1;
+            }
         }
+
         .bulk-action-bar .btn {
             border-radius: 20px;
             margin: 0 5px;
             display: inline-flex;
             align-items: center;
         }
+
         .selection-count {
             font-weight: 700;
             color: #0d6efd;
@@ -60,29 +70,31 @@
             @stack('addButtonHook')
         </div>
         @permission('lead import')
-            <div class="col-auto pt-2">
-                <a class="btn btn-sm btn-primary btn-icon me-2" data-ajax-popup="true" data-title="{{ __('Lead Import') }}"
-                    data-url="{{ route('lead.file.import') }}" data-size="md" data-toggle="tooltip" title="{{ __('Import') }}"><i
-                        class="ti ti-file-import"></i>
-                </a>
-            </div>
+        <div class="col-auto pt-2">
+            <a class="btn btn-sm btn-primary btn-icon me-2" data-ajax-popup="true" data-title="{{ __('Lead Import') }}"
+                data-url="{{ route('lead.file.import') }}" data-size="md" data-toggle="tooltip"
+                title="{{ __('Import') }}"><i class="ti ti-file-import"></i>
+            </a>
+        </div>
         @endpermission
         <div class="col-auto pt-2">
             <a href="{{ route('leads.index') }}" data-bs-toggle="tooltip" data-bs-placement="top"
-                title="{{ __('Kanban View') }}" class="btn btn-sm btn-primary btn-icon me-2"><i class="ti ti-table"></i> </a>
+                title="{{ __('Kanban View') }}" class="btn btn-sm btn-primary btn-icon me-2"><i class="ti ti-table"></i>
+            </a>
         </div>
         @permission('lead create')
-            <div class="col-auto pt-2">
-                <a class="btn btn-sm btn-primary btn-icon" data-bs-toggle="tooltip" data-bs-placement="top"
-                    title="{{ __('Create Lead') }}" data-ajax-popup="true" data-size="lg" data-title="{{ __('Create Lead') }}"
-                    data-url="{{ route('leads.create') }}"><i class="ti ti-plus text-white"></i></a>
-            </div>
+        <div class="col-auto pt-2">
+            <a class="btn btn-sm btn-primary btn-icon" data-bs-toggle="tooltip" data-bs-placement="top"
+                title="{{ __('Create Lead') }}" data-ajax-popup="true" data-size="lg" data-title="{{ __('Create Lead') }}"
+                data-url="{{ route('leads.create') }}"><i class="ti ti-plus text-white"></i></a>
+        </div>
         @endpermission
 
         <!-- Column Selection Dropdown -->
         <div class="col-auto pt-2 ms-2">
             <div class="dropdown">
-                <button class="btn btn-sm btn-primary btn-icon dropdown-toggle hide-arrow" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('View Columns') }}">
+                <button class="btn btn-sm btn-primary btn-icon dropdown-toggle hide-arrow" type="button"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('View Columns') }}">
                     <i class="ti ti-layout-grid"></i>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 250px;">
@@ -116,19 +128,19 @@
     <!-- Bulk Action Bar -->
     <div class="bulk-action-bar" id="bulk-action-bar">
         <span class="selection-count"><span id="selected-count">0</span> {{ __('Selected') }}</span>
-        
+
         <button class="btn btn-primary btn-sm" id="bulk-change-stage">
             <i class="ti ti-arrow-forward-up me-1"></i> {{ __('Change Stage') }}
         </button>
-        
+
         <button class="btn btn-info btn-sm" id="bulk-change-owner">
             <i class="ti ti-user me-1"></i> {{ __('Change Responsible') }}
         </button>
-        
+
         <button class="btn btn-danger btn-sm" id="bulk-delete">
             <i class="ti ti-trash me-1"></i> {{ __('Delete') }}
         </button>
-        
+
         <button class="btn btn-warning btn-sm" id="bulk-task-reminder">
             <i class="ti ti-calendar-event me-1"></i> {{ __('Add Task/Reminder') }}
         </button>
@@ -144,8 +156,8 @@
 
     <script src="{{ asset('assets/js/plugins/summernote-0.8.18-dist/summernote-lite.min.js') }}"></script>
     <script>
-        $(document).ready(function() {
-            var selectedLeads = [];
+        var selectedLeads = [];
+        $(document).ready(function () {
 
             function updateBulkBar() {
                 var count = selectedLeads.length;
@@ -158,11 +170,11 @@
             }
 
             // Master Checkbox
-            $(document).on('change', '#checkAll', function() {
+            $(document).on('change', '#checkAll', function () {
                 var isChecked = $(this).prop('checked');
                 $('.lead-checkbox').prop('checked', isChecked);
-                
-                $('.lead-checkbox').each(function() {
+
+                $('.lead-checkbox').each(function () {
                     var id = $(this).val();
                     if (isChecked) {
                         if (!selectedLeads.includes(id)) selectedLeads.push(id);
@@ -170,21 +182,21 @@
                         selectedLeads = selectedLeads.filter(item => item !== id);
                     }
                 });
-                
+
                 if (selectedLeads.length > 500) {
                     toastrs('warning', @json(__("Maximum 500 leads can be selected at once.")), 'warning');
                     selectedLeads = selectedLeads.slice(0, 500);
                     // Uncheck those beyond 500
-                    $('.lead-checkbox').each(function(index) {
-                         if (index >= 500) $(this).prop('checked', false);
+                    $('.lead-checkbox').each(function (index) {
+                        if (index >= 500) $(this).prop('checked', false);
                     });
                 }
-                
+
                 updateBulkBar();
             });
 
             // Individual Checkbox
-            $(document).on('change', '.lead-checkbox', function() {
+            $(document).on('change', '.lead-checkbox', function () {
                 var id = $(this).val();
                 if ($(this).prop('checked')) {
                     if (selectedLeads.length >= 500) {
@@ -201,7 +213,7 @@
             });
 
             // Clear Selection
-            $(document).on('click', '#clear-selection', function() {
+            $(document).on('click', '#clear-selection', function () {
                 selectedLeads = [];
                 $('.lead-checkbox, #checkAll').prop('checked', false);
                 updateBulkBar();
@@ -210,9 +222,9 @@
             // Bulk actions methods
             function executeBulkAction(type, value = null) {
                 if (selectedLeads.length === 0) return;
-                
+
                 var message = @json(__('Are you sure you want to perform this action on selected leads?'));
-                if(type === 'delete') message = @json(__('Are you sure you want to delete selected leads? This action cannot be undone.'));
+                if (type === 'delete') message = @json(__('Are you sure you want to delete selected leads? This action cannot be undone.'));
 
                 if (confirm(message)) {
                     $.ajax({
@@ -224,7 +236,7 @@
                             value: value,
                             _token: $('meta[name="csrf-token"]').attr('content')
                         },
-                        success: function(data) {
+                        success: function (data) {
                             if (data.success) {
                                 toastrs('success', data.message, 'success');
                                 window.LaravelDataTables["leads-table"].draw();
@@ -239,45 +251,45 @@
             }
 
             // Bulk Delete
-            $('#bulk-delete').on('click', function() {
+            $('#bulk-delete').on('click', function () {
                 executeBulkAction('delete');
             });
 
             // Change Stage Modal
-            $('#bulk-change-stage').on('click', function() {
+            $('#bulk-change-stage').on('click', function () {
                 var stages = @json($stages);
                 var options = '';
-                $.each(stages, function(id, name) {
+                $.each(stages, function (id, name) {
                     options += `<option value="${id}">${name}</option>`;
                 });
 
                 var html = `
-                    <div class="modal-body p-3" style="min-height: 200px;">
-                        <div class="form-group mb-3 text-start">
-                            <label class="form-label text-dark fw-bold">@json(__('Select Target Stage'))</label>
-                            <select class="form-control" id="target_stage">
-                                ${options}
-                            </select>
+                        <div class="modal-body p-3" style="min-height: 200px;">
+                            <div class="form-group mb-3 text-start">
+                                <label class="form-label text-dark fw-bold">@json(__('Select Target Stage'))</label>
+                                <select class="form-control" id="target_stage">
+                                    ${options}
+                                </select>
+                            </div>
+                            <div class="text-end mt-4 border-top pt-3">
+                                <button class="btn btn-secondary me-2 px-3" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                                <button class="btn btn-primary px-4" id="confirm-stage-change">{{ __('Apply Changes') }}</button>
+                            </div>
                         </div>
-                        <div class="text-end mt-4 border-top pt-3">
-                            <button class="btn btn-secondary me-2 px-3" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                            <button class="btn btn-primary px-4" id="confirm-stage-change">{{ __('Apply Changes') }}</button>
-                        </div>
-                    </div>
-                `;
+                    `;
                 $('#commonModal .modal-title').html('{{ __("Bulk Change Lead Stage") }}');
                 $('#commonModal .body').html(html);
                 $('#commonModal').modal('show');
-                
+
                 // Initialize Choices with a small delay to ensure modal is rendering
-                setTimeout(function() {
+                setTimeout(function () {
                     new Choices('#target_stage', { searchEnabled: true, shouldSort: false });
                 }, 100);
             });
 
-            $(document).on('click', '#confirm-stage-change', function() {
+            $(document).on('click', '#confirm-stage-change', function () {
                 var stageId = $('#target_stage').val();
-                if(!stageId) {
+                if (!stageId) {
                     toastrs('error', @json(__("Please select a stage")), 'error');
                     return;
                 }
@@ -286,40 +298,40 @@
             });
 
             // Change Owner Modal
-            $('#bulk-change-owner').on('click', function() {
+            $('#bulk-change-owner').on('click', function () {
                 var users = @json($users);
                 var options = '';
-                $.each(users, function(id, name) {
+                $.each(users, function (id, name) {
                     options += `<option value="${id}">${name}</option>`;
                 });
 
                 var html = `
-                    <div class="modal-body p-3" style="min-height: 200px;">
-                        <div class="form-group mb-3 text-start">
-                            <label class="form-label text-dark fw-bold">@json(__('Select Responsible Person'))</label>
-                            <select class="form-control" id="target_owner">
-                                ${options}
-                            </select>
+                        <div class="modal-body p-3" style="min-height: 200px;">
+                            <div class="form-group mb-3 text-start">
+                                <label class="form-label text-dark fw-bold">@json(__('Select Responsible Person'))</label>
+                                <select class="form-control" id="target_owner">
+                                    ${options}
+                                </select>
+                            </div>
+                            <div class="text-end mt-4 border-top pt-3">
+                                <button class="btn btn-secondary me-2 px-3" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                                <button class="btn btn-primary px-4" id="confirm-owner-change">{{ __('Reassign Leads') }}</button>
+                            </div>
                         </div>
-                        <div class="text-end mt-4 border-top pt-3">
-                            <button class="btn btn-secondary me-2 px-3" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                            <button class="btn btn-primary px-4" id="confirm-owner-change">{{ __('Reassign Leads') }}</button>
-                        </div>
-                    </div>
-                `;
+                    `;
                 $('#commonModal .modal-title').html('{{ __("Bulk Change Responsible Person") }}');
                 $('#commonModal .body').html(html);
                 $('#commonModal').modal('show');
- 
+
                 // Initialize Choices
-                setTimeout(function() {
+                setTimeout(function () {
                     new Choices('#target_owner', { searchEnabled: true, shouldSort: false });
                 }, 100);
             });
 
-            $(document).on('click', '#confirm-owner-change', function() {
+            $(document).on('click', '#confirm-owner-change', function () {
                 var userId = $('#target_owner').val();
-                if(!userId) {
+                if (!userId) {
                     toastrs('error', @json(__("Please select a user")), 'error');
                     return;
                 }
@@ -328,8 +340,8 @@
             });
 
             // Bulk Task/Reminder Modal
-            $('#bulk-task-reminder').on('click', function() {
-                if(selectedLeads.length === 0) return;
+            $('#bulk-task-reminder').on('click', function () {
+                if (selectedLeads.length === 0) return;
 
                 $.ajax({
                     url: '{{ route("leads.bulk.task.reminder.create") }}',
@@ -338,7 +350,7 @@
                         ids: selectedLeads,
                         _token: $('meta[name="csrf-token"]').attr('content')
                     },
-                    success: function(response) {
+                    success: function (response) {
                         if (response.error) {
                             toastrs('error', response.error, 'error');
                         } else {
@@ -347,7 +359,7 @@
                             $('#commonModal').modal('show');
                         }
                     },
-                    error: function(response) {
+                    error: function (response) {
                         toastrs('error', response.responseJSON.error, 'error');
                     }
                 });
@@ -355,17 +367,17 @@
         });
 
         // Advanced Column Selection & Masking Logic
-        $(document).on('click', '.reveal-link', function(e) {
+        $(document).on('click', '.reveal-link', function (e) {
             e.preventDefault();
             var $this = $(this);
             var url = $this.data('url');
             var target = $this.data('target');
-            
+
             $.ajax({
                 url: url,
                 type: 'POST',
                 data: { _token: $('meta[name="csrf-token"]').attr('content') },
-                success: function(response) {
+                success: function (response) {
                     if (response.is_success) {
                         $(target).text(response.value).removeClass('masked-value');
                         $this.remove();
@@ -373,7 +385,7 @@
                         toastrs('error', response.error || @json(__('Failed to reveal field')), 'error');
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     toastrs('error', xhr.responseJSON.error || @json(__('Permission Denied')), 'error');
                 }
             });
@@ -384,37 +396,37 @@
             var table = window.LaravelDataTables["leads-table"];
             var columns = table.columns().settings()[0].aoColumns;
             var listHtml = '';
-            
-            columns.forEach(function(col, index) {
+
+            columns.forEach(function (col, index) {
                 // Skip batch, index, and action columns
                 if (col.name === 'batch' || col.name === 'DT_RowIndex' || col.name === 'action' || !col.sTitle) return;
-                
+
                 var title = col.sTitle;
                 var isVisible = table.column(index).visible();
                 var checked = isVisible ? 'checked' : '';
-                
+
                 listHtml += `
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input column-toggle" type="checkbox" id="col_toggle_${index}" data-column="${index}" ${checked}>
-                        <label class="form-check-label" for="col_toggle_${index}">${title}</label>
-                    </div>
-                `;
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" id="col_toggle_${index}" data-column="${index}" ${checked}>
+                            <label class="form-check-label" for="col_toggle_${index}">${title}</label>
+                        </div>
+                    `;
             });
-            
+
             $('#column-selector-list').html(listHtml);
         }
 
         // Handle Column Toggle
-        $(document).on('change', '.column-toggle', function() {
+        $(document).on('change', '.column-toggle', function () {
             var colIdx = $(this).data('column');
             var isVisible = $(this).prop('checked');
             var table = window.LaravelDataTables["leads-table"];
-            
+
             table.column(colIdx).visible(isVisible);
         });
 
         // Re-init column selector after table init or state load
-        $('#leads-table').on('init.dt', function() {
+        $('#leads-table').on('init.dt', function () {
             initColumnSelector();
         });
 

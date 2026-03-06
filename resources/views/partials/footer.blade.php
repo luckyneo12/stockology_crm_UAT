@@ -7,7 +7,7 @@
                 @elseif(isset($admin_settings['footer_text']))
                     {{ $admin_settings['footer_text'] }}
                 @else
-                    {{ __('Copyright') }} &copy; {{ config('app.name', 'WorkDo') }}
+                    {{ __('Copyright') }} &copy; {{ config('app.name', 'Stockology') }}
                 @endif
                 {{ date('Y') }}
             </span>
@@ -68,6 +68,62 @@
 @endif
 
 
+
+{{-- ===== NProgress: Page Load Bar on Navigation ===== --}}
+<script>
+    // Configure NProgress
+    NProgress.configure({
+        showSpinner: false,   // sirf top bar, spinner nahi
+        speed: 400,
+        minimum: 0.15,
+        easing: 'ease',
+        trickleSpeed: 150
+    });
+
+    $(document).ready(function () {
+
+        // Sab navigation links pe NProgress start karo
+        $(document).on('click', 'a', function (e) {
+            var href = $(this).attr('href');
+
+            // Ignore karo: empty, anchor, javascript, modal, tab, external links
+            if (!href) return;
+            if (href === '#' || href === '' || href.startsWith('#')) return;
+            if (href.startsWith('javascript')) return;
+            if ($(this).attr('data-bs-toggle')) return;  // bootstrap modal/tab
+            if ($(this).attr('target') === '_blank') return;  // new tab
+            if ($(this).hasClass('no-loader')) return;  // manually exclude karo
+
+            // External link check
+            try {
+                var linkHost = new URL(href, window.location.origin).hostname;
+                if (linkHost !== window.location.hostname) return;
+            } catch (err) { return; }
+
+            NProgress.start();
+        });
+
+        // Form submit pe bhi loading dkhao
+        $(document).on('submit', 'form', function () {
+            var method = $(this).attr('method') || 'GET';
+            if (method.toUpperCase() !== 'GET') {
+                // POST forms pe bhi loader show karo (optional)
+            }
+            NProgress.start();
+        });
+
+        // Page load hone ke baad band karo
+        $(window).on('load', function () {
+            NProgress.done();
+        });
+
+        // Agar AJAX navigation ho to bhi done karo
+        $(document).ajaxStop(function () {
+            NProgress.done();
+        });
+    });
+</script>
+{{-- ===== NProgress End ===== --}}
 
 <script src="{{ asset('js/custom.js') }}"></script>
 @if ($message = Session::get('success'))

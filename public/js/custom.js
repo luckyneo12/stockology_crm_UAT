@@ -141,7 +141,7 @@ function toastrs(text, message, type) {
 // Global Notification Polling
 function globalNotificationPoll() {
     // Poll for general notifications
-    $.get('/crm/notifications/latest-unread', function (notification) {
+    $.get('/notifications/latest-unread', function (notification) {
         if (notification && notification.id) {
             let lastNotifiedId = localStorage.getItem('last_notified_notification_id');
             if (lastNotifiedId != notification.id) {
@@ -188,7 +188,7 @@ function globalNotificationPoll() {
 
     // Also poll for messenger if not on messenger page
     if (!window.location.pathname.includes('/messenger')) {
-        $.get('/crm/messenger/latest-unread', function (message) {
+        $.get('/messenger/latest-unread', function (message) {
             if (message && message.id) {
                 let lastNotifiedMsgId = localStorage.getItem('last_notified_message_id');
                 if (lastNotifiedMsgId != message.id) {

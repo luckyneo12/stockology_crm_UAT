@@ -34,9 +34,11 @@ class WebhookDataController extends Controller
         if ($endpoint) {
             $view_permissions = $endpoint->view_permissions ?? [];
             $edit_permissions = $endpoint->edit_permissions ?? [];
-            if (in_array((string)$user->id, $view_permissions) ||
-            in_array((string)$user->id, $edit_permissions) ||
-            $endpoint->created_by == $user->id) {
+            if (
+                in_array((string) $user->id, $view_permissions) ||
+                in_array((string) $user->id, $edit_permissions) ||
+                $endpoint->created_by == $user->id
+            ) {
                 return true;
             }
         }
@@ -50,8 +52,8 @@ class WebhookDataController extends Controller
         // Let's verify if they have overall access to at least see the page
         $canSeePage = $this->isCompany();
         if (!$canSeePage) {
-            $canSeePage = WebhookEndpoint::whereJsonContains('view_permissions', (string)$user->id)
-                ->orWhereJsonContains('edit_permissions', (string)$user->id)
+            $canSeePage = WebhookEndpoint::whereJsonContains('view_permissions', (string) $user->id)
+                ->orWhereJsonContains('edit_permissions', (string) $user->id)
                 ->orWhere('created_by', $user->id)->exists();
             if (!$canSeePage) {
                 $canSeePage = WebhookData::where('assigned_user_id', $user->id)->exists();
@@ -64,19 +66,20 @@ class WebhookDataController extends Controller
             if (!$this->isCompany()) {
                 $query->where(function ($q) use ($user) {
                     $q->where('assigned_user_id', $user->id)
-                        ->orWhereHas('endpoint', function ($req) use ($user) {
-                        $req->whereJsonContains('view_permissions', (string)$user->id)
-                            ->orWhereJsonContains('edit_permissions', (string)$user->id)
-                            ->orWhere('created_by', $user->id);
-                    }
-                    );
+                        ->orWhereHas(
+                            'endpoint',
+                            function ($req) use ($user) {
+                                $req->whereJsonContains('view_permissions', (string) $user->id)
+                                    ->orWhereJsonContains('edit_permissions', (string) $user->id)
+                                    ->orWhere('created_by', $user->id);
+                            }
+                        );
                 });
             }
 
             $webhookDataList = $query->orderBy('id', 'DESC')->get();
             return view('lead::webhook_data.index', compact('webhookDataList'));
-        }
-        else {
+        } else {
             return redirect()->route('dashboard')->with('error', __('Permission completely denied.'));
         }
     }
@@ -86,8 +89,7 @@ class WebhookDataController extends Controller
         $webhookData = WebhookData::find($id);
         if ($webhookData && $webhookData->workspace_id == getActiveWorkSpace() && $this->canViewSpecific($webhookData)) {
             return view('lead::webhook_data.payload', compact('webhookData'));
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -99,8 +101,7 @@ class WebhookDataController extends Controller
             $endpoint = $webhookData->endpoint;
             $users = User::where('workspace_id', getActiveWorkSpace())->where('type', '!=', 'client')->get()->pluck('name', 'id');
             return view('lead::webhook_data.transfer', compact('webhookData', 'users'));
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -135,8 +136,7 @@ class WebhookDataController extends Controller
             }
 
             return redirect()->back()->with('success', __('Data transferred successfully.'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -155,7 +155,8 @@ class WebhookDataController extends Controller
             // Use mapping for standard fields
             $lead->name = $payload[$mapping['name'] ?? ''] ?? $payload['name'] ?? $payload['title'] ?? 'Lead from Webhook ' . $endpoint->name;
             $lead->email = $payload[$mapping['email'] ?? ''] ?? $payload['email'] ?? '';
-            $lead->phone = $payload[$mapping['phone'] ?? ''] ?? $payload['phone'] ?? $payload['mobile'] ?? '';
+            $phone = $payload[$mapping['phone'] ?? ''] ?? $payload['phone'] ?? $payload['mobile'] ?? '';
+            $lead->phone = str_replace(' ', '', $phone);
             $lead->subject = $payload[$mapping['subject'] ?? ''] ?? $payload['subject'] ?? 'Webhook Lead';
 
             $lead->pipeline_id = $endpoint->pipeline_id;
@@ -194,8 +195,7 @@ class WebhookDataController extends Controller
             event(new CreateLead($request, $lead));
 
             return redirect()->back()->with('success', __('Lead successfully created from webhook data!'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }

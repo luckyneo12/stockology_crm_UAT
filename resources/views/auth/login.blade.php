@@ -78,15 +78,103 @@
         </div>
     </div>
 @endsection
+@push('custom-scripts')
+<style>
+    /* ===== Login Card Fade-in on page load ===== */
+    .custom-login .card {
+        animation: loginFadeUp 0.5s ease both;
+    }
+    @keyframes loginFadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== Full-screen loading overlay ===== */
+    #login-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(255,255,255,0.75);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+    }
+    #login-overlay .login-spinner {
+        width: 52px;
+        height: 52px;
+        border: 5px solid #e0e0e0;
+        border-top-color: var(--bs-primary, #405189);
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+    }
+    #login-overlay p {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--bs-primary, #405189);
+        margin: 0;
+        letter-spacing: 0.3px;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* ===== Button spinner ===== */
+    .btn-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2.5px solid rgba(255,255,255,0.5);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+    }
+</style>
+@endpush
+
 @push('script')
+    {{-- Login Loading Overlay HTML --}}
+    <div id="login-overlay">
+        <div class="login-spinner"></div>
+        <p>{{ __('Logging in, please wait...') }}</p>
+    </div>
+
     <script>
-        $(document).ready(function() {
-            $("#form_data").submit(function(e) {
-                $(".login_button").attr("disabled", true);
-                setInterval(() => {
-                    $(".login_button").attr("disabled", false);
-                }, 1500);
+        $(document).ready(function () {
+            $("#form_data").on("submit", function (e) {
+                // Validate: agar fields empty hain to loader mat dkhao
+                var email    = $("#email").val().trim();
+                var password = $("#password").val().trim();
+                if (!email || !password) return;
+
+                // Button mein spinner + text change
+                $(".login_button")
+                    .prop("disabled", true)
+                    .html('<span class="btn-spinner"></span> {{ __("Logging in...") }}');
+
+                // Full-screen overlay show karo
+                $("#login-overlay").css("display", "flex");
+
+                // Safety: 15 sec baad unlock (agar server slow ho)
+                setTimeout(function () {
+                    $(".login_button")
+                        .prop("disabled", false)
+                        .html('{{ __("Login") }}');
+                    $("#login-overlay").hide();
+                }, 15000);
             });
+
+            // Agar validation error aaya (page reload) to overlay hide karo
+            if ($(".is-invalid").length > 0) {
+                $("#login-overlay").hide();
+                $(".login_button")
+                    .prop("disabled", false)
+                    .html('{{ __("Login") }}');
+            }
         });
     </script>
 @endpush

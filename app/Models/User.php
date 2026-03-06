@@ -104,6 +104,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
         'ProductService',
         'LandingPage',
         'Ekyc',
+        'StockMarket',
     ];
 
 

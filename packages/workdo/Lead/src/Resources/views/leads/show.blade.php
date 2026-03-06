@@ -1138,25 +1138,83 @@
 
                             <div id="activity">
                                 <div class="card card-modern border-0 shadow-sm mb-4">
-                                    <div class="card-header bg-transparent border-bottom-0 pt-4 px-4">
-                                        <h5 class="mb-0 section-title"><i class="ti ti-activity me-2"></i> {{ __('Activity Timeline') }}</h5>
+                                    <div class="card-header bg-transparent border-bottom-0 pt-4 px-4 d-flex align-items-center justify-content-between">
+                                        <h5 class="mb-0 section-title">
+                                            <i class="ti ti-activity me-2"></i> {{ __('Activity Timeline') }}
+                                        </h5>
+                                        @if($lead->activities->count() > 0)
+                                            <span class="badge bg-success-subtle text-success rounded-pill" style="font-size: 0.7rem; padding: 4px 10px;">
+                                                {{ $lead->activities->count() }} {{ __('entries') }}
+                                            </span>
+                                        @endif
                                     </div>
-                                    <div class="card-body p-4 pt-0">
-                                        <div class="timeline-vertical mt-3">
-                                            @forelse ($lead->activities as $activity)
-                                                <div class="timeline-item">
-                                                    <div class="timeline-dot"></div>
-                                                    <div class="ps-3">
-                                                        <h6 class="mb-1 fw-bold text-dark">{!! $activity->getLeadRemark() !!}</h6>
-                                                        <small class="text-muted"><i class="ti ti-clock me-1"></i> {{ $activity->created_at->diffForHumans() }}</small>
+                                    <div class="card-body p-4 pt-2">
+                                        @php
+                                            $activityIconMap = [
+                                                'Lead Created'    => ['icon' => 'ti-circle-plus',       'bg' => '#198754', 'light' => 'rgba(25,135,84,0.1)'],
+                                                'Move'            => ['icon' => 'ti-arrows-right-left',  'bg' => '#fd7e14', 'light' => 'rgba(253,126,20,0.1)'],
+                                                'Lead Updated'    => ['icon' => 'ti-pencil',              'bg' => '#0d6efd', 'light' => 'rgba(13,110,253,0.1)'],
+                                                'Lead Transferred'=> ['icon' => 'ti-switch-horizontal',  'bg' => '#6f42c1', 'light' => 'rgba(111,66,193,0.1)'],
+                                                'Lead Imported'   => ['icon' => 'ti-file-upload',         'bg' => '#20c997', 'light' => 'rgba(32,201,151,0.1)'],
+                                                'Upload File'     => ['icon' => 'ti-file',                'bg' => '#6c757d', 'light' => 'rgba(108,117,125,0.1)'],
+                                                'Add Product'     => ['icon' => 'ti-package',             'bg' => '#198754', 'light' => 'rgba(25,135,84,0.1)'],
+                                                'Update Sources'  => ['icon' => 'ti-source-code',         'bg' => '#0dcaf0', 'light' => 'rgba(13,202,240,0.1)'],
+                                                'Create Lead Call'=> ['icon' => 'ti-phone',               'bg' => '#198754', 'light' => 'rgba(25,135,84,0.1)'],
+                                                'Create Lead Email'=> ['icon' => 'ti-mail',               'bg' => '#0d6efd', 'light' => 'rgba(13,110,253,0.1)'],
+                                                'Create Task'     => ['icon' => 'ti-list-check',          'bg' => '#fd7e14', 'light' => 'rgba(253,126,20,0.1)'],
+                                                'Create Reminder' => ['icon' => 'ti-bell',                'bg' => '#ffc107', 'light' => 'rgba(255,193,7,0.1)'],
+                                            ];
+                                        @endphp
+
+                                        @forelse ($lead->activities as $activity)
+                                            @php
+                                                $ai = $activityIconMap[$activity->log_type] ?? ['icon' => 'ti-point', 'bg' => '#adb5bd', 'light' => 'rgba(173,181,189,0.1)'];
+                                                $actUser = $activity->user;
+                                                $actAvatar = (!empty($actUser) && !empty($actUser->avatar) && check_file($actUser->avatar))
+                                                    ? get_file($actUser->avatar)
+                                                    : get_file('uploads/users-avatar/avatar.png');
+                                            @endphp
+                                            <div class="d-flex align-items-start py-3 px-2 rounded-3 mb-1" style="transition: background 0.2s; border-left: 3px solid {{ $ai['bg'] }}; padding-left: 12px !important;"
+                                                 onmouseover="this.style.background='{{ $ai['light'] }}'" onmouseout="this.style.background='transparent'">
+                                                {{-- Icon --}}
+                                                <div class="flex-shrink-0 me-3 d-flex align-items-center justify-content-center rounded-circle shadow-sm"
+                                                     style="width: 36px; height: 36px; background: {{ $ai['light'] }}; border: 2px solid {{ $ai['bg'] }};">
+                                                    <i class="ti {{ $ai['icon'] }}" style="color: {{ $ai['bg'] }}; font-size: 14px;"></i>
+                                                </div>
+                                                {{-- Text --}}
+                                                <div class="flex-grow-1 overflow-hidden">
+                                                    <div class="d-flex align-items-center flex-wrap gap-1 mb-1">
+                                                        <span class="badge rounded-pill px-2 py-1" style="background: {{ $ai['light'] }}; color: {{ $ai['bg'] }}; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.3px;">
+                                                            {{ __($activity->log_type) }}
+                                                        </span>
+                                                        @if($actUser)
+                                                            <span class="d-flex align-items-center ms-1">
+                                                                <img src="{{ $actAvatar }}" class="rounded-circle me-1" style="width: 16px; height: 16px; border: 1px solid #dee2e6;">
+                                                                <small class="text-muted fw-600" style="font-size: 0.7rem;">{{ $actUser->name }}</small>
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    <p class="mb-0 text-dark fw-500" style="font-size: 0.85rem; line-height: 1.4;">{!! $activity->getLeadRemark() !!}</p>
+                                                    <div class="d-flex align-items-center mt-1 gap-2">
+                                                        <small class="text-muted" style="font-size: 0.7rem;">
+                                                            <i class="ti ti-clock me-1"></i>{{ $activity->created_at->diffForHumans() }}
+                                                        </small>
+                                                        <small class="text-muted opacity-50" style="font-size: 0.65rem;">
+                                                            · {{ $activity->created_at->format('d M Y, h:i A') }}
+                                                        </small>
                                                     </div>
                                                 </div>
-                                            @empty
-                                                 <div class="text-center text-muted">
-                                                    <small>{{ __('No activity logs found') }}</small>
+                                            </div>
+                                        @empty
+                                            <div class="text-center py-5">
+                                                <div class="d-flex align-items-center justify-content-center mb-3 mx-auto rounded-circle"
+                                                     style="width: 64px; height: 64px; background: rgba(25,135,84,0.08);">
+                                                    <i class="ti ti-activity-heartbeat text-success" style="font-size: 28px;"></i>
                                                 </div>
-                                            @endforelse
-                                        </div>
+                                                <p class="text-muted mb-1" style="font-size: 0.85rem;">{{ __('No activity yet') }}</p>
+                                                <small class="text-muted opacity-50">{{ __('Actions on this lead will appear here') }}</small>
+                                            </div>
+                                        @endforelse
                                     </div>
                                 </div>
                             </div>

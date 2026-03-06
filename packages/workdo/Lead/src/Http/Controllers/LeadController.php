@@ -85,8 +85,7 @@ class LeadController extends Controller
     {
         if (Auth::user()->isAbleTo('crm dashboard manage')) {
             return $this->crmDashboard();
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', 'permission Denied');
         }
     }
@@ -151,16 +150,15 @@ class LeadController extends Controller
                                 'title' => $task->name,
                                 'start' => $task->date,
                                 'url' => route(
-                                'deals.tasks.show',
-                                [
-                                    $deal->id,
-                                    $task->id,
-                                ]
-                            ),
+                                    'deals.tasks.show',
+                                    [
+                                        $deal->id,
+                                        $task->id,
+                                    ]
+                                ),
                                 'className' => ($task->status) ? 'event-success border-success' : 'event-warning border-warning',
                             ];
-                        }
-                        else {
+                        } else {
                             $calenderTasks[] = [];
                         }
                     }
@@ -178,8 +176,7 @@ class LeadController extends Controller
                 $chartcall = $arryTemp;
                 $chartcall['user'] = $arrCount['user'];
                 $chartcall['deal'] = $arrCount['deal'];
-            }
-            elseif ($user->hasRole('client')) {
+            } elseif ($user->hasRole('client')) {
                 $temp = [];
                 for ($i = 0; $i <= 7 - 1; $i++) {
                     $date = date($format, mktime(0, 0, 0, $m, ($de - $i), $y));
@@ -194,12 +191,12 @@ class LeadController extends Controller
                             'title' => $task->name,
                             'start' => $task->date,
                             'url' => route(
-                            'deals.tasks.show',
-                            [
-                                $deal->id,
-                                $task->id,
-                            ]
-                        ),
+                                'deals.tasks.show',
+                                [
+                                    $deal->id,
+                                    $task->id,
+                                ]
+                            ),
                             'className' => ($task->status) ? 'event-success border-success' : 'event-warning border-warning',
                         ];
                     }
@@ -216,12 +213,10 @@ class LeadController extends Controller
                 $arrCount['deal'] = $usr->clientDeals->count();
                 if (!empty($client_deal->first())) {
                     $arrCount['task'] = DealTask::whereIn('deal_id', $client_deal)->count();
-                }
-                else {
+                } else {
                     $arrCount['task'] = 0;
                 }
-            }
-            else {
+            } else {
                 $arrTemp = [];
 
                 $chartData = $arrTemp;
@@ -231,12 +226,12 @@ class LeadController extends Controller
                             'title' => $task->name,
                             'start' => $task->date,
                             'url' => route(
-                            'deals.tasks.show',
-                            [
-                                $deal->id,
-                                $task->id,
-                            ]
-                        ),
+                                'deals.tasks.show',
+                                [
+                                    $deal->id,
+                                    $task->id,
+                                ]
+                            ),
                             'className' => ($task->status) ? 'event-success border-success' : 'event-warning border-warning',
                         ];
                     }
@@ -253,8 +248,7 @@ class LeadController extends Controller
                 $arrCount['deal'] = $usr->deals()->count();
                 if (!empty($user_deal->first())) {
                     $arrCount['task'] = DealTask::whereIn('deal_id', $user_deal)->count();
-                }
-                else {
+                } else {
                     $arrCount['task'] = 0;
                 }
             }
@@ -273,8 +267,7 @@ class LeadController extends Controller
                     ->where('deals.workspace_id', '=', getActiveWorkSpace())
                     ->orderBy('deals.updated_at', 'desc')
                     ->take(5)->with('stage')->get();
-            }
-            else {
+            } else {
                 $deals = Deal::select('deals.*')
                     ->join('user_deals', 'user_deals.deal_id', '=', 'deals.id')
                     ->where('user_deals.user_id', '=', $user->id)
@@ -304,8 +297,7 @@ class LeadController extends Controller
             }
 
             return view('lead::index', compact('calenderTasks', 'transdate', 'arrErr', 'arrCount', 'chartData', 'chartcall', 'deals', 'dealdata', 'dealStageName', 'dealStageData', 'workspace', 'modifiedDeals'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', 'permission Denied');
         }
     }
@@ -322,31 +314,32 @@ class LeadController extends Controller
                 if (!$pipeline) {
                     $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
                 }
-            }
-            else {
+            } else {
                 $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
             }
             if (Auth::user()->type == 'company' || Auth::user()->type == 'super admin') {
                 $pipelines = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
-            }
-            else {
+            } else {
                 $accessibleUserIds = Auth::user()->getAccessibleUserIds();
                 $pipelines = Pipeline::where('created_by', '=', $creatorId)
                     ->where('workspace_id', $getActiveWorkSpace)
                     ->whereIn('id', function ($query) use ($accessibleUserIds) {
-                    $query->select('pipeline_id')
-                        ->from('leads')
-                        ->where(function ($q) use ($accessibleUserIds) {
-                        $q->whereIn('user_id', $accessibleUserIds)
-                            ->orWhereIn('id', function ($sub) use ($accessibleUserIds) {
-                            $sub->select('lead_id')
-                                ->from('user_leads')
-                                ->whereIn('user_id', $accessibleUserIds);
-                        }
-                        );
-                    }
-                    );
-                })
+                        $query->select('pipeline_id')
+                            ->from('leads')
+                            ->where(
+                                function ($q) use ($accessibleUserIds) {
+                                    $q->whereIn('user_id', $accessibleUserIds)
+                                        ->orWhereIn(
+                                            'id',
+                                            function ($sub) use ($accessibleUserIds) {
+                                                $sub->select('lead_id')
+                                                    ->from('user_leads')
+                                                    ->whereIn('user_id', $accessibleUserIds);
+                                            }
+                                        );
+                                }
+                            );
+                    })
                     ->get()
                     ->pluck('name', 'id');
             }
@@ -358,11 +351,9 @@ class LeadController extends Controller
             // Scoping User Filters based on user type & assistance permissions (New Request)
             if (Auth::user()->type == 'super admin') {
                 $base_user_query = User::where('workspace_id', $getActiveWorkSpace)->orWhere('id', Auth::user()->id);
-            }
-            elseif (Auth::user()->type == 'company') {
+            } elseif (Auth::user()->type == 'company') {
                 $base_user_query = User::where('workspace_id', $getActiveWorkSpace)->orWhere('id', Auth::user()->id);
-            }
-            else {
+            } else {
                 // For regular users, only show themselves + subordinates (as defined in getAccessibleUserIds)
                 $base_user_query = User::whereIn('id', $accessibleUserIds);
             }
@@ -385,21 +376,27 @@ class LeadController extends Controller
             }
 
             return view('lead::leads.index', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'designations'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
 
     public function jsonDesignation(Request $request)
     {
+        if ($request->has('get_parent') && $request->has('designation_id')) {
+            $ids = is_array($request->designation_id) ? $request->designation_id : explode(',', $request->designation_id);
+            if (module_is_active('Hrm')) {
+                $deptIds = \Workdo\Hrm\Entities\Designation::whereIn('id', $ids)->pluck('department_id')->unique()->toArray();
+                return response()->json(['department_ids' => $deptIds]);
+            }
+        }
+
         $designations = [];
         if (module_is_active('Hrm')) {
             if ($request->department_id) {
                 $department_ids = is_array($request->department_id) ? $request->department_id : explode(',', $request->department_id);
                 $designations = \Workdo\Hrm\Entities\Designation::whereIn('department_id', $department_ids)->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
-            }
-            else {
+            } else {
                 $designations = \Workdo\Hrm\Entities\Designation::where('workspace', getActiveWorkSpace())->pluck('name', 'id');
             }
         }
@@ -414,18 +411,15 @@ class LeadController extends Controller
                 $designation_ids = is_array($request->designation_id) ? $request->designation_id : explode(',', $request->designation_id);
                 $employee_ids = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $designation_ids)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
                 $users = User::whereIn('id', $employee_ids)->where('type', '!=', 'client')->pluck('name', 'id');
-            }
-            elseif ($request->department_id) {
+            } elseif ($request->department_id) {
                 $department_ids = is_array($request->department_id) ? $request->department_id : explode(',', $request->department_id);
                 $employee_ids = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $department_ids)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
                 $users = User::whereIn('id', $employee_ids)->where('type', '!=', 'client')->pluck('name', 'id');
-            }
-            else {
+            } else {
                 $employee_ids = \Workdo\Hrm\Entities\Employee::where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
                 $users = User::whereIn('id', $employee_ids)->where('type', '!=', 'client')->pluck('name', 'id');
             }
-        }
-        else {
+        } else {
             // Fallback if HRM is not active, just return all non-client users as usual
             $accessibleUserIds = Auth::user()->getAccessibleUserIds();
             $users = User::whereIn('id', $accessibleUserIds)->where('type', '!=', 'client')->pluck('name', 'id');
@@ -457,8 +451,7 @@ class LeadController extends Controller
                 if (!$pipeline) {
                     $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
                 }
-            }
-            else {
+            } else {
                 $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
             }
             $stage = null;
@@ -469,10 +462,9 @@ class LeadController extends Controller
             if (module_is_active('CustomField')) {
                 $customFields = \Workdo\CustomField\Entities\CustomField::where('workspace_id', $getActiveWorkSpace)->where('module', '=', 'lead')->where('sub_module', 'lead')->get();
 
-            // Initial load: don't filter server-side so they all exist in the DOM 
-            // and can be dynamically shown/hidden by Javascript.
-            }
-            else {
+                // Initial load: don't filter server-side so they all exist in the DOM 
+                // and can be dynamically shown/hidden by Javascript.
+            } else {
                 $customFields = null;
             }
 
@@ -499,8 +491,7 @@ class LeadController extends Controller
             $duplicateFields = company_setting('duplicate_fields') ? json_decode(company_setting('duplicate_fields'), true) : [];
 
             return view('lead::leads.create', compact('users', 'customFields', 'leadCustomFields', 'isResponsiblePersonEditable', 'pipelines', 'stages', 'pipeline', 'stage', 'duplicateFields'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -512,6 +503,10 @@ class LeadController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->has('phone')) {
+            $request->merge(['phone' => str_replace(' ', '', $request->phone)]);
+        }
+
         $usr = Auth::user();
         if ($usr->isAbleTo('lead create')) {
 
@@ -520,13 +515,13 @@ class LeadController extends Controller
 
             $validator = \Validator::make(
                 $request->all(),
-            [
-                'subject' => 'nullable|string|max:255',
-                'name' => 'nullable|string|max:255',
-                'email' => 'nullable|email|max:255',
-                'follow_up_date' => 'nullable|date',
-                'phone' => 'required',
-            ]
+                [
+                    'subject' => 'nullable|string|max:255',
+                    'name' => 'nullable|string|max:255',
+                    'email' => 'nullable|email|max:255',
+                    'follow_up_date' => 'nullable|date',
+                    'phone' => 'required',
+                ]
             );
 
             // Stage ID for validation - use request stage or fallback to default
@@ -548,9 +543,8 @@ class LeadController extends Controller
             foreach ($dupeSettings as $dfield) {
                 $dvalue = null;
                 if (in_array($dfield, ['name', 'email', 'phone', 'subject'])) {
-                    $dvalue = $request->{ $dfield};
-                }
-                elseif (str_starts_with($dfield, 'custom_')) {
+                    $dvalue = $request->{$dfield};
+                } elseif (str_starts_with($dfield, 'custom_')) {
                     $cfId = str_replace('custom_', '', $dfield);
                     $dvalue = $request->leadCustomField[$cfId] ?? null;
                 }
@@ -561,10 +555,9 @@ class LeadController extends Controller
                         $exists = \Workdo\Lead\Entities\LeadCustomFieldValue::where('field_id', $cfId)
                             ->where('value', $dvalue)
                             ->whereHas('lead', function ($q) use ($getActiveWorkSpace) {
-                            $q->where('workspace_id', $getActiveWorkSpace);
-                        })->exists();
-                    }
-                    else {
+                                $q->where('workspace_id', $getActiveWorkSpace);
+                            })->exists();
+                    } else {
                         $exists = Lead::where('workspace_id', $getActiveWorkSpace)->where($dfield, $dvalue)->exists();
                     }
 
@@ -634,16 +627,14 @@ class LeadController extends Controller
             if ($request->has('pipeline_id') && $request->has('stage_id')) {
                 $pipeline = Pipeline::find($request->pipeline_id);
                 $stage = LeadStage::find($request->stage_id);
-            }
-            else {
+            } else {
                 // Fallback to default logic
                 if ($usr->default_pipeline) {
                     $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->where('id', '=', $usr->default_pipeline)->first();
                     if (!$pipeline) {
                         $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
                     }
-                }
-                else {
+                } else {
                     $pipeline = Pipeline::find($request->global_pipeline);
                     if (empty($pipeline)) {
                         $pipeline = Pipeline::where('created_by', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
@@ -655,8 +646,7 @@ class LeadController extends Controller
                     if (empty($stage)) {
                         $stage = LeadStage::where('pipeline_id', $pipeline->id)->where('created_by', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
                     }
-                }
-                else {
+                } else {
                     return redirect()->back()->with('error', __('Please create pipeline.'));
                 }
             }
@@ -667,8 +657,7 @@ class LeadController extends Controller
 
             if (empty($stage)) {
                 return redirect()->back()->with('error', __('Please create stage for this pipeline.'));
-            }
-            else {
+            } else {
                 if (empty($request->name)) {
                     $request->merge(['name' => $request->phone]);
                 }
@@ -707,8 +696,8 @@ class LeadController extends Controller
                             $value = $fileName;
                         }
                         \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
-                        ['lead_id' => $lead->id, 'field_id' => $fieldId],
-                        ['value' => is_array($value) ? implode(',', array_map('trim', $value)) : trim($value)]
+                            ['lead_id' => $lead->id, 'field_id' => $fieldId],
+                            ['value' => is_array($value) ? implode(',', array_map('trim', $value)) : trim($value)]
                         );
                     }
                 }
@@ -718,8 +707,7 @@ class LeadController extends Controller
                         $usr->id,
                         $request->user_id,
                     ];
-                }
-                else {
+                } else {
                     $usrLeads = [
                         $creatorId,
                         $request->user_id,
@@ -776,8 +764,7 @@ class LeadController extends Controller
                 $resp['is_success'] = true;
                 return redirect()->back()->with('success', __('The lead has been created successfully.') . (($resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -807,8 +794,7 @@ class LeadController extends Controller
                 if (module_is_active('CustomField')) {
                     $lead->customField = \Workdo\CustomField\Entities\CustomField::getData($lead, 'lead', 'lead');
                     $customFields = \Workdo\CustomField\Entities\CustomField::where('workspace_id', '=', getActiveWorkSpace())->where('module', '=', 'lead')->where('sub_module', 'lead')->get();
-                }
-                else {
+                } else {
                     $customFields = null;
                 }
 
@@ -826,9 +812,11 @@ class LeadController extends Controller
 
                 // Fetch Dedicated Lead Custom Fields and Values
                 $leadSections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', getActiveWorkSpace())
-                    ->with(['fields' => function ($q) {
-                    $q->orderBy('order');
-                }])
+                    ->with([
+                        'fields' => function ($q) {
+                            $q->orderBy('order');
+                        }
+                    ])
                     ->orderBy('order')
                     ->get();
                 $leadCustomFieldValues = \Workdo\Lead\Entities\LeadCustomFieldValue::where('lead_id', $lead->id)->pluck('value', 'field_id')->toArray();
@@ -842,12 +830,10 @@ class LeadController extends Controller
                 $todayRemindersCount = $lead->getTodayRemindersCount();
 
                 return view('lead::leads.show', compact('lead', 'calenderTasks', 'deal', 'percentage', 'customFields', 'leadDocuments', 'uploadedFiles', 'leadSections', 'leadCustomFieldValues', 'tasks', 'reminders', 'overdueTasksCount', 'todayRemindersCount'));
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -901,16 +887,17 @@ class LeadController extends Controller
                         return in_array($field->id, $stageCustomFields);
                     });
                 }
-            }
-            else {
+            } else {
                 $customFields = null;
             }
 
             // Dedicated Lead Custom Fields
             $leadSections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', $getActiveWorkSpace)
-                ->with(['fields' => function ($q) {
-                $q->orderBy('order');
-            }])
+                ->with([
+                    'fields' => function ($q) {
+                        $q->orderBy('order');
+                    }
+                ])
                 ->orderBy('order')
                 ->get();
             $leadCustomFieldValues = \Workdo\Lead\Entities\LeadCustomFieldValue::where('lead_id', $lead->id)->pluck('value', 'field_id')->toArray();
@@ -936,8 +923,7 @@ class LeadController extends Controller
             $isResponsiblePersonEditable = $user->type == 'company' || in_array($user->visibility_level, ['team', 'department', 'all']);
 
             return view('lead::leads.edit', compact('lead', 'pipelines', 'sources', 'products', 'users', 'customFields', 'isResponsiblePersonEditable', 'leadSections', 'leadCustomFieldValues', 'stages'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -950,6 +936,10 @@ class LeadController extends Controller
      */
     public function update(Request $request, Lead $lead)
     {
+        if ($request->has('phone')) {
+            $request->merge(['phone' => str_replace(' ', '', $request->phone)]);
+        }
+
         \Log::debug('Lead Update Request Data: ' . json_encode($request->all()));
         if (Auth::user()->isAbleTo('lead edit') && $lead->isAccessible()) {
             $creatorId = creatorId();
@@ -957,20 +947,20 @@ class LeadController extends Controller
 
             $validator = \Validator::make(
                 $request->all(),
-            [
-                'subject' => 'nullable|string|max:255',
-                'name' => 'required|string|max:255',
-                'email' => 'nullable|email|max:255',
-                'pipeline_id' => 'required|integer|exists:pipelines,id',
-                'user_id' => 'nullable|integer|exists:users,id',
-                'stage_id' => 'required|integer|exists:lead_stages,id',
-                'phone' => 'required',
-                'sources' => 'nullable|array',
-                'sources.*' => 'integer|exists:sources,id',
-                'products' => 'nullable|array',
-                'products.*' => 'integer|exists:product_services,id',
-                'follow_up_date' => 'nullable|date',
-            ]
+                [
+                    'subject' => 'nullable|string|max:255',
+                    'name' => 'required|string|max:255',
+                    'email' => 'nullable|email|max:255',
+                    'pipeline_id' => 'required|integer|exists:pipelines,id',
+                    'user_id' => 'nullable|integer|exists:users,id',
+                    'stage_id' => 'required|integer|exists:lead_stages,id',
+                    'phone' => 'required',
+                    'sources' => 'nullable|array',
+                    'sources.*' => 'integer|exists:sources,id',
+                    'products' => 'nullable|array',
+                    'products.*' => 'integer|exists:product_services,id',
+                    'follow_up_date' => 'nullable|date',
+                ]
             );
 
             // Dynamic Validation for Custom Fields (Update)
@@ -1002,28 +992,19 @@ class LeadController extends Controller
             $lead->subject = $request->subject ?? 'New Lead';
             if (!empty($request->user_id)) {
                 if ($lead->user_id != $request->user_id) {
-                    $oldUserId = $lead->user_id;
-                    $oldUserName = $oldUserId ?User::find($oldUserId)->name : __('Unknown');
-                    $newUserName = User::find($request->user_id)->name;
+                    $oldUserIdComp = $lead->user_id;
+                    $oldUserNameComp = $oldUserIdComp ? User::find($oldUserIdComp)->name : __('Unknown');
                     $lead->user_id = $request->user_id;
+                    $newUserNameComp = User::find($request->user_id)->name;
 
-                    // STRICT: Remove ALL existing shared users to ensuring single responsibility
-                    UserLead::where('lead_id', $lead->id)->delete();
+                    // Message for transfer
+                    $transferMsg = __('Lead responsibility transferred from ') . $oldUserNameComp . __(' to ') . $newUserNameComp . ' (' . __('at stage') . ': ' . ($lead->stage->name ?? '-') . ')';
 
                     // Update UserLead: Add new user
+                    UserLead::where('lead_id', $lead->id)->delete();
                     UserLead::firstOrCreate([
                         'lead_id' => $lead->id,
                         'user_id' => $request->user_id
-                    ]);
-
-                    // Activity Log for Transfer
-                    $lead->activities()->create([
-                        'user_id' => Auth::user()->id,
-                        'log_type' => 'Lead Transferred',
-                        'remark' => json_encode([
-                            'title' => 'Lead Transferred',
-                            'message' => __('Lead responsibility transferred from ') . $oldUserName . __(' to ') . $newUserName . __(' by ') . Auth::user()->name
-                        ])
                     ]);
 
                     // Notification for Lead Transfer
@@ -1033,7 +1014,7 @@ class LeadController extends Controller
                         'data' => [
                             'lead_id' => $lead->id,
                             'lead_name' => $lead->name,
-                            'old_user_id' => $oldUserId,
+                            'old_user_id' => $oldUserIdComp,
                             'transferred_by_name' => Auth::user()->name,
                         ],
                         'workspace_id' => getActiveWorkSpace(),
@@ -1043,12 +1024,25 @@ class LeadController extends Controller
             $lead->pipeline_id = $request->pipeline_id;
 
             // Automation Logic (Centralized)
+            $stageChanged = false;
+            $oldStageForLog = null;
+            $newStageForLog = null;
             if ($lead->stage_id != $request->stage_id) {
+                $stageChanged = true;
+                $oldStageForLog = LeadStage::find($lead->stage_id);
+                $newStageForLog = LeadStage::find($request->stage_id);
+
                 PipelineStageAutomation::run($lead, $request->stage_id);
 
                 // Move to top logic
                 Lead::where('stage_id', $request->stage_id)->increment('order');
                 $lead->order = 0;
+
+                // Notify department head about stage change
+                $this->notifyDepartmentHead(
+                    $lead,
+                    __('Lead "') . $lead->name . __('" moved from ') . ($oldStageForLog ? $oldStageForLog->name : '?') . __(' to ') . ($newStageForLog ? $newStageForLog->name : '?')
+                );
             }
 
             $lead->stage_id = $request->stage_id;
@@ -1062,6 +1056,33 @@ class LeadController extends Controller
             $lead->updated_by = Auth::user()->id;
             $lead->save();
 
+            // Consolidated Activity Log
+            $logRemark = [
+                'title' => $lead->name,
+                'message' => Auth::user()->name . ' ' . __('updated lead details')
+            ];
+
+            if (isset($transferMsg)) {
+                $logRemark['transfer_msg'] = $transferMsg;
+                $logRemark['message'] = $transferMsg; // Primary message if only transfer
+            }
+
+            if ($stageChanged) {
+                $logType = 'Move';
+                $logRemark['old_status'] = $oldStageForLog ? $oldStageForLog->name : 'Unknown';
+                $logRemark['new_status'] = $newStageForLog ? $newStageForLog->name : 'Unknown';
+                $logRemark['old_stage_id'] = $oldStageForLog ? $oldStageForLog->id : null;
+                $logRemark['new_stage_id'] = $newStageForLog ? $newStageForLog->id : null;
+            } else {
+                $logType = isset($transferMsg) ? 'Lead Transferred' : 'Lead Updated';
+            }
+
+            LeadActivityLog::create([
+                'user_id' => Auth::user()->id,
+                'lead_id' => $lead->id,
+                'log_type' => $logType,
+                'remark' => json_encode($logRemark),
+            ]);
 
             if (module_is_active('CustomField')) {
                 \Workdo\CustomField\Entities\CustomField::saveData($lead, $request->customField);
@@ -1082,11 +1103,10 @@ class LeadController extends Controller
                     }
 
                     \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
-                    ['lead_id' => $lead->id, 'field_id' => $field->id],
-                    ['value' => is_array($value) ? implode(',', array_map('trim', $value)) : trim($value)]
+                        ['lead_id' => $lead->id, 'field_id' => $field->id],
+                        ['value' => is_array($value) ? implode(',', array_map('trim', $value)) : trim($value)]
                     );
-                }
-                else {
+                } else {
                     // For non-file fields, if it's missing from request, it means it's cleared (especially for multi-select)
                     // We only do this if the field was visible/applicable
                     $isVisible = true;
@@ -1102,17 +1122,47 @@ class LeadController extends Controller
 
                     if ($isVisible && $field->type != 'file') {
                         \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
-                        ['lead_id' => $lead->id, 'field_id' => $field->id],
-                        ['value' => '']
+                            ['lead_id' => $lead->id, 'field_id' => $field->id],
+                            ['value' => '']
                         );
+                    }
+                }
+            }
+
+            // KYC Comment Handling
+            if ($request->has('kyc_comment') && !empty($request->kyc_comment) && \Auth::user()->isAbleTo('lead kyc comment')) {
+                $discussion = new LeadDiscussion();
+                $discussion->comment = $request->kyc_comment;
+                $discussion->lead_id = $lead->id;
+                $discussion->created_by = Auth::user()->id;
+                $discussion->is_kyc = 1;
+                $discussion->save();
+
+                // Notify responsible persons about KYC comment
+                $responsiblePersonIds = $lead->users->pluck('id')->toArray();
+                $responsiblePersonIds[] = $lead->user_id; // Owner
+                $responsiblePersonIds = array_unique(array_filter($responsiblePersonIds));
+
+                foreach ($responsiblePersonIds as $recipientId) {
+                    if ($recipientId != Auth::user()->id) {
+                        UserNotification::create([
+                            'user_id' => $recipientId,
+                            'type' => 'kyc_comment',
+                            'data' => [
+                                'lead_id' => $lead->id,
+                                'lead_name' => $lead->name,
+                                'comment' => $request->kyc_comment,
+                                'created_by_name' => Auth::user()->name,
+                            ],
+                            'workspace_id' => getActiveWorkSpace(),
+                        ]);
                     }
                 }
             }
             event(new UpdateLead($request, $lead));
 
             return redirect()->back()->with('success', __('The lead deatails are updated successfully.'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1149,8 +1199,7 @@ class LeadController extends Controller
             $lead->delete();
 
             return redirect()->back()->with('success', __('The lead has been deleted.'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1167,8 +1216,7 @@ class LeadController extends Controller
                 if (!$pipeline) {
                     $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
                 }
-            }
-            else {
+            } else {
                 $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
             }
 
@@ -1193,8 +1241,7 @@ class LeadController extends Controller
             $saved_filters = [];
 
             return $dataTable->render('lead::leads.list', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'designations'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1205,8 +1252,7 @@ class LeadController extends Controller
         if ($request->pipeline_id && !empty($request->pipeline_id)) {
             $lead_stages = $lead_stages->where('pipeline_id', '=', $request->pipeline_id);
             $lead_stages = $lead_stages->get()->pluck('name', 'id');
-        }
-        else {
+        } else {
             $lead_stages = [];
         }
 
@@ -1225,63 +1271,60 @@ class LeadController extends Controller
                 $url = upload_file($request, 'file', $file_name, 'leads', []);
                 if (isset($url['flag']) && $url['flag'] == 1) {
                     $file = LeadFile::create(
-                    [
-                        'lead_id' => $request->lead_id,
-                        'file_name' => $file_name,
-                        'file_path' => $url['url'],
-                    ]
+                        [
+                            'lead_id' => $request->lead_id,
+                            'file_name' => $file_name,
+                            'file_path' => $url['url'],
+                        ]
                     );
                     $return = [];
                     $return['is_success'] = true;
                     $return['download'] = get_file($url['url']);
                     $return['delete'] = route(
                         'leads.file.delete',
-                    [
-                        $lead->id,
-                        $file->id,
-                    ]
+                        [
+                            $lead->id,
+                            $file->id,
+                        ]
                     );
 
                     LeadActivityLog::create(
-                    [
-                        'user_id' => Auth::user()->id,
-                        'lead_id' => $lead->id,
-                        'log_type' => 'Upload File',
-                        'remark' => json_encode(['file_name' => $file_name]),
-                    ]
+                        [
+                            'user_id' => Auth::user()->id,
+                            'lead_id' => $lead->id,
+                            'log_type' => 'Upload File',
+                            'remark' => json_encode(['file_name' => $file_name]),
+                        ]
                     );
 
                     event(new LeadUploadFile($request, $lead));
                     $lead->touch();
 
                     return response()->json($return);
-                }
-                else {
+                } else {
                     return response()->json(
-                    [
-                        'is_success' => false,
-                        'error' => $url['msg'],
-                    ],
+                        [
+                            'is_success' => false,
+                            'error' => $url['msg'],
+                        ],
                         401
                     );
                 }
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -1300,20 +1343,17 @@ class LeadController extends Controller
                     return \Response::download(
                         $file_path,
                         $filename,
-                    [
-                        'Content-Length: ' . get_size($file_path),
-                    ]
+                        [
+                            'Content-Length: ' . get_size($file_path),
+                        ]
                     );
-                }
-                else {
+                } else {
                     return redirect()->back()->with('error', __('The file does not exist.'));
                 }
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1332,33 +1372,30 @@ class LeadController extends Controller
                     event(new DestroyLeadFile($lead));
 
                     return response()->json(['is_success' => true, 'success' => __('The file has been deleted.')], 200);
-                }
-                else {
+                } else {
                     return response()->json(
-                    [
-                        'is_success' => false,
-                        'error' => __('The file does not exist.'),
-                    ],
+                        [
+                            'is_success' => false,
+                            'error' => __('The file does not exist.'),
+                        ],
                         200
                     );
                 }
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -1375,20 +1412,30 @@ class LeadController extends Controller
 
             event(new LeadAddNote($request, $lead));
 
+            LeadActivityLog::create([
+                'user_id' => Auth::user()->id,
+                'lead_id' => $lead->id,
+                'log_type' => 'Note Updated',
+                'remark' => json_encode([
+                    'title' => $lead->name,
+                    'message' => Auth::user()->name . ' ' . __('updated the lead note'),
+                    'old_stage_id' => $lead->stage_id // Include for real-time sync logic in changesSince
+                ]),
+            ]);
+
             return response()->json(
-            [
-                'is_success' => true,
-                'success' => __('The note has been saved successfully.'),
-            ],
+                [
+                    'is_success' => true,
+                    'success' => __('The note has been saved successfully.'),
+                ],
                 200
             );
-        }
-        else {
+        } else {
             return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
+                [
+                    'is_success' => false,
+                    'error' => __('Permission Denied.'),
+                ],
                 401
             );
         }
@@ -1403,18 +1450,15 @@ class LeadController extends Controller
                 $selected = $lead->labels();
                 if ($selected) {
                     $selected = $selected->pluck('name', 'id')->toArray();
-                }
-                else {
+                } else {
                     $selected = [];
                 }
 
                 return view('lead::leads.labels', compact('lead', 'labels', 'selected'));
-            }
-            else {
+            } else {
                 return response()->json(['error' => __('Permission Denied.')], 401);
             }
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission Denied.')], 401);
         }
     }
@@ -1426,19 +1470,17 @@ class LeadController extends Controller
             if ($leads && $leads->isAccessible()) {
                 if ($request->labels) {
                     $leads->labels = implode(',', $request->labels);
-                }
-                else {
+                } else {
                     $leads->labels = $request->labels;
                 }
                 $leads->save();
+                $leads->touch();
 
                 return redirect()->back()->with('success', __('The label details are updated successfully.'));
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1454,12 +1496,10 @@ class LeadController extends Controller
 
                 $users = $users->pluck('name', 'id');
                 return view('lead::leads.users', compact('lead', 'users'));
-            }
-            else {
+            } else {
                 return response()->json(['error' => __('Permission Denied.')], 401);
             }
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission Denied.')], 401);
         }
     }
@@ -1490,16 +1530,13 @@ class LeadController extends Controller
 
                 if (!empty($request->users)) {
                     return redirect()->back()->with('success', __('Responsibile person updated successfully.'));
-                }
-                else {
+                } else {
                     return redirect()->back()->with('error', __('Please select valid user.'));
                 }
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1515,12 +1552,10 @@ class LeadController extends Controller
                 event(new DestroyLeadUser($lead));
 
                 return redirect()->back()->with('success', __('The user has been deleted.'));
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1536,12 +1571,10 @@ class LeadController extends Controller
                     $products = \Workdo\ProductService\Entities\ProductService::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->whereNOTIn('id', explode(',', $lead->products))->get()->pluck('name', 'id');
                 }
                 return view('lead::leads.products', compact('lead', 'products'));
-            }
-            else {
+            } else {
                 return response()->json(['error' => __('Permission Denied.')], 401);
             }
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission Denied.')], 401);
         }
     }
@@ -1557,16 +1590,17 @@ class LeadController extends Controller
                     $old_products = explode(',', $lead->products);
                     $lead->products = implode(',', array_merge($old_products, $products));
                     $lead->save();
+                    $lead->touch();
 
                     $objProduct = ProductService::whereIN('id', $products)->get()->pluck('name', 'id')->toArray();
 
                     LeadActivityLog::create(
-                    [
-                        'user_id' => $usr->id,
-                        'lead_id' => $lead->id,
-                        'log_type' => 'Add Product',
-                        'remark' => json_encode(['title' => implode(",", $objProduct)]),
-                    ]
+                        [
+                            'user_id' => $usr->id,
+                            'lead_id' => $lead->id,
+                            'log_type' => 'Add Product',
+                            'remark' => json_encode(['title' => implode(",", $objProduct)]),
+                        ]
                     );
 
                     $productArr = [
@@ -1580,16 +1614,13 @@ class LeadController extends Controller
 
                 if (!empty($products) && !empty($request->products)) {
                     return redirect()->back()->with('success', __('Products have been updated successfully.'))->with('status', 'products');
-                }
-                else {
+                } else {
                     return redirect()->back()->with('error', __('Please select valid product.'))->with('status', 'general');
                 }
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'products');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'products');
         }
     }
@@ -1607,16 +1638,15 @@ class LeadController extends Controller
                 }
                 $lead->products = implode(',', $products);
                 $lead->save();
+                $lead->touch();
 
                 event(new DestroyLeadProduct($lead));
 
                 return redirect()->back()->with('success', __('The product has been deleted.'))->with('status', 'products');
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'products');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'products');
         }
     }
@@ -1635,12 +1665,10 @@ class LeadController extends Controller
                 }
 
                 return view('lead::leads.sources', compact('lead', 'sources', 'selected'));
-            }
-            else {
+            } else {
                 return response()->json(['error' => __('Permission Denied.')], 401);
             }
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission Denied.')], 401);
         }
     }
@@ -1653,20 +1681,20 @@ class LeadController extends Controller
             if ($lead && $lead->isAccessible()) {
                 if (!empty($request->sources) && count($request->sources) > 0) {
                     $lead->sources = implode(',', $request->sources);
-                }
-                else {
+                } else {
                     $lead->sources = "";
                 }
 
                 $lead->save();
+                $lead->touch();
 
                 LeadActivityLog::create(
-                [
-                    'user_id' => $usr->id,
-                    'lead_id' => $lead->id,
-                    'log_type' => 'Update Sources',
-                    'remark' => json_encode(['title' => 'Update Sources']),
-                ]
+                    [
+                        'user_id' => $usr->id,
+                        'lead_id' => $lead->id,
+                        'log_type' => 'Update Sources',
+                        'remark' => json_encode(['title' => 'Update Sources']),
+                    ]
                 );
 
                 $leadArr = [
@@ -1678,12 +1706,10 @@ class LeadController extends Controller
                 event(new LeadSourceUpdate($request, $lead));
 
                 return redirect()->back()->with('success', __('The sources has been changes successfully'))->with('status', 'sources');
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'sources');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'sources');
         }
     }
@@ -1705,12 +1731,10 @@ class LeadController extends Controller
                 event(new DestroyLeadSource($lead));
 
                 return redirect()->back()->with('success', __('The source has been deleted.'))->with('status', 'sources');
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'sources');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'sources');
         }
     }
@@ -1725,8 +1749,7 @@ class LeadController extends Controller
                 $discussions = $discussions->where('is_kyc', 1);
             }
             return view('lead::leads.discussions', compact('lead', 'is_kyc', 'discussions'));
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission Denied.')], 401);
         }
     }
@@ -1760,6 +1783,17 @@ class LeadController extends Controller
 
             event(new LeadAddDiscussion($request, $lead));
 
+            LeadActivityLog::create([
+                'user_id' => $usr->id,
+                'lead_id' => $lead->id,
+                'log_type' => 'Discussion',
+                'remark' => json_encode([
+                    'title' => $lead->name,
+                    'message' => $usr->name . ' ' . ($is_kyc ? __('posted a KYC comment') : __('posted a comment')),
+                    'old_stage_id' => $lead->stage_id // Include for real-time sync logic in changesSince
+                ]),
+            ]);
+
             if ($is_kyc) {
                 $responsiblePersonIds = $lead->users->pluck('id')->toArray();
                 $responsiblePersonIds[] = $lead->user_id; // Owner
@@ -1780,8 +1814,7 @@ class LeadController extends Controller
                         ]);
                     }
                 }
-            }
-            else {
+            } else {
                 // General Discussion Notification
                 $responsiblePersonIds = $lead->users->pluck('id')->toArray();
                 $responsiblePersonIds[] = $lead->user_id; // Owner
@@ -1801,8 +1834,7 @@ class LeadController extends Controller
             }
 
             return redirect()->back()->with('success', __('The message has been added successfully.'))->with('status', $is_kyc ? 'kyc-discussion' : 'discussion');
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'discussion');
         }
     }
@@ -1818,16 +1850,13 @@ class LeadController extends Controller
                     $discussion->delete();
                     $lead->touch();
                     return redirect()->back()->with('success', __('The message has been deleted.'));
-                }
-                else {
+                } else {
                     return redirect()->back()->with('error', __('Permission Denied.'));
                 }
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('The message does not exist.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1846,88 +1875,254 @@ class LeadController extends Controller
 
                 $lead_users = $lead->users->pluck('email', 'id')->toArray();
 
-                if ($lead->stage_id != $post['stage_id']) {
+                $oldStageId = $lead->stage_id;
+                $newStageId = $post['stage_id'];
+                $hasStageChanged = ($oldStageId != $newStageId);
 
-                    $newStage = LeadStage::find($post['stage_id']);
+                // If stage changed, run logs/automation BEFORE we update $lead object state
+                if ($hasStageChanged) {
+                    $oldStage = $lead->stage;
+                    $newStage = LeadStage::find($newStageId);
 
-                    $customFieldErrors = $this->validateLeadCustomFields($lead, $post['stage_id']);
-                    if (!empty($customFieldErrors)) {
-                        return response()->json(['error' => $customFieldErrors[0]]);
+                    if ($newStage) {
+                        $customFieldErrors = $this->validateLeadCustomFields($lead, $newStageId);
+                        if (!empty($customFieldErrors)) {
+                            return response()->json(['error' => $customFieldErrors[0]]);
+                        }
+
+                        if (!$newStage->permissions()->can_move) {
+                            return response()->json(['error' => __('Aapko is stage tak lead move karne ka access nahi hai.')]);
+                        }
+
+                        // Create Move Activity Log
+                        LeadActivityLog::create([
+                            'user_id' => $usr->id,
+                            'lead_id' => $lead->id,
+                            'log_type' => 'Move',
+                            'remark' => json_encode([
+                                'title' => $lead->name,
+                                'old_status' => $oldStage ? $oldStage->name : 'Unknown',
+                                'new_status' => $newStage->name,
+                                'old_stage_id' => $oldStageId,
+                                'new_stage_id' => $newStageId,
+                            ]),
+                        ]);
+
+                        if (!empty(company_setting('Lead Moved')) && company_setting('Lead Moved') == true) {
+                            $lArr = [
+                                'lead_name' => $lead->name,
+                                'lead_email' => $lead->email,
+                                'lead_pipeline' => $lead->pipeline->name,
+                                'lead_stage' => $newStage->name,
+                                'lead_old_stage' => $oldStage ? $oldStage->name : 'Unknown',
+                                'lead_new_stage' => $newStage->name,
+                            ];
+                            EmailTemplate::sendEmailTemplate('Lead Moved', $lead_users, $lArr);
+                        }
+
+                        PipelineStageAutomation::run($lead, $newStageId);
+
+                        $this->notifyDepartmentHead(
+                            $lead,
+                            __('Lead "') . $lead->name . __('" moved to ') . $newStage->name
+                        );
                     }
-
-                    if (!$newStage->permissions()->can_move) {
-                        return response()->json(['error' => __('Aapko is stage tak lead move karne ka access nahi hai.')]);
-                    }
-
-                    LeadActivityLog::create(
-                    [
-                        'user_id' => Auth::user()->id,
-                        'lead_id' => $lead->id,
-                        'log_type' => 'Move',
-                        'remark' => json_encode(
-                        [
-                            'title' => $lead->name,
-                            'old_status' => $lead->stage->name,
-                            'new_status' => $newStage->name,
-                        ]
-                    ),
-                    ]
-                    );
-
-                    $leadArr = [
-                        'lead_id' => $lead->id,
-                        'name' => $lead->name,
-                        'updated_by' => $usr->id,
-                        'old_status' => $lead->stage->name,
-                        'new_status' => $newStage->name,
-                    ];
-
-
-                    if (!empty(company_setting('Lead Moved')) && company_setting('Lead Moved') == true) {
-
-                        $lArr = [
-                            'lead_name' => $lead->name,
-                            'lead_email' => $lead->email,
-                            'lead_pipeline' => $lead->pipeline->name,
-                            'lead_stage' => $lead->stage->name,
-                            'lead_old_stage' => $lead->stage->name,
-                            'lead_new_stage' => $newStage->name,
-                        ];
-
-                        // Send Email
-                        EmailTemplate::sendEmailTemplate('Lead Moved', $lead_users, $lArr);
-                    }
-
-                    // Automation Logic (Centralized)
-                    PipelineStageAutomation::run($lead, $post['stage_id']);
                 }
+
+                // NOW explicitly save the moved lead to ensure persistence
+                $lead->stage_id = $newStageId;
+                $lead->save();
+
                 event(new LeadMoved($request, $lead));
 
-                foreach ($post['order'] as $key => $item) {
-                    $l = Lead::find($item);
-                    if ($l) {
-                        $l->order = $key;
-                        $l->stage_id = $post['stage_id'];
-                        $l->save();
-                    }
+                // Parse and update order for ALL leads in the target column
+                $orderRaw = $request->order ?? [];
+                $orderArr = is_array($orderRaw) ? $orderRaw : explode(',', (string) $orderRaw);
+                $orderArr = array_filter($orderArr);
+
+                \Log::debug("Kanban Persistence Final - Lead: {$lead->id} -> Stage: {$newStageId} | Col Size: " . count($orderArr));
+
+                foreach ($orderArr as $key => $item) {
+                    Lead::where('id', $item)->update([
+                        'order' => $key,
+                        'stage_id' => $newStageId
+                    ]);
                 }
                 $old_status = !empty($post['old_status']) ? $post['old_status'] : 0;
                 $pipeline_id = !empty($post['pipeline_id']) ? $post['pipeline_id'] : 0;
-                $old_stage_count = Lead::where('stage_id', $old_status)->where('pipeline_id', $pipeline_id)->count();
-                $new_stage_count = Lead::where('stage_id', $post['stage_id'])->where('pipeline_id', $pipeline_id)->count();
+
+                // Use filter-aware count so badge reflects applied filters
+                $oldStageObj = LeadStage::find($old_status);
+                $newStageObj = LeadStage::find($post['stage_id']);
+                $old_stage_count = $oldStageObj ? $oldStageObj->leadCount($request) : 0;
+                $new_stage_count = $newStageObj ? $newStageObj->leadCount($request) : 0;
 
                 return response()->json([
                     'success' => __('Lead moved successfully.'),
                     'old_stage_count' => $old_stage_count,
                     'new_stage_count' => $new_stage_count,
                 ]);
-            }
-            else {
+            } else {
                 return response()->json(['error' => __('Permission denied.')]);
             }
-        }
-        catch (\Throwable $th) {
+        } catch (\Throwable $th) {
             return response()->json(['error' => $th->getMessage()]);
+        }
+    }
+
+    /**
+     * Returns leads whose stage_id changed after the given Unix timestamp.
+     * Used by Kanban board JS to do real-time polling.
+     * Returns: [{id, name, stage_id, old_stage_id, new_count, old_count}]
+     */
+    public function changesSince(Request $request)
+    {
+        try {
+            $since = $request->get('ts');
+            $pipelineId = $request->get('pipeline_id');
+
+            if (!$since || !$pipelineId) {
+                return response()->json([]);
+            }
+
+            $sinceDate = \Carbon\Carbon::createFromTimestamp((int) $since);
+            $workspace = getActiveWorkSpace();
+
+            // Get recent logs (All types now tracked for real-time sync)
+            $logs = \Workdo\Lead\Entities\LeadActivityLog::where('created_at', '>', $sinceDate)
+                ->orderByDesc('created_at')
+                ->get()
+                ->groupBy('lead_id');
+
+            if ($logs->isEmpty()) {
+                return response()->json(['changes' => [], 'counts' => []]);
+            }
+
+            $changes = [];
+            $allLeadIds = $logs->keys();
+
+            $baseQuery = Lead::whereIn('id', $allLeadIds)
+                ->where('pipeline_id', $pipelineId)
+                ->where('workspace_id', $workspace);
+
+            // Apply Hierarchy Filters once to the set (Robust)
+            if (module_is_active('Hrm')) {
+                if ($request->has('department_id') && !empty($request->department_id)) {
+                    $deps = (array) $request->department_id;
+                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $deps)->where('workspace', $workspace)->pluck('user_id')->toArray();
+                    $baseQuery->where(function ($q) use ($uids) {
+                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
+                    });
+                }
+                if ($request->has('designation_id') && !empty($request->designation_id)) {
+                    $desigs = (array) $request->designation_id;
+                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $desigs)->where('workspace', $workspace)->pluck('user_id')->toArray();
+                    $baseQuery->where(function ($q) use ($uids) {
+                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
+                    });
+                }
+            }
+
+            $leadsFetched = $baseQuery->get()->keyBy('id');
+
+            // Collect all affected stage IDs for count refresh
+            $affectedStageIds = collect();
+
+            foreach ($logs as $leadId => $leadLogs) {
+                $lead = $leadsFetched->get($leadId);
+
+                if (!$lead || !$lead->isAccessible()) {
+                    continue;
+                }
+
+                $latestLog = $leadLogs->first();
+                // Parse Log to find old stage ID
+                $remark = json_decode($latestLog->remark, true);
+                $oldStageId = $remark['old_stage_id'] ?? null;
+
+                // Fallback to name search if ID not in old logs
+                if (!$oldStageId && !empty($remark->old_status)) {
+                    $os = LeadStage::where('name', $remark->old_status)->where('pipeline_id', $pipelineId)->first();
+                    if ($os)
+                        $oldStageId = $os->id;
+                }
+
+                $affectedStageIds->push($lead->stage_id);
+                if ($oldStageId)
+                    $affectedStageIds->push($oldStageId);
+
+                $changes[] = [
+                    'id' => $lead->id,
+                    'name' => $lead->name,
+                    'stage_id' => $lead->stage_id,
+                    'old_stage_id' => $oldStageId,
+                ];
+            }
+
+            if (empty($changes)) {
+                return response()->json(['changes' => [], 'counts' => []]);
+            }
+
+            // Compute server-side filter-aware counts for all affected stages in a SINGLE query
+            $counts = [];
+            $uniqueStageIds = $affectedStageIds->unique()->toArray();
+
+            if (!empty($uniqueStageIds)) {
+                // We use a dummy stage object to leverage the leadCount query logic but modify it for batching
+                $dummyStage = new LeadStage();
+                $baseCountQuery = Lead::whereIn('leads.stage_id', $uniqueStageIds)
+                    ->where('leads.workspace_id', '=', $workspace);
+
+                // Replicate the filtering logic from leadCount but with groupBy
+                $user = Auth::user();
+                if ($user->type == 'client') {
+                    $baseCountQuery->join('client_leads', 'client_leads.lead_id', '=', 'leads.id')
+                        ->where('client_leads.client_id', '=', $user->id);
+                } elseif ($user->type != 'company' && $user->visibility_level != 'all') {
+                    $accessibleUserIds = $user->getAccessibleUserIds();
+                    $baseCountQuery->where(function ($q) use ($accessibleUserIds) {
+                        $q->whereIn('leads.user_id', $accessibleUserIds)
+                            ->orWhereHas('users', function ($subQ) use ($accessibleUserIds) {
+                                $subQ->whereIn('users.id', $accessibleUserIds);
+                            });
+                    });
+                }
+
+                // Apply browser filters to counts as well
+                if ($request->has('department_id') && !empty($request->department_id)) {
+                    $deps = (array) $request->department_id;
+                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $deps)->where('workspace', $workspace)->pluck('user_id')->toArray();
+                    $baseCountQuery->where(function ($q) use ($uids) {
+                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
+                    });
+                }
+                if ($request->has('designation_id') && !empty($request->designation_id)) {
+                    $desigs = (array) $request->designation_id;
+                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $desigs)->where('workspace', $workspace)->pluck('user_id')->toArray();
+                    $baseCountQuery->where(function ($q) use ($uids) {
+                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
+                    });
+                }
+
+                $rawCounts = $baseCountQuery->groupBy('stage_id')
+                    ->selectRaw('stage_id, count(*) as total')
+                    ->pluck('total', 'stage_id')
+                    ->toArray();
+
+                foreach ($uniqueStageIds as $sid) {
+                    $counts[$sid] = $rawCounts[$sid] ?? 0;
+                }
+            }
+
+            $nowTs = time();
+
+            return response()->json([
+                'changes' => $changes,
+                'counts' => $counts,
+                'now_ts' => $nowTs
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
@@ -1940,8 +2135,7 @@ class LeadController extends Controller
             $clients = User::where('type', '=', 'client')->where('created_by', '=', $creatorId)->get();
 
             return view('lead::leads.convert', compact('lead', 'exist_client', 'clients'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -1957,10 +2151,10 @@ class LeadController extends Controller
             if ($request->client_check == 'exist') {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'clients' => 'required|email|exists:users,email',
-                    'price' => 'numeric|min:0',
-                ]
+                    [
+                        'clients' => 'required|email|exists:users,email',
+                        'price' => 'numeric|min:0',
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -1974,16 +2168,15 @@ class LeadController extends Controller
                 if (empty($client)) {
                     return redirect()->back()->with('error', 'The client is not available now.');
                 }
-            }
-            else {
+            } else {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'client_name' => 'required|string|max:255',
-                    'client_email' => 'required|email|unique:users,email',
-                    'client_password' => 'required',
-                    'price' => 'min:0',
-                ]
+                    [
+                        'client_name' => 'required|string|max:255',
+                        'client_email' => 'required|email|unique:users,email',
+                        'client_password' => 'required',
+                        'price' => 'min:0',
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -1994,17 +2187,17 @@ class LeadController extends Controller
 
                 $role = Role::where('name', 'client')->where('created_by', '=', $creatorId)->first();
                 $client = User::create(
-                [
-                    'name' => $request->client_name,
-                    'email' => $request->client_email,
-                    'password' => \Hash::make($request->client_password),
-                    'email_verified_at' => date('Y-m-d h:i:s'),
-                    'type' => 'client',
-                    'lang' => 'en',
-                    'created_by' => $creatorId,
-                    'workspace_id' => $getActiveWorkSpace,
-                    'active_workspace' => $getActiveWorkSpace,
-                ]
+                    [
+                        'name' => $request->client_name,
+                        'email' => $request->client_email,
+                        'password' => \Hash::make($request->client_password),
+                        'email_verified_at' => date('Y-m-d h:i:s'),
+                        'type' => 'client',
+                        'lang' => 'en',
+                        'created_by' => $creatorId,
+                        'workspace_id' => $getActiveWorkSpace,
+                        'active_workspace' => $getActiveWorkSpace,
+                    ]
                 );
                 $client->addRole($role);
 
@@ -2040,25 +2233,25 @@ class LeadController extends Controller
 
             // Make entry in ClientDeal Table
             \Workdo\Lead\Entities\ClientDeal::create(
-            [
-                'deal_id' => $deal->id,
-                'client_id' => $client->id,
-            ]
+                [
+                    'deal_id' => $deal->id,
+                    'client_id' => $client->id,
+                ]
             );
 
             $leadTasks = LeadTask::where('lead_id', '=', $lead->id)->get();
 
             foreach ($leadTasks as $leadTask) {
                 \Workdo\Lead\Entities\DealTask::create(
-                [
-                    'deal_id' => $deal->id,
-                    'name' => $leadTask->name,
-                    'date' => $leadTask->date,
-                    'time' => $leadTask->time,
-                    'priority' => $leadTask->priority,
-                    'status' => $leadTask->status,
-                    'workspace' => $leadTask->workspace,
-                ]
+                    [
+                        'deal_id' => $deal->id,
+                        'name' => $leadTask->name,
+                        'date' => $leadTask->date,
+                        'time' => $leadTask->time,
+                        'priority' => $leadTask->priority,
+                        'status' => $leadTask->status,
+                        'workspace' => $leadTask->workspace,
+                    ]
                 );
             }
 
@@ -2086,10 +2279,10 @@ class LeadController extends Controller
             $leadUsers = UserLead::where('lead_id', '=', $lead->id)->get();
             foreach ($leadUsers as $leadUser) {
                 \Workdo\Lead\Entities\UserDeal::create(
-                [
-                    'user_id' => $leadUser->user_id,
-                    'deal_id' => $deal->id,
-                ]
+                    [
+                        'user_id' => $leadUser->user_id,
+                        'deal_id' => $deal->id,
+                    ]
                 );
             }
             // end
@@ -2100,11 +2293,11 @@ class LeadController extends Controller
                 if (!empty($discussions)) {
                     foreach ($discussions as $discussion) {
                         \Workdo\Lead\Entities\DealDiscussion::create(
-                        [
-                            'deal_id' => $deal->id,
-                            'comment' => $discussion->comment,
-                            'created_by' => $discussion->created_by,
-                        ]
+                            [
+                                'deal_id' => $deal->id,
+                                'comment' => $discussion->comment,
+                                'created_by' => $discussion->created_by,
+                            ]
                         );
                     }
                 }
@@ -2122,11 +2315,11 @@ class LeadController extends Controller
 
                         if ($copied) {
                             \Workdo\Lead\Entities\DealFile::create(
-                            [
-                                'deal_id' => $deal->id,
-                                'file_name' => $file->file_name,
-                                'file_path' => $file->file_path,
-                            ]
+                                [
+                                    'deal_id' => $deal->id,
+                                    'file_name' => $file->file_name,
+                                    'file_path' => $file->file_path,
+                                ]
                             );
                         }
                     }
@@ -2140,15 +2333,15 @@ class LeadController extends Controller
                 if (!empty($calls)) {
                     foreach ($calls as $call) {
                         \Workdo\Lead\Entities\DealCall::create(
-                        [
-                            'deal_id' => $deal->id,
-                            'subject' => $call->subject,
-                            'call_type' => $call->call_type,
-                            'duration' => $call->duration,
-                            'user_id' => $call->user_id,
-                            'description' => $call->description,
-                            'call_result' => $call->call_result,
-                        ]
+                            [
+                                'deal_id' => $deal->id,
+                                'subject' => $call->subject,
+                                'call_type' => $call->call_type,
+                                'duration' => $call->duration,
+                                'user_id' => $call->user_id,
+                                'description' => $call->description,
+                                'call_result' => $call->call_result,
+                            ]
                         );
                     }
                 }
@@ -2161,12 +2354,12 @@ class LeadController extends Controller
                 if (!empty($emails)) {
                     foreach ($emails as $email) {
                         \Workdo\Lead\Entities\DealEmail::create(
-                        [
-                            'deal_id' => $deal->id,
-                            'to' => $email->to,
-                            'subject' => $email->subject,
-                            'description' => $email->description,
-                        ]
+                            [
+                                'deal_id' => $deal->id,
+                                'to' => $email->to,
+                                'subject' => $email->subject,
+                                'description' => $email->description,
+                            ]
                         );
                     }
                 }
@@ -2179,8 +2372,7 @@ class LeadController extends Controller
             event(new LeadConvertDeal($request, $lead));
 
             return redirect()->back()->with('success', __('The lead has been converted into a deal successfully.'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -2194,23 +2386,21 @@ class LeadController extends Controller
                 $users = UserLead::where('lead_id', '=', $lead->id)->get();
 
                 return view('lead::leads.calls', compact('lead', 'users'));
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -2224,15 +2414,15 @@ class LeadController extends Controller
             if ($lead && $lead->isAccessible()) {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'subject' => 'required|string|max:255',
-                    'call_type' => 'required|in:outbound,inbound',
-                    'user_id' => 'required|integer|exists:users,id',
-                    'duration' => [
-                        'required',
-                        'regex:/^\d{2}:\d{2}:\d{2}$/',
-                    ],
-                ]
+                    [
+                        'subject' => 'required|string|max:255',
+                        'call_type' => 'required|in:outbound,inbound',
+                        'user_id' => 'required|integer|exists:users,id',
+                        'duration' => [
+                            'required',
+                            'regex:/^\d{2}:\d{2}:\d{2}$/',
+                        ],
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -2242,24 +2432,24 @@ class LeadController extends Controller
                 }
 
                 $leadCall = LeadCall::create(
-                [
-                    'lead_id' => $lead->id,
-                    'subject' => $request->subject,
-                    'call_type' => $request->call_type,
-                    'duration' => $request->duration,
-                    'user_id' => $request->user_id,
-                    'description' => $request->description,
-                    'call_result' => $request->call_result,
-                ]
+                    [
+                        'lead_id' => $lead->id,
+                        'subject' => $request->subject,
+                        'call_type' => $request->call_type,
+                        'duration' => $request->duration,
+                        'user_id' => $request->user_id,
+                        'description' => $request->description,
+                        'call_result' => $request->call_result,
+                    ]
                 );
 
                 LeadActivityLog::create(
-                [
-                    'user_id' => $usr->id,
-                    'lead_id' => $lead->id,
-                    'log_type' => 'Create Lead Call',
-                    'remark' => json_encode(['title' => 'Create new Lead Call']),
-                ]
+                    [
+                        'user_id' => $usr->id,
+                        'lead_id' => $lead->id,
+                        'log_type' => 'Create Lead Call',
+                        'remark' => json_encode(['title' => 'Create new Lead Call']),
+                    ]
                 );
 
                 $leadArr = [
@@ -2272,12 +2462,10 @@ class LeadController extends Controller
                 $lead->touch();
 
                 return redirect()->back()->with('success', __('The call has been created successfully.'))->with('status', 'calls');
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'calls');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'calls');
         }
     }
@@ -2291,23 +2479,21 @@ class LeadController extends Controller
                 $users = UserLead::where('lead_id', '=', $lead->id)->get();
 
                 return view('lead::leads.calls', compact('call', 'lead', 'users'));
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -2320,15 +2506,15 @@ class LeadController extends Controller
             if ($lead && $lead->isAccessible()) {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'subject' => 'required|string|max:255',
-                    'call_type' => 'required|in:outbound,inbound',
-                    'user_id' => 'required|integer|exists:users,id',
-                    'duration' => [
-                        'required',
-                        'regex:/^\d{2}:\d{2}:\d{2}$/',
-                    ],
-                ]
+                    [
+                        'subject' => 'required|string|max:255',
+                        'call_type' => 'required|in:outbound,inbound',
+                        'user_id' => 'required|integer|exists:users,id',
+                        'duration' => [
+                            'required',
+                            'regex:/^\d{2}:\d{2}:\d{2}$/',
+                        ],
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -2340,25 +2526,23 @@ class LeadController extends Controller
                 $call = LeadCall::find($call_id);
 
                 $call->update(
-                [
-                    'subject' => $request->subject,
-                    'call_type' => $request->call_type,
-                    'duration' => $request->duration,
-                    'user_id' => $request->user_id,
-                    'description' => $request->description,
-                    'call_result' => $request->call_result,
-                ]
+                    [
+                        'subject' => $request->subject,
+                        'call_type' => $request->call_type,
+                        'duration' => $request->duration,
+                        'user_id' => $request->user_id,
+                        'description' => $request->description,
+                        'call_result' => $request->call_result,
+                    ]
                 );
 
                 event(new LeadUpdateCall($request, $lead));
 
                 return redirect()->back()->with('success', __('The call details are updated successfully.'))->with('status', 'calls');
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'calls');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'tasks');
         }
     }
@@ -2374,12 +2558,10 @@ class LeadController extends Controller
                 event(new DestroyLeadCall($lead));
 
                 return redirect()->back()->with('success', __('The call has been deleted.'))->with('status', 'calls');
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'calls');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'calls');
         }
     }
@@ -2412,18 +2594,17 @@ class LeadController extends Controller
                             return redirect()->back()->with('error', __('You can only assign to your team members.'));
                         }
                     }
-                }
-                else {
+                } else {
                     $request->merge(['user_id' => $usr->id]);
                 }
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'title' => 'required|string|max:255',
-                    'remind_at' => 'required|date_format:Y-m-d\TH:i',
-                    'user_id' => 'required|exists:users,id',
-                    'type' => 'required|in:call,message,follow_up',
-                ]
+                    [
+                        'title' => 'required|string|max:255',
+                        'remind_at' => 'required|date_format:Y-m-d\TH:i',
+                        'user_id' => 'required|exists:users,id',
+                        'type' => 'required|in:call,message,follow_up',
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -2433,7 +2614,7 @@ class LeadController extends Controller
                 Reminder::create([
                     'user_id' => $request->user_id,
                     'remindable_id' => $lead->id,
-                    'remindable_type' => Lead::class ,
+                    'remindable_type' => Lead::class,
                     'title' => $request->title,
                     'description' => $request->description,
                     'remind_at' => $request->remind_at,
@@ -2452,6 +2633,8 @@ class LeadController extends Controller
                         'workspace_id' => getActiveWorkSpace()
                     ]);
                 }
+
+                $lead->touch();
 
                 return redirect()->back()->with('success', __('Reminder created successfully.'))->with('status', 'reminders');
             }
@@ -2480,12 +2663,12 @@ class LeadController extends Controller
             if ($lead && $lead->isAccessible()) {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'title' => 'required|string|max:255',
-                    'remind_at' => 'required|date_format:Y-m-d\TH:i',
-                    'user_id' => 'required|exists:users,id',
-                    'type' => 'required|in:call,message,follow_up',
-                ]
+                    [
+                        'title' => 'required|string|max:255',
+                        'remind_at' => 'required|date_format:Y-m-d\TH:i',
+                        'user_id' => 'required|exists:users,id',
+                        'type' => 'required|in:call,message,follow_up',
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -2527,23 +2710,21 @@ class LeadController extends Controller
             $lead = Lead::find($id);
             if ($lead && $lead->isAccessible()) {
                 return view('lead::leads.emails', compact('lead'));
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -2556,10 +2737,10 @@ class LeadController extends Controller
             if ($lead && $lead->isAccessible()) {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'to' => 'required|email|max:255',
-                    'subject' => 'required|string|max:255',
-                ]
+                    [
+                        'to' => 'required|email|max:255',
+                        'subject' => 'required|string|max:255',
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -2569,21 +2750,21 @@ class LeadController extends Controller
                 }
 
                 $leadEmail = LeadEmail::create(
-                [
-                    'lead_id' => $lead->id,
-                    'to' => $request->to,
-                    'subject' => $request->subject,
-                    'description' => $request->description,
-                ]
+                    [
+                        'lead_id' => $lead->id,
+                        'to' => $request->to,
+                        'subject' => $request->subject,
+                        'description' => $request->description,
+                    ]
                 );
 
                 LeadActivityLog::create(
-                [
-                    'user_id' => Auth::user()->id,
-                    'lead_id' => $lead->id,
-                    'log_type' => 'Create Lead Email',
-                    'remark' => json_encode(['title' => 'Create new Deal Email']),
-                ]
+                    [
+                        'user_id' => Auth::user()->id,
+                        'lead_id' => $lead->id,
+                        'log_type' => 'Create Lead Email',
+                        'remark' => json_encode(['title' => 'Create new Deal Email']),
+                    ]
                 );
 
                 event(new LeadAddEmail($request, $lead));
@@ -2602,12 +2783,10 @@ class LeadController extends Controller
                 }
 
                 return redirect()->back()->with('success', __('The email has been created successfully.') . ((!empty($resp) && $resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'emails');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'emails');
         }
     }
@@ -2623,8 +2802,7 @@ class LeadController extends Controller
                 if (!$pipeline) {
                     $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
                 }
-            }
-            else {
+            } else {
                 $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
             }
             if (!empty($pipeline)) {
@@ -2632,13 +2810,11 @@ class LeadController extends Controller
                 if (empty($stage)) {
                     return response()->json(['error' => __('Please create stage for this pipeline.')], 401);
                 }
-            }
-            else {
+            } else {
                 return response()->json(['error' => __('Please create pipeline.')], 401);
             }
             return view('lead::leads.import');
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -2668,20 +2844,24 @@ class LeadController extends Controller
 
                     $_SESSION['import_file_path'] = $filePath;
                     $_SESSION['file_header'] = $file_header;
-                    // For progress bar calculation, we need total rows. Let's count quickly.
-                    $total_rows = (int)shell_exec("find /c /v \"\" \"$filePath\"") - 1; // Windows specific count -1 for header
-                    if (!$total_rows || $total_rows < 0) {
-                        // Fallback for non-windows or failed command
-                        $lines = file($filePath);
-                        $total_rows = $lines ? count($lines) - 1 : 0;
+                    // For progress bar calculation, we need total rows. Let's count quickly and safely.
+                    $total_rows = 0;
+                    $handle = fopen($filePath, "r");
+                    if ($handle) {
+                        while (!feof($handle)) {
+                            $line = fgets($handle);
+                            if ($line !== false) {
+                                $total_rows++;
+                            }
+                        }
+                        fclose($handle);
+                        $total_rows = max(0, $total_rows - 1); // Subtract 1 for header
                     }
                     $_SESSION['import_total_rows'] = $total_rows;
-                }
-                else {
+                } else {
                     $error = 'Only <b>.csv</b> file allowed';
                 }
-            }
-            else {
+            } else {
 
                 $error = __('Please select CSV file');
             }
@@ -2691,8 +2871,7 @@ class LeadController extends Controller
             );
 
             return json_encode($output);
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('permission Denied'));
         }
     }
@@ -2705,8 +2884,7 @@ class LeadController extends Controller
         if (Auth::user()->isAbleTo('lead import')) {
             if (Auth::user()->type == "company") {
                 $users = User::where('created_by', '=', creatorId())->where('type', '!=', 'client')->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
-            }
-            else {
+            } else {
                 $users = User::where('id', '=', Auth::user()->id)->where('type', '!=', 'client')->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
             }
 
@@ -2727,8 +2905,7 @@ class LeadController extends Controller
             $file_header = $_SESSION['file_header'] ?? [];
 
             return view('lead::leads.import_modal', compact('users', 'pipelines', 'file_data', 'file_header', 'sources'));
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -2866,8 +3043,7 @@ class LeadController extends Controller
                         'message' => __('Please create stage for this pipeline.'),
                     ]);
                 }
-            }
-            else {
+            } else {
                 return response()->json([
                     'success' => false,
                     'message' => __('Please create pipeline.'),
@@ -2896,15 +3072,15 @@ class LeadController extends Controller
 
             $existing_leads = Lead::where('workspace_id', $getActiveWorkSpace)
                 ->where(function ($query) use ($emails_in_chunk, $phones_in_chunk) {
-                if (!empty($emails_in_chunk)) {
-                    $query->orWhereIn('email', $emails_in_chunk);
-                }
-                if (!empty($phones_in_chunk)) {
-                    $query->orWhereIn('phone', $phones_in_chunk);
-                }
-            })->get()->keyBy(function ($item) {
-                return ($item->email ?? '') . '|' . ($item->phone ?? '');
-            });
+                    if (!empty($emails_in_chunk)) {
+                        $query->orWhereIn('email', $emails_in_chunk);
+                    }
+                    if (!empty($phones_in_chunk)) {
+                        $query->orWhereIn('phone', $phones_in_chunk);
+                    }
+                })->get()->keyBy(function ($item) {
+                    return ($item->email ?? '') . '|' . ($item->phone ?? '');
+                });
 
             // Map existing leads for faster lookup
             $existing_emails = $existing_leads->pluck('email')->filter()->flip()->toArray();
@@ -2983,8 +3159,14 @@ class LeadController extends Controller
                         UserLead::firstOrCreate(['user_id' => $usrLead, 'lead_id' => $lead->id]);
                     }
 
-                }
-                catch (\Exception $e) {
+                    // Activity log for import
+                    $lead->activities()->create([
+                        'user_id' => Auth::user()->id,
+                        'log_type' => 'Lead Imported',
+                        'remark' => json_encode(['message' => __('Lead imported via CSV by ') . Auth::user()->name]),
+                    ]);
+
+                } catch (\Exception $e) {
                     $_SESSION['import_error_flag'] = 1;
                     $_SESSION['import_error_html'] .= '<tr><td>' . $subject . '</td><td>' . $name . '</td><td>' . (empty($email) ? '-' : $email) . '</td><td>' . (empty($phone) ? '-' : $phone) . '</td></tr>';
                     \Log::error("Lead Import Creation Error: " . $e->getMessage());
@@ -2999,8 +3181,7 @@ class LeadController extends Controller
                 $flag = $_SESSION['import_error_flag'];
                 unset($_SESSION['import_error_html']);
                 unset($_SESSION['import_error_flag']);
-            }
-            else {
+            } else {
                 $flag = 0;
                 $html = '';
             }
@@ -3030,8 +3211,7 @@ class LeadController extends Controller
             }
 
             return response()->json($log_data);
-        }
-        else {
+        } else {
             return response()->json(['success' => false, 'message' => __('Permission Denied')]);
         }
     }
@@ -3071,23 +3251,21 @@ class LeadController extends Controller
                 $status = LeadTask::$status;
                 $users = User::where('created_by', '=', creatorId())->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
                 return view('lead::leads.tasks', compact('lead', 'priorities', 'status', 'users'));
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -3108,8 +3286,7 @@ class LeadController extends Controller
                             return redirect()->back()->with('error', __('You can only assign to your team members.'));
                         }
                     }
-                }
-                else {
+                } else {
                     $request->merge(['user_id' => $usr->id]);
                 }
                 $getActiveWorkSpace = getActiveWorkSpace();
@@ -3118,14 +3295,14 @@ class LeadController extends Controller
 
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'name' => 'required|string|max:255',
-                    'date' => 'required|date',
-                    'time' => 'required|date_format:H:i',
-                    'priority' => 'required|in:1,2,3',
-                    'status' => 'required|in:pending,in_progress,done,overdue',
-                    'user_id' => 'required|exists:users,id',
-                ]
+                    [
+                        'name' => 'required|string|max:255',
+                        'date' => 'required|date',
+                        'time' => 'required|date_format:H:i',
+                        'priority' => 'required|in:1,2,3',
+                        'status' => 'required|in:pending,in_progress,done,overdue',
+                        'user_id' => 'required|exists:users,id',
+                    ]
                 );
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
@@ -3134,26 +3311,26 @@ class LeadController extends Controller
                 }
 
                 $leadTask = LeadTask::create(
-                [
-                    'lead_id' => $lead->id,
-                    'user_id' => $request->user_id,
-                    'name' => $request->name,
-                    'description' => $request->description,
-                    'date' => $request->date,
-                    'time' => date('H:i:s', strtotime($request->date . ' ' . $request->time)),
-                    'priority' => $request->priority,
-                    'status' => $request->status,
-                    'workspace' => $getActiveWorkSpace,
-                ]
+                    [
+                        'lead_id' => $lead->id,
+                        'user_id' => $request->user_id,
+                        'name' => $request->name,
+                        'description' => $request->description,
+                        'date' => $request->date,
+                        'time' => date('H:i:s', strtotime($request->date . ' ' . $request->time)),
+                        'priority' => $request->priority,
+                        'status' => $request->status,
+                        'workspace' => $getActiveWorkSpace,
+                    ]
                 );
 
                 LeadActivityLog::create(
-                [
-                    'user_id' => $usr->id,
-                    'lead_id' => $lead->id,
-                    'log_type' => 'Create Task',
-                    'remark' => json_encode(['title' => $leadTask->name]),
-                ]
+                    [
+                        'user_id' => $usr->id,
+                        'lead_id' => $lead->id,
+                        'log_type' => 'Create Task',
+                        'remark' => json_encode(['title' => $leadTask->name]),
+                    ]
                 );
 
                 $taskArr = [
@@ -3161,6 +3338,8 @@ class LeadController extends Controller
                     'name' => $lead->name,
                     'updated_by' => $usr->id,
                 ];
+
+                $lead->touch();
                 if (!empty(company_setting('New Task')) && company_setting('New Task') == true) {
                     $tArr = [
                         'lead_name' => $lead->name,
@@ -3179,12 +3358,10 @@ class LeadController extends Controller
 
                 event(new CreateLeadTask($request, $leadTask, $lead));
                 return redirect()->back()->with('success', __('The task has been created successfully.') . ((!empty($resp) && $resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'tasks');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'tasks');
         }
     }
@@ -3200,23 +3377,21 @@ class LeadController extends Controller
                 $users = User::where('created_by', '=', creatorId())->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
 
                 return view('lead::leads.tasks', compact('task', 'lead', 'priorities', 'status', 'users'));
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -3229,14 +3404,14 @@ class LeadController extends Controller
             if ($lead && $lead->isAccessible()) {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'name' => 'required|string|max:255',
-                    'date' => 'required|date',
-                    'time' => 'required',
-                    'priority' => 'required|in:1,2,3',
-                    'status' => 'required|in:pending,in_progress,done,overdue',
-                    'user_id' => 'required|exists:users,id',
-                ]
+                    [
+                        'name' => 'required|string|max:255',
+                        'date' => 'required|date',
+                        'time' => 'required',
+                        'priority' => 'required|in:1,2,3',
+                        'status' => 'required|in:pending,in_progress,done,overdue',
+                        'user_id' => 'required|exists:users,id',
+                    ]
                 );
 
                 if ($validator->fails()) {
@@ -3248,26 +3423,26 @@ class LeadController extends Controller
                 $task = LeadTask::find($task_id);
 
                 $task->update(
-                [
-                    'name' => $request->name,
-                    'description' => $request->description,
-                    'user_id' => $request->user_id,
-                    'date' => $request->date,
-                    'time' => date('H:i:s', strtotime($request->date . ' ' . $request->time)),
-                    'priority' => $request->priority,
-                    'status' => $request->status,
-                ]
+                    [
+                        'name' => $request->name,
+                        'description' => $request->description,
+                        'user_id' => $request->user_id,
+                        'date' => $request->date,
+                        'time' => date('H:i:s', strtotime($request->date . ' ' . $request->time)),
+                        'priority' => $request->priority,
+                        'status' => $request->status,
+                    ]
                 );
 
                 event(new \Workdo\Lead\Events\UpdateLeadTask($request, $lead, $task));
 
+                $lead->touch();
+
                 return redirect()->back()->with('success', __('The task details are updated successfully.'))->with('status', 'tasks');
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'tasks');
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'))->with('status', 'tasks');
         }
     }
@@ -3280,19 +3455,19 @@ class LeadController extends Controller
 
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'status' => 'required',
-                ]
+                    [
+                        'status' => 'required',
+                    ]
                 );
 
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
 
                     return response()->json(
-                    [
-                        'is_success' => false,
-                        'error' => $messages->first(),
-                    ],
+                        [
+                            'is_success' => false,
+                            'error' => $messages->first(),
+                        ],
                         401
                     );
                 }
@@ -3305,41 +3480,39 @@ class LeadController extends Controller
                     if ($task->date && strtotime($task->date) < strtotime(date('Y-m-d'))) {
                         $task->status = 'overdue';
                     }
-                }
-                else {
+                } else {
                     // Task was not done, clicking it means make it done
                     $task->status = 'done';
                 }
                 $task->save();
+                $lead->touch();
 
                 event(new StatusChangeLeadTask($request, $lead, $task));
 
                 return response()->json(
-                [
-                    'is_success' => true,
-                    'success' => __('The task status has been changes successfully.'),
-                    'status' => $task->status,
-                    'status_label' => __(LeadTask::$status[$task->status]),
-                ],
+                    [
+                        'is_success' => true,
+                        'success' => __('The task status has been changes successfully.'),
+                        'status' => $task->status,
+                        'status_label' => __(LeadTask::$status[$task->status]),
+                    ],
                     200
                 );
-            }
-            else {
+            } else {
                 return response()->json(
+                    [
+                        'is_success' => false,
+                        'error' => __('Permission Denied.'),
+                    ],
+                    401
+                );
+            }
+        } else {
+            return response()->json(
                 [
                     'is_success' => false,
                     'error' => __('Permission Denied.'),
                 ],
-                    401
-                );
-            }
-        }
-        else {
-            return response()->json(
-            [
-                'is_success' => false,
-                'error' => __('Permission Denied.'),
-            ],
                 401
             );
         }
@@ -3357,16 +3530,13 @@ class LeadController extends Controller
                     event(new DestroyLeadTask($task));
 
                     return redirect()->back()->with('success', __('Lead task successfully deleted.'));
-                }
-                else {
+                } else {
                     return redirect()->back()->with('error', __('Task not found.'));
                 }
-            }
-            else {
+            } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -3438,22 +3608,41 @@ class LeadController extends Controller
                     if ($usr->isAbleTo('lead delete')) {
                         $lead->delete();
                     }
-                }
-                elseif ($action == 'change_stage') {
+                } elseif ($action == 'change_stage') {
                     if ($usr->isAbleTo('lead edit')) {
                         $customFieldErrors = $this->validateLeadCustomFields($lead, $value);
                         if (!empty($customFieldErrors)) {
                             return response()->json(['success' => false, 'message' => $customFieldErrors[0]]);
                         }
+                        $oldStage = LeadStage::find($lead->stage_id);
+                        $newStage = LeadStage::find($value);
                         $lead->stage_id = $value;
                         $lead->save();
+
+                        // Activity log for bulk stage change
+                        $lead->activities()->create([
+                            'user_id' => $usr->id,
+                            'log_type' => 'Move',
+                            'remark' => json_encode([
+                                'title' => $lead->name,
+                                'old_status' => $oldStage ? $oldStage->name : 'Unknown',
+                                'new_status' => $newStage ? $newStage->name : 'Unknown',
+                                'old_stage_id' => $oldStage ? $oldStage->id : null,
+                                'new_stage_id' => $newStage ? $newStage->id : null,
+                            ]),
+                        ]);
+
+                        // Notify department head
+                        $this->notifyDepartmentHead(
+                            $lead,
+                            __('Lead "') . $lead->name . __('" stage changed to ') . ($newStage ? $newStage->name : 'Unknown')
+                        );
                     }
-                }
-                elseif ($action == 'change_owner') {
+                } elseif ($action == 'change_owner') {
                     if ($usr->isAbleTo('lead edit')) {
                         // Reassign leads to another user
                         $oldUserId = $lead->user_id;
-                        $oldUserName = $oldUserId ?User::find($oldUserId)->name : __('Unknown');
+                        $oldUserName = $oldUserId ? User::find($oldUserId)->name : __('Unknown');
                         $newUserName = User::find($value)->name;
                         $lead->user_id = $value;
                         $lead->save();
@@ -3543,11 +3732,11 @@ class LeadController extends Controller
             if ($request->type == 'task') {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'task_subject' => 'required',
-                    'task_date' => 'required',
-                    'task_priority' => 'required',
-                ]
+                    [
+                        'task_subject' => 'required',
+                        'task_date' => 'required',
+                        'task_priority' => 'required',
+                    ]
                 );
                 if ($validator->fails()) {
                     return redirect()->back()->with('error', $validator->errors()->first());
@@ -3580,14 +3769,13 @@ class LeadController extends Controller
                 }
                 return redirect()->back()->with('success', __('Tasks created successfully for ' . $count . ' leads.'));
 
-            }
-            else {
+            } else {
                 $validator = \Validator::make(
                     $request->all(),
-                [
-                    'reminder_date' => 'required',
-                    'reminder_description' => 'required',
-                ]
+                    [
+                        'reminder_date' => 'required',
+                        'reminder_description' => 'required',
+                    ]
                 );
                 if ($validator->fails()) {
                     return redirect()->back()->with('error', $validator->errors()->first());
@@ -3715,8 +3903,7 @@ class LeadController extends Controller
                     if (empty($value) && (!isset($inputData['leadCustomField']) || !request()->hasFile("leadCustomField.{$field->id}"))) {
                         $errors[] = __($field->name . ' is required.');
                     }
-                }
-                else {
+                } else {
                     if ($value === null || $value === '' || (is_array($value) && empty($value))) {
                         $errors[] = __($field->name . ' is required.');
                     }
@@ -3772,8 +3959,7 @@ class LeadController extends Controller
             }
 
             return view('lead::crm.visibility_settings', compact('roles', 'pipelines', 'visibilities', 'fields'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -3825,14 +4011,14 @@ class LeadController extends Controller
             $duplicateFields = $request->duplicate_fields ?? [];
 
             \App\Models\Setting::updateOrCreate(
-            [
-                'key' => 'duplicate_fields',
-                'workspace' => getActiveWorkSpace(),
-            ],
-            [
-                'value' => json_encode($duplicateFields),
-                'created_by' => creatorId(),
-            ]
+                [
+                    'key' => 'duplicate_fields',
+                    'workspace' => getActiveWorkSpace(),
+                ],
+                [
+                    'value' => json_encode($duplicateFields),
+                    'created_by' => creatorId(),
+                ]
             );
 
             // Clear cache to ensure settings are fresh
@@ -3860,10 +4046,9 @@ class LeadController extends Controller
             $exists = \Workdo\Lead\Entities\LeadCustomFieldValue::where('field_id', $fieldId)
                 ->where('value', $value)
                 ->whereHas('lead', function ($q) use ($workspace) {
-                $q->where('workspace_id', $workspace);
-            })->exists();
-        }
-        else {
+                    $q->where('workspace_id', $workspace);
+                })->exists();
+        } else {
             $exists = $query->where($field, $value)->exists();
         }
 
@@ -3913,12 +4098,10 @@ class LeadController extends Controller
             if (!empty($requiredStages)) {
                 if ($stageId && in_array($stageId, $requiredStages)) {
                     $isRequired = true;
-                }
-                else {
+                } else {
                     $isHidden = true; // User requested: if required for a stage, only visible when that stage is selected.
                 }
-            }
-            else {
+            } else {
                 if (!empty($visibleStages) && $stageId && !in_array($stageId, $visibleStages)) {
                     $isHidden = true;
                 }
@@ -3928,11 +4111,10 @@ class LeadController extends Controller
             }
 
             if ($isHidden) {
-                $dedicatedHidden[] = (string)$field->id;
-            }
-            else {
+                $dedicatedHidden[] = (string) $field->id;
+            } else {
                 if ($isRequired) {
-                    $dedicatedRequired[] = (string)$field->id;
+                    $dedicatedRequired[] = (string) $field->id;
                 }
             }
         }
@@ -3944,5 +4126,61 @@ class LeadController extends Controller
             'required_lead' => $dedicatedRequired,
             'hidden_lead' => $dedicatedHidden
         ]);
+    }
+
+    /**
+     * Notify department head (or company creator) about a lead stage change.
+     * Uses HRM module to find the owner's department manager.
+     */
+    private function notifyDepartmentHead(Lead $lead, string $message): void
+    {
+        try {
+            $owner = User::find($lead->user_id);
+            if (!$owner)
+                return;
+
+            $departmentHeadId = null;
+
+            if (module_is_active('Hrm')) {
+                $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $owner->id)->first();
+                if ($employee && $employee->department_id) {
+                    $dept = \Workdo\Hrm\Entities\Department::find($employee->department_id);
+                    if ($dept && !empty($dept->manager_id)) {
+                        $departmentHeadId = $dept->manager_id;
+                    }
+                }
+            }
+
+            // Fallback: notify the company/workspace creator
+            if (!$departmentHeadId) {
+                $departmentHeadId = $lead->created_by;
+            }
+
+            // Don't notify yourself
+            if ($departmentHeadId == Auth::id())
+                return;
+
+            // Don't notify if same as lead owner
+            if ($departmentHeadId == $lead->user_id)
+                return;
+
+            UserNotification::create([
+                'user_id' => $departmentHeadId,
+                'type' => 'lead_stage_change',
+                'data' => [
+                    'lead_id' => $lead->id,
+                    'lead_name' => $lead->name,
+                    'message' => $message,
+                    'changed_by' => Auth::user()->name,
+                    'url' => route('leads.show', $lead->id),
+                    'icon' => 'ti-arrows-right-left',
+                    'color' => 'primary',
+                ],
+                'is_read' => false,
+                'workspace_id' => getActiveWorkSpace(),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::warning('notifyDepartmentHead failed: ' . $e->getMessage());
+        }
     }
 }

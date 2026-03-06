@@ -95,36 +95,36 @@ document.addEventListener("DOMContentLoaded", function () {
   // Menu collapse click start
   var mobilecollapsever = document.querySelector("#mobile-collapse");
 
-if (mobilecollapsever) {
-  mobilecollapsever.addEventListener("click", function () {
-    var body = document.querySelector("body");
-    var sidebar = document.querySelector(".dash-sidebar");
+  if (mobilecollapsever) {
+    mobilecollapsever.addEventListener("click", function () {
+      var body = document.querySelector("body");
+      var sidebar = document.querySelector(".dash-sidebar");
 
-    // Check if sidebar is currently open
-    var isSidebarActive = sidebar.classList.contains("mob-sidebar-active");
+      // Check if sidebar is currently open
+      var isSidebarActive = sidebar.classList.contains("mob-sidebar-active");
 
-    if (isSidebarActive) {
-      // If open, close it
-      rmmenu();
-    } else {
-      // If not open, open it
-      sidebar.classList.add("mob-sidebar-active");
-      body.classList.add("no-scroll");
+      if (isSidebarActive) {
+        // If open, close it
+        rmmenu();
+      } else {
+        // If not open, open it
+        sidebar.classList.add("mob-sidebar-active");
+        body.classList.add("no-scroll");
 
-      // Only add overlay if it doesn't already exist
-      if (!sidebar.querySelector(".dash-menu-overlay")) {
-        var overlay = document.createElement("div");
-        overlay.className = "dash-menu-overlay";
-        sidebar.appendChild(overlay);
+        // Only add overlay if it doesn't already exist
+        if (!sidebar.querySelector(".dash-menu-overlay")) {
+          var overlay = document.createElement("div");
+          overlay.className = "dash-menu-overlay";
+          sidebar.appendChild(overlay);
 
-        overlay.addEventListener("click", function () {
-          document.querySelector(".hamburger")?.classList.remove("is-active");
-          rmmenu();
-        });
+          overlay.addEventListener("click", function () {
+            document.querySelector(".hamburger")?.classList.remove("is-active");
+            rmmenu();
+          });
+        }
       }
-    }
-  });
-}
+    });
+  }
 
 
 
@@ -265,7 +265,7 @@ function horizontalmobilemenuclick() {
   var vw = window.innerWidth;
   var pcnavlinklist = document.querySelector(".dash-navbar li");
   if (pcnavlinklist) {
-    pcnavlinklist.removeEventListener("click", function () {});
+    pcnavlinklist.removeEventListener("click", function () { });
   }
 
   var pclinkclick = document.querySelectorAll(
@@ -347,11 +347,11 @@ function addscroller() {
   // Menu scrollbar start
   if (document.querySelector(".navbar-content")) {
     var px = new PerfectScrollbar(".navbar-content", {
-        wheelSpeed: 0.5,
-        swipeEasing: 0,
-        suppressScrollX: !0,
-        wheelPropagation: 1,
-        minScrollbarLength: 40,
+      wheelSpeed: 0.5,
+      swipeEasing: 0,
+      suppressScrollX: !0,
+      wheelPropagation: 1,
+      minScrollbarLength: 40,
     });
   }
   // Menu scrollbar end
@@ -361,7 +361,7 @@ function menuclick() {
   var vw = window.innerWidth;
   var elem = document.querySelectorAll(".dash-navbar li");
   for (var j = 0; j < elem.length; j++) {
-    elem[j].removeEventListener("click", function () {});
+    elem[j].removeEventListener("click", function () { });
   }
 
   if (!document.querySelector("body").classList.contains("minimenu")) {
@@ -457,28 +457,28 @@ function rmthead() {
 
 
 function rmmenu() {
-    var sidebar = document.querySelector(".dash-sidebar");
-    var topbar = document.querySelector(".topbar");
+  var sidebar = document.querySelector(".dash-sidebar");
+  var topbar = document.querySelector(".topbar");
 
-    if (sidebar) {
-      sidebar.classList.remove("mob-sidebar-active");
-      document.body.classList.remove("no-scroll");
+  if (sidebar) {
+    sidebar.classList.remove("mob-sidebar-active");
+    document.body.classList.remove("no-scroll");
 
-      var sidebarOverlay = sidebar.querySelector(".dash-menu-overlay");
-      if (sidebarOverlay) {
-        sidebarOverlay.remove();
-      }
-    }
-
-    if (topbar) {
-      topbar.classList.remove("mob-sidebar-active");
-
-      var topbarOverlay = topbar.querySelector(".dash-menu-overlay");
-      if (topbarOverlay) {
-        topbarOverlay.remove();
-      }
+    var sidebarOverlay = sidebar.querySelector(".dash-menu-overlay");
+    if (sidebarOverlay) {
+      sidebarOverlay.remove();
     }
   }
+
+  if (topbar) {
+    topbar.classList.remove("mob-sidebar-active");
+
+    var topbarOverlay = topbar.querySelector(".dash-menu-overlay");
+    if (topbarOverlay) {
+      topbarOverlay.remove();
+    }
+  }
+}
 
 
 function rmovermenu() {
@@ -805,6 +805,7 @@ for (var t = 0; t < tc.length; t++) {
 // =======================================================
 // =======================================================
 let slideUp = (target, duration = 0) => {
+  if (!target) return;
   target.style.transitionProperty = "height, margin, padding";
   target.style.transitionDuration = duration + "ms";
   target.style.boxSizing = "border-box";

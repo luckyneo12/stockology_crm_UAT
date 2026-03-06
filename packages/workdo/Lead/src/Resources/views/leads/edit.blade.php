@@ -204,6 +204,41 @@
                             @endif
                         @endforeach
                     @endif
+
+                    @permission('lead kyc comment')
+                        <div class="col-12 mt-4">
+                            <h6 class="section-title"><i class="ti ti-shield-check"></i> {{ __('KYC Information') }}</h6>
+                        </div>
+                        <div class="col-12">
+                            <div class="custom-field-section">
+                                @php
+                                    $kycComments = $lead->discussions->where('is_kyc', 1);
+                                @endphp
+                                
+                                <div class="mb-3">
+                                    {{ Form::label('kyc_comment', '<i class="ti ti-message-plus"></i> ' . __('Add KYC Comment'), ['class' => 'form-label'], false) }}
+                                    {{ Form::textarea('kyc_comment', null, ['class' => 'form-control', 'rows' => 2, 'placeholder' => __('Enter KYC specific observations...')]) }}
+                                </div>
+
+                                @if($kycComments->count() > 0)
+                                    <div class="mt-3">
+                                        {{ Form::label('', '<i class="ti ti-history"></i> ' . __('Previous KYC Comments'), ['class' => 'form-label'], false) }}
+                                        <div class="list-group list-group-flush border rounded-2 p-2 bg-white" style="max-height: 200px; overflow-y: auto;">
+                                            @foreach($kycComments as $kyc)
+                                                <div class="list-group-item px-2 py-2 border-0 border-bottom last-child-border-0">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="text-xs fw-bold text-primary">{{ $kyc->user->name }}</span>
+                                                        <span class="text-xs text-muted">{{ $kyc->created_at->diffForHumans() }}</span>
+                                                    </div>
+                                                    <p class="text-xs text-dark mb-0 line-height-base">{{ $kyc->comment }}</p>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endpermission
                 </div>
             </div>
         </div>

@@ -25,36 +25,36 @@ class LeadStage extends Model
     {
         $user = Auth::user();
         $query = Lead::where('leads.stage_id', '=', $this->id)
-                     ->where('leads.workspace_id', '=', getActiveWorkSpace())
-                     ->with(['users', 'tasks', 'complete_tasks', 'stage', 'reminders']);
+            ->where('leads.workspace_id', '=', getActiveWorkSpace())
+            ->with(['users', 'tasks', 'complete_tasks', 'stage', 'reminders']);
 
         if ($user->type == 'client') {
             $query->join('client_leads', 'client_leads.lead_id', '=', 'leads.id')
-                  ->where('client_leads.client_id', '=', $user->id);
+                ->where('client_leads.client_id', '=', $user->id);
         } elseif ($user->type != 'company' && $user->visibility_level != 'all') {
             $accessibleUserIds = $user->getAccessibleUserIds();
-            $query->where(function($q) use ($accessibleUserIds) {
+            $query->where(function ($q) use ($accessibleUserIds) {
                 $q->whereIn('leads.user_id', $accessibleUserIds)
-                  ->orWhereHas('users', function($subQ) use ($accessibleUserIds) {
-                      $subQ->whereIn('users.id', $accessibleUserIds);
-                  });
+                    ->orWhereHas('users', function ($subQ) use ($accessibleUserIds) {
+                        $subQ->whereIn('users.id', $accessibleUserIds);
+                    });
             });
         }
 
         // Apply Custom Filters if request is provided
         if ($request) {
             if ($request->has('responsible_person') && !empty($request->responsible_person)) {
-                $respIds = (array)$request->responsible_person;
-                $query->where(function($q) use ($respIds) {
+                $respIds = (array) $request->responsible_person;
+                $query->where(function ($q) use ($respIds) {
                     $q->whereIn('leads.user_id', $respIds)
-                      ->orWhereHas('users', function($subQ) use ($respIds) {
-                          $subQ->whereIn('users.id', $respIds);
-                      });
+                        ->orWhereHas('users', function ($subQ) use ($respIds) {
+                            $subQ->whereIn('users.id', $respIds);
+                        });
                 });
             }
             if ($request->has('source_id') && !empty($request->source_id)) {
-                $query->where(function($q) use ($request) {
-                    foreach ((array)$request->source_id as $source) {
+                $query->where(function ($q) use ($request) {
+                    foreach ((array) $request->source_id as $source) {
                         $q->orWhereRaw('FIND_IN_SET(?, leads.sources)', [$source]);
                     }
                 });
@@ -66,23 +66,23 @@ class LeadStage extends Model
                 $query->where('leads.created_at', '<=', $request->end_date . ' 23:59:59');
             }
             if ($request->has('created_by') && !empty($request->created_by)) {
-                $query->whereIn('leads.created_by', (array)$request->created_by);
+                $query->whereIn('leads.created_by', (array) $request->created_by);
             }
             if ($request->has('modified_by') && !empty($request->modified_by)) {
-                $query->whereIn('leads.updated_by', (array)$request->modified_by);
+                $query->whereIn('leads.updated_by', (array) $request->modified_by);
             }
             if ($request->has('search') && !empty($request->search)) {
                 $search = $request->search;
                 $user = Auth::user();
                 $searchFields = !empty($user->search_settings) ? $user->search_settings : ['name', 'subject'];
 
-                $query->where(function($q) use ($search, $searchFields) {
+                $query->where(function ($q) use ($search, $searchFields) {
                     foreach ($searchFields as $field) {
                         if (str_starts_with($field, 'custom_')) {
                             $customFieldId = str_replace('custom_', '', $field);
-                            $q->orWhereHas('customFieldValues', function($subQ) use ($customFieldId, $search) {
+                            $q->orWhereHas('customFieldValues', function ($subQ) use ($customFieldId, $search) {
                                 $subQ->where('field_id', $customFieldId)
-                                     ->where('value', 'like', "%$search%");
+                                    ->where('value', 'like', "%$search%");
                             });
                         } else {
                             // System fields (name, subject, email, phone, etc.)
@@ -93,45 +93,46 @@ class LeadStage extends Model
             }
             // Custom Fields Filter
             if ($request->has('custom_fields') && !empty($request->custom_fields)) {
-                foreach ($request->custom_fields as $fieldId => $value) {
+                $customFields = is_array($request->custom_fields) ? $request->custom_fields : [];
+                foreach ($customFields as $fieldId => $value) {
                     if (!empty($value)) {
-                        $query->whereHas('customFieldValues', function($q) use ($fieldId, $value) {
+                        $query->whereHas('customFieldValues', function ($q) use ($fieldId, $value) {
                             $q->where('field_id', $fieldId)
-                              ->where('value', 'like', "%$value%");
+                                ->where('value', 'like', "%$value%");
                         });
                     }
                 }
             }
-            
+
             // Department & Designation Filters (HRM Integration)
             if (module_is_active('Hrm')) {
                 if ($request->has('department_id') && !empty($request->department_id)) {
-                    $departmentIds = (array)$request->department_id;
+                    $departmentIds = (array) $request->department_id;
                     $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIds)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
-                    
-                    $query->where(function($q) use ($employeeUserIds) {
+
+                    $query->where(function ($q) use ($employeeUserIds) {
                         $q->whereIn('leads.user_id', $employeeUserIds)
-                          ->orWhereHas('users', function($subQ) use ($employeeUserIds) {
-                              $subQ->whereIn('users.id', $employeeUserIds);
-                          });
+                            ->orWhereHas('users', function ($subQ) use ($employeeUserIds) {
+                                $subQ->whereIn('users.id', $employeeUserIds);
+                            });
                     });
                 }
 
                 if ($request->has('designation_id') && !empty($request->designation_id)) {
-                    $designationIds = (array)$request->designation_id;
+                    $designationIds = (array) $request->designation_id;
                     $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $designationIds)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
 
-                    $query->where(function($q) use ($employeeUserIds) {
+                    $query->where(function ($q) use ($employeeUserIds) {
                         $q->whereIn('leads.user_id', $employeeUserIds)
-                          ->orWhereHas('users', function($subQ) use ($employeeUserIds) {
-                              $subQ->whereIn('users.id', $employeeUserIds);
-                          });
+                            ->orWhereHas('users', function ($subQ) use ($employeeUserIds) {
+                                $subQ->whereIn('users.id', $employeeUserIds);
+                            });
                     });
                 }
             }
         }
 
-        $query->orderBy('leads.order', 'ASC');
+        $query->orderBy('leads.updated_at', 'DESC');
 
         if ($limit !== null) {
             $query->skip($offset)->take($limit);
@@ -144,35 +145,35 @@ class LeadStage extends Model
     {
         $user = Auth::user();
         $query = Lead::where('leads.stage_id', '=', $this->id)
-                     ->where('leads.workspace_id', '=', getActiveWorkSpace());
+            ->where('leads.workspace_id', '=', getActiveWorkSpace());
 
         if ($user->type == 'client') {
             $query->join('client_leads', 'client_leads.lead_id', '=', 'leads.id')
-                  ->where('client_leads.client_id', '=', $user->id);
+                ->where('client_leads.client_id', '=', $user->id);
         } elseif ($user->type != 'company' && $user->visibility_level != 'all') {
             $accessibleUserIds = $user->getAccessibleUserIds();
-            $query->where(function($q) use ($accessibleUserIds) {
+            $query->where(function ($q) use ($accessibleUserIds) {
                 $q->whereIn('leads.user_id', $accessibleUserIds)
-                  ->orWhereHas('users', function($subQ) use ($accessibleUserIds) {
-                      $subQ->whereIn('users.id', $accessibleUserIds);
-                  });
+                    ->orWhereHas('users', function ($subQ) use ($accessibleUserIds) {
+                        $subQ->whereIn('users.id', $accessibleUserIds);
+                    });
             });
         }
 
         if ($request) {
             // Apply same filters as lead() method
             if ($request->has('responsible_person') && !empty($request->responsible_person)) {
-                $respIds = (array)$request->responsible_person;
-                $query->where(function($q) use ($respIds) {
+                $respIds = (array) $request->responsible_person;
+                $query->where(function ($q) use ($respIds) {
                     $q->whereIn('leads.user_id', $respIds)
-                      ->orWhereHas('users', function($subQ) use ($respIds) {
-                          $subQ->whereIn('users.id', $respIds);
-                      });
+                        ->orWhereHas('users', function ($subQ) use ($respIds) {
+                            $subQ->whereIn('users.id', $respIds);
+                        });
                 });
             }
             if ($request->has('source_id') && !empty($request->source_id)) {
-                $query->where(function($q) use ($request) {
-                    foreach ((array)$request->source_id as $source) {
+                $query->where(function ($q) use ($request) {
+                    foreach ((array) $request->source_id as $source) {
                         $q->orWhereRaw('FIND_IN_SET(?, leads.sources)', [$source]);
                     }
                 });
@@ -184,23 +185,23 @@ class LeadStage extends Model
                 $query->where('leads.created_at', '<=', $request->end_date . ' 23:59:59');
             }
             if ($request->has('created_by') && !empty($request->created_by)) {
-                $query->whereIn('leads.created_by', (array)$request->created_by);
+                $query->whereIn('leads.created_by', (array) $request->created_by);
             }
             if ($request->has('modified_by') && !empty($request->modified_by)) {
-                $query->whereIn('leads.updated_by', (array)$request->modified_by);
+                $query->whereIn('leads.updated_by', (array) $request->modified_by);
             }
             if ($request->has('search') && !empty($request->search)) {
                 $search = $request->search;
                 $user = Auth::user();
                 $searchFields = !empty($user->search_settings) ? $user->search_settings : ['name', 'subject'];
 
-                $query->where(function($q) use ($search, $searchFields) {
+                $query->where(function ($q) use ($search, $searchFields) {
                     foreach ($searchFields as $field) {
                         if (str_starts_with($field, 'custom_')) {
                             $customFieldId = str_replace('custom_', '', $field);
-                            $q->orWhereHas('customFieldValues', function($subQ) use ($customFieldId, $search) {
+                            $q->orWhereHas('customFieldValues', function ($subQ) use ($customFieldId, $search) {
                                 $subQ->where('field_id', $customFieldId)
-                                     ->where('value', 'like', "%$search%");
+                                    ->where('value', 'like', "%$search%");
                             });
                         } else {
                             // System fields (name, subject, email, phone, etc.)
@@ -211,39 +212,40 @@ class LeadStage extends Model
             }
             // Custom Fields Filter
             if ($request->has('custom_fields') && !empty($request->custom_fields)) {
-                foreach ($request->custom_fields as $fieldId => $value) {
+                $customFields = is_array($request->custom_fields) ? $request->custom_fields : [];
+                foreach ($customFields as $fieldId => $value) {
                     if (!empty($value)) {
-                        $query->whereHas('customFieldValues', function($q) use ($fieldId, $value) {
+                        $query->whereHas('customFieldValues', function ($q) use ($fieldId, $value) {
                             $q->where('field_id', $fieldId)
-                              ->where('value', 'like', "%$value%");
+                                ->where('value', 'like', "%$value%");
                         });
                     }
                 }
             }
-            
+
             // Department & Designation Filters (HRM Integration)
             if (module_is_active('Hrm')) {
                 if ($request->has('department_id') && !empty($request->department_id)) {
-                    $departmentIds = (array)$request->department_id;
+                    $departmentIds = (array) $request->department_id;
                     $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIds)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
-                    
-                    $query->where(function($q) use ($employeeUserIds) {
+
+                    $query->where(function ($q) use ($employeeUserIds) {
                         $q->whereIn('leads.user_id', $employeeUserIds)
-                          ->orWhereHas('users', function($subQ) use ($employeeUserIds) {
-                              $subQ->whereIn('users.id', $employeeUserIds);
-                          });
+                            ->orWhereHas('users', function ($subQ) use ($employeeUserIds) {
+                                $subQ->whereIn('users.id', $employeeUserIds);
+                            });
                     });
                 }
 
                 if ($request->has('designation_id') && !empty($request->designation_id)) {
-                    $designationIds = (array)$request->designation_id;
+                    $designationIds = (array) $request->designation_id;
                     $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $designationIds)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
 
-                    $query->where(function($q) use ($employeeUserIds) {
+                    $query->where(function ($q) use ($employeeUserIds) {
                         $q->whereIn('leads.user_id', $employeeUserIds)
-                          ->orWhereHas('users', function($subQ) use ($employeeUserIds) {
-                              $subQ->whereIn('users.id', $employeeUserIds);
-                          });
+                            ->orWhereHas('users', function ($subQ) use ($employeeUserIds) {
+                                $subQ->whereIn('users.id', $employeeUserIds);
+                            });
                     });
                 }
             }
@@ -256,7 +258,7 @@ class LeadStage extends Model
     {
         $user = $user ?? Auth::user();
         if ($user->type == 'company') {
-            return (object)['can_view' => true, 'can_move' => true];
+            return (object) ['can_view' => true, 'can_move' => true];
         }
 
         $can_view = false;
@@ -269,8 +271,8 @@ class LeadStage extends Model
             $rolePerm = LeadStagePermission::where('stage_id', $this->id)->where('role_id', $roleId)->first();
             if ($rolePerm) {
                 $hasAnyConfig = true;
-                $can_view = (bool)$rolePerm->can_view;
-                $can_move = (bool)$rolePerm->can_move;
+                $can_view = (bool) $rolePerm->can_view;
+                $can_move = (bool) $rolePerm->can_move;
             }
         }
 
@@ -278,16 +280,18 @@ class LeadStage extends Model
         $userPerm = LeadStagePermission::where('stage_id', $this->id)->where('user_id', $user->id)->first();
         if ($userPerm) {
             $hasAnyConfig = true;
-            if ($userPerm->can_view) $can_view = true;
-            if ($userPerm->can_move) $can_move = true;
+            if ($userPerm->can_view)
+                $can_view = true;
+            if ($userPerm->can_move)
+                $can_move = true;
         }
 
         // Default permission if nothing defined at all
         if (!$hasAnyConfig) {
-            return (object)['can_view' => true, 'can_move' => true];
+            return (object) ['can_view' => true, 'can_move' => true];
         }
 
-        return (object)['can_view' => $can_view, 'can_move' => $can_move];
+        return (object) ['can_view' => $can_view, 'can_move' => $can_move];
     }
 
     public function pipeline()
