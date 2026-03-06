@@ -23,10 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Absolute force override for Live Server
-        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'stockologysecurities.in') {
-            \URL::forceScheme('https');
-            \URL::forceRootUrl('https://stockologysecurities.in');
+        // Force the root URL and scheme globally to fix redirect issues
+        if (!app()->runningInConsole() && config('app.url') && strpos(config('app.url'), 'localhost') === false) {
+            \URL::forceScheme(parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'https');
+            \URL::forceRootUrl(config('app.url'));
         }
     }
 }
