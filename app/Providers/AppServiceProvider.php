@@ -15,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton('module', function ($app) {
             return new Module();
         });
-       
+
     }
 
     /**
@@ -23,6 +23,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if (strpos(request()->root(), 'localhost') === false) {
+            \URL::forceScheme('https');
+            \URL::forceRootUrl(config('app.url'));
+        }
     }
 }
