@@ -25,6 +25,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // Force the root URL and scheme globally to fix redirect issues
         if (!app()->runningInConsole() && config('app.url') && strpos(config('app.url'), 'localhost') === false) {
+
+            // Enforce production mode for HTTPS and correct URL generation
+            if (strpos(request()->root(), 'localhost') === false) {
+                config(['app.env' => 'production']);
+            }
+
             \URL::forceScheme(parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'https');
             \URL::forceRootUrl(config('app.url'));
         }
