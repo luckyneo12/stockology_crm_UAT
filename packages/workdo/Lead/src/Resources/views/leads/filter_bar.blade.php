@@ -154,6 +154,136 @@
             </button>
         </div>
     @endif
+    @php
+        $user = Auth::user();
+    @endphp
+    @if(!empty($user->extension_1) || !empty($user->extension_2))
+        <div class="col-auto">
+            <div class="dropdown shadow-sm rounded">
+                <button class="btn btn-primary d-flex align-items-center dropdown-toggle" type="button"
+                    id="activeExtensionDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="padding: 0.55rem 1rem;">
+                    <i class="ti ti-phone-call me-2"></i>
+                    <span class="d-none d-sm-inline">Ext {{ $user->active_extension == 1 ? '1' : '2' }}: </span>
+                    <strong
+                        class="ms-1">{{ $user->active_extension == 1 ? $user->extension_1 : $user->extension_2 }}</strong>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="activeExtensionDropdown"
+                    style="border-radius: 12px;">
+                    <li class="px-3 py-2 border-bottom mb-2">
+                        <small class="text-muted text-uppercase fw-bold">{{ __('Active Extension') }}</small>
+                    </li>
+                    @if(!empty($user->extension_1))
+                        <li>
+                            <a class="dropdown-item switch-extension-btn d-flex align-items-center justify-content-between {{ $user->active_extension == 1 ? 'active bg-primary text-white' : '' }}"
+                                href="javascript:void(0)" data-index="1">
+                                <span>Ext 1: <strong>{{ $user->extension_1 }}</strong></span>
+                                @if($user->active_extension == 1) <i class="ti ti-check ms-2"></i> @endif
+                            </a>
+                        </li>
+                    @endif
+                    @if(!empty($user->extension_2))
+                        <li>
+                            <a class="dropdown-item switch-extension-btn d-flex align-items-center justify-content-between {{ $user->active_extension == 2 ? 'active bg-primary text-white' : '' }}"
+                                href="javascript:void(0)" data-index="2">
+                                <span>Ext 2: <strong>{{ $user->extension_2 }}</strong></span>
+                                @if($user->active_extension == 2) <i class="ti ti-check ms-2"></i> @endif
+                            </a>
+                        </li>
+                    @endif
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center text-primary" href="javascript:void(0)"
+                            id="manualExtensionPrompt">
+                            <i class="ti ti-pencil me-2"></i>{{ __('Manage Call Settings') }}
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    @endif
+    
+    @php
+        $settings = getCompanyAllSetting($user->id, $user->workspace_id);
+        
+        $availableApis = [];
+        // 1. User
+        for($i=1; $i<=2; $i++) {
+            if(!empty($settings['user_api_'.$i.'_url_'.$user->id])) {
+                $availableApis[] = ['id' => 'user_'.$i, 'name' => $settings['user_api_'.$i.'_name_'.$user->id] ?: 'User API '.$i];
+            }
+        }
+        // 2. Dept
+        if(empty($availableApis) && module_is_active('Hrm', $user->workspace_id)) {
+            $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
+            if($employee && $employee->department_id) {
+                for($i=1; $i<=2; $i++) {
+                    if(!empty($settings['dept_api_'.$i.'_url_'.$employee->department_id])) {
+                        $availableApis[] = ['id' => 'dept_'.$i, 'name' => $settings['dept_api_'.$i.'_name_'.$employee->department_id] ?: 'Dept API '.$i];
+                    }
+                }
+            }
+        }
+        // 3. Global
+        if(empty($availableApis)) {
+            for($i=1; $i<=3; $i++) {
+                if(!empty($settings['global_calling_api_'.$i.'_url'])) {
+                    $availableApis[] = ['id' => 'global_'.$i, 'name' => $settings['global_calling_api_'.$i.'_name'] ?: 'Global API '.$i];
+                }
+            }
+        }
+
+        $activeExtIdx = $user->active_extension == 2 ? 2 : 1;
+        $mappedApiId = $settings['user_ext_'.$activeExtIdx.'_api_id_'.$user->id] ?? '';
+        
+        $activeApiName = '';
+        foreach($availableApis as $api) {
+            if((string)$api['id'] === (string)$mappedApiId) {
+                $activeApiName = $api['name'];
+                break;
+            }
+        }
+    @endphp
+
+    @if(!empty($availableApis))
+        <div class="col-auto">
+            <div class="dropdown shadow-sm rounded">
+                <button class="btn btn-primary d-flex align-items-center dropdown-toggle" type="button"
+                    id="activeApiDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="padding: 0.55rem 1rem; background-color: #28a745; border-color: #28a745;">
+                    <i class="ti ti-server me-2"></i>
+                    <span class="d-none d-sm-inline">{{ __('API') }}: </span>
+                    <strong class="ms-1">{{ $activeApiName ?: __('Default') }}</strong>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="activeApiDropdown"
+                    style="border-radius: 12px;">
+                    <li class="px-3 py-2 border-bottom mb-2">
+                        <small class="text-muted text-uppercase fw-bold">{{ __('Select API for Ext') }} {{ $activeExtIdx }}</small>
+                    </li>
+                    @foreach($availableApis as $api)
+                        <li>
+                            <a class="dropdown-item switch-api-btn d-flex align-items-center justify-content-between {{ (string)$mappedApiId === (string)$api['id'] ? 'active bg-success text-white' : '' }}"
+                                href="javascript:void(0)" data-id="{{ $api['id'] }}">
+                                <span><strong>{{ $api['name'] }}</strong></span>
+                                @if((string)$mappedApiId === (string)$api['id']) <i class="ti ti-check ms-2"></i> @endif
+                            </a>
+                        </li>
+                    @endforeach
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center text-success" href="javascript:void(0)"
+                            id="manualExtensionPrompt2">
+                            <i class="ti ti-pencil me-2"></i>{{ __('Manage Call Settings') }}
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    @endif
 </div>
 
 <!-- Advanced Filter Modal -->

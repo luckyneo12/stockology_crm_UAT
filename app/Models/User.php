@@ -60,6 +60,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
         'active_module',
         'plan_expire_date',
         'total_user',
+        'extension',
         'total_workspace',
         'seeder_run',
         'workspace_id',
@@ -75,6 +76,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
         'accessible_departments',
         'accessible_users',
         'bio',
+        'allowed_login_ips',
     ];
 
     /**
@@ -518,28 +520,28 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
     {
         if (!empty($id) && !empty($plan)) {
 
-            $users = User::where('workspace_id', $id)->where('is_disable', 1)->where('type', '!=', 'company')->get();
+            $users = User::where('workspace_id', $id)->where('is_disable', 0)->where('type', '!=', 'company')->get();
             $total_users = $users->count();
             if ($plan->number_of_user > 0) {
                 if ($total_users > $plan->number_of_user) {
                     $count_user = $total_users - $plan->number_of_user;
-                    $usersToDisable = User::orderBy('created_at', 'desc')->where('workspace_id', $id)->where('is_disable', 1)->where('type', '!=', 'company')->take($count_user)->get();
+                    $usersToDisable = User::orderBy('created_at', 'desc')->where('workspace_id', $id)->where('is_disable', 0)->where('type', '!=', 'company')->take($count_user)->get();
                     foreach ($usersToDisable as $item) {
-                        $item->is_disable = 0;
+                        $item->is_disable = 1;
                         $item->save();
                     }
                 } else {
                     $count_user = $plan->number_of_user - $total_users;
-                    $users = User::where('workspace_id', $id)->where('is_disable', 0)->where('type', '!=', 'company')->take($count_user)->get();
+                    $users = User::where('workspace_id', $id)->where('is_disable', 1)->where('type', '!=', 'company')->take($count_user)->get();
                     foreach ($users as $item) {
-                        $item->is_disable = 1;
+                        $item->is_disable = 0;
                         $item->save();
                     }
                 }
             } elseif ($plan->number_of_user == -1) {
                 $users = User::where('workspace_id', $id)->get();
                 foreach ($users as $item) {
-                    $item->is_disable = 1;
+                    $item->is_disable = 0;
                     $item->save();
                 }
             }
@@ -556,10 +558,19 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
         return $this->hasOne(\Workdo\School\Entities\Admission::class, 'converted_student_id');
     }
 
+    private static $accessibleUserIdsCache = [];
+
     public function getAccessibleUserIds()
     {
+        $cacheKey = $this->id . '_' . $this->active_workspace;
+        if (isset(self::$accessibleUserIdsCache[$cacheKey])) {
+            return self::$accessibleUserIdsCache[$cacheKey];
+        }
+
         if ($this->type == 'company' || $this->visibility_level == 'all') {
-            return User::where('workspace_id', $this->active_workspace)->pluck('id')->toArray();
+            $ids = User::where('workspace_id', $this->active_workspace)->pluck('id')->toArray();
+            self::$accessibleUserIdsCache[$cacheKey] = $ids;
+            return $ids;
         }
 
         $user_ids = [$this->id];
@@ -612,6 +623,8 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
             $user_ids = array_merge($user_ids, $this->accessible_users);
         }
 
-        return array_unique($user_ids);
+        $result = array_unique($user_ids);
+        self::$accessibleUserIdsCache[$cacheKey] = $result;
+        return $result;
     }
 }

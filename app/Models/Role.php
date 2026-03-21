@@ -8,6 +8,14 @@ class Role extends RoleModel
 {
     public $guarded = [];
 
+    protected $fillable = [
+        'name',
+        'guard_name',
+        'module',
+        'created_by',
+        'allowed_login_ips',
+    ];
+
 
     public function users()
     {

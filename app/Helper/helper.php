@@ -262,12 +262,12 @@ if (!function_exists('getCompanyAllSetting')) {
         }
 
         if (!empty($user)) {
-            $key = 'company_settings_' . $workspace . '_' . $user->id;
-            return Cache::rememberForever($key, function () use ($user, $workspace) {
+            // $key = 'company_settings_' . $workspace . '_' . $user->id;
+            // return Cache::rememberForever($key, function () use ($user, $workspace) {
                 $settings = [];
                 $settings = Setting::where('created_by', $user->id)->where('workspace', $workspace)->pluck('value', 'key')->toArray();
                 return $settings;
-            });
+            // });
         }
 
         return [];
@@ -310,8 +310,8 @@ if (!function_exists('AdminSettingCacheForget')) {
     }
 }
 
-if (!function_exists('comapnySettingCacheForget')) {
-    function comapnySettingCacheForget($user_id = null, $workspace = null)
+if (!function_exists('companySettingCacheForget')) {
+    function companySettingCacheForget($user_id = null, $workspace = null)
     {
         try {
             if (empty($user_id)) {
@@ -323,8 +323,15 @@ if (!function_exists('comapnySettingCacheForget')) {
             $key = 'company_settings_' . $workspace . '_' . $user_id;
             Cache::forget($key);
         } catch (\Exception $e) {
-            \Log::error('comapnySettingCacheForget :' . $e->getMessage());
+            \Log::error('companySettingCacheForget :' . $e->getMessage());
         }
+    }
+}
+
+if (!function_exists('comapnySettingCacheForget')) {
+    function comapnySettingCacheForget($user_id = null, $workspace = null)
+    {
+        companySettingCacheForget($user_id, $workspace);
     }
 }
 
@@ -399,8 +406,7 @@ if (!function_exists('getActiveWorkSpace')) {
                 if ($user->type == 'super admin') {
                     return 0;
                 } else {
-                    static $WorkSpace = null;
-                    if ($WorkSpace == null) {
+                    if (true) {
                         $workspace = WorkSpace::where('created_by', $user->id)->first();
                     }
                     return $workspace ? $workspace->id : 0;
@@ -415,15 +421,8 @@ if (!function_exists('getWorkspace')) {
     {
         $data = [];
         if (Auth::check()) {
-            static $users = null;
-            if ($users == null) {
-                $users = User::where('email', Auth::user()->email)->get();
-            }
-            static $WorkSpace = null;
-            if ($WorkSpace == null) {
-                // remove this  ->where('is_disable', 1)
-                $WorkSpace = WorkSpace::whereIn('id', $users->pluck('workspace_id')->toArray())->orWhereIn('created_by', $users->pluck('id')->toArray())->get();
-            }
+            $users = User::where('email', Auth::user()->email)->get();
+            $WorkSpace = WorkSpace::whereIn('id', $users->pluck('workspace_id')->toArray())->orWhereIn('created_by', $users->pluck('id')->toArray())->get();
             return $WorkSpace;
         } else {
             return $data;
@@ -515,19 +514,13 @@ if (!function_exists('ActivatedModule')) {
             if ($user->type == 'super admin') {
                 $user_active_module = $available_modules;
             } else {
-                static $active_module = null;
                 if ($user->type != 'company') {
                     $user_not_com = User::find($user->created_by);
                     if (!empty($user_not_com)) {
-                        // Sidebar Performance Changes
-                        if ($active_module == null) {
-                            $active_module = userActiveModule::where('user_id', $user_not_com->id)->pluck('module')->toArray();
-                        }
+                        $active_module = userActiveModule::where('user_id', $user_not_com->id)->pluck('module')->toArray();
                     }
                 } else {
-                    if ($active_module == null) {
-                        $active_module = userActiveModule::where('user_id', $user->id)->pluck('module')->toArray();
-                    }
+                    $active_module = userActiveModule::where('user_id', $user->id)->pluck('module')->toArray();
                 }
 
                 // Find the common modules
@@ -542,19 +535,15 @@ if (!function_exists('ActivatedModule')) {
 if (!function_exists('Module_Alias_Name')) {
     function Module_Alias_Name($module_name)
     {
-        static $addons = [];
-        static $resultArray = [];
-        if (count($addons) == 0 && count($resultArray) == 0) {
-            $addons = Module::all();
-            $resultArray = array_reduce($addons, function ($carry, $item) {
-                // Check if both "name" and "alias" keys exist in the current item
-                if (isset($item->name) && isset($item->alias)) {
-                    // Add a new key-value pair to the result array
-                    $carry[$item->name] = $item->alias;
-                }
-                return $carry;
-            }, []);
-        }
+        $addons = Module::all();
+        $resultArray = array_reduce($addons, function ($carry, $item) {
+            // Check if both "name" and "alias" keys exist in the current item
+            if (isset($item->name) && isset($item->alias)) {
+                // Add a new key-value pair to the result array
+                $carry[$item->name] = $item->alias;
+            }
+            return $carry;
+        }, []);
 
         if ($module_name === 'general' || $module_name === 'General') {
             return $module_name;
@@ -570,20 +559,22 @@ if (!function_exists('Module_Alias_Name')) {
 }
 
 if (!function_exists('get_permission_by_module')) {
-    function get_permission_by_module($mudule)
+    function get_permission_by_module($module)
     {
         $user = Auth::user();
 
         if ($user->type == 'super admin') {
-            $permissions = Permission::where('module', $mudule)->orderBy('name')->get();
+            $permissions = Permission::where('module', $module)->orderBy('name')->get();
         } else {
             $permissions = new Collection();
             foreach ($user->roles as $role) {
                 $permissions = $permissions->merge($role->permissions);
             }
-            $permissions = $permissions->where('module', $mudule);
+            $permissions = $permissions->filter(function ($item) use ($module) {
+                return strtolower($item->module) === strtolower($module);
+            });
         }
-        // $permissions = Spatie\Permission\Models\Permission::where('module',$mudule)->orderBy('name')->get();
+        // $permissions = Spatie\Permission\Models\Permission::where('module',$module)->orderBy('name')->get();
         return $permissions;
     }
 }
@@ -886,7 +877,7 @@ if (!function_exists('check_file')) {
 
             $storage_settings = getAdminAllSetting();
 
-            if ($storage_settings['storage_setting'] == null || $storage_settings['storage_setting'] == 'local') {
+            if (!isset($storage_settings['storage_setting']) || $storage_settings['storage_setting'] == null || $storage_settings['storage_setting'] == 'local') {
 
                 return file_exists(base_path($path));
             } else {
@@ -966,16 +957,16 @@ if (!function_exists('get_file')) {
 if (!function_exists('get_base_file')) {
     function get_base_file($path)
     {
-        $admin_settings = getAdminAllSetting();
+        $storage_settings = getAdminAllSetting();
         if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 's3') {
             config(
                 [
-                    'filesystems.disks.s3.key' => $admin_settings['s3_key'],
-                    'filesystems.disks.s3.secret' => $admin_settings['s3_secret'],
-                    'filesystems.disks.s3.region' => $admin_settings['s3_region'],
-                    'filesystems.disks.s3.bucket' => $admin_settings['s3_bucket'],
-                    // 'filesystems.disks.s3.url' => $admin_settings['s3_url'],
-                    // 'filesystems.disks.s3.endpoint' => $admin_settings['s3_endpoint'],
+                    'filesystems.disks.s3.key' => $storage_settings['s3_key'],
+                    'filesystems.disks.s3.secret' => $storage_settings['s3_secret'],
+                    'filesystems.disks.s3.region' => $storage_settings['s3_region'],
+                    'filesystems.disks.s3.bucket' => $storage_settings['s3_bucket'],
+                    // 'filesystems.disks.s3.url' => $storage_settings['s3_url'],
+                    // 'filesystems.disks.s3.endpoint' => $storage_settings['s3_endpoint'],
                 ]
             );
 
@@ -983,12 +974,12 @@ if (!function_exists('get_base_file')) {
         } else if (isset($storage_settings['storage_setting']) && $storage_settings['storage_setting'] == 'wasabi') {
             config(
                 [
-                    'filesystems.disks.wasabi.key' => $admin_settings['wasabi_key'],
-                    'filesystems.disks.wasabi.secret' => $admin_settings['wasabi_secret'],
-                    'filesystems.disks.wasabi.region' => $admin_settings['wasabi_region'],
-                    'filesystems.disks.wasabi.bucket' => $admin_settings['wasabi_bucket'],
-                    'filesystems.disks.wasabi.root' => $admin_settings['wasabi_root'],
-                    'filesystems.disks.wasabi.endpoint' => $admin_settings['wasabi_url']
+                    'filesystems.disks.wasabi.key' => $storage_settings['wasabi_key'],
+                    'filesystems.disks.wasabi.secret' => $storage_settings['wasabi_secret'],
+                    'filesystems.disks.wasabi.region' => $storage_settings['wasabi_region'],
+                    'filesystems.disks.wasabi.bucket' => $storage_settings['wasabi_bucket'],
+                    'filesystems.disks.wasabi.root' => $storage_settings['wasabi_root'],
+                    'filesystems.disks.wasabi.endpoint' => $storage_settings['wasabi_url']
                 ]
             );
             return Storage::disk('wasabi')->url($path);
@@ -1693,20 +1684,16 @@ if (!function_exists('company_Time_formate')) {
 if (!function_exists('ModulePriceByName')) {
     function ModulePriceByName($module_name)
     {
-        static $addons = [];
-        static $resultArray = [];
-        if (count($addons) == 0 && count($resultArray) == 0) {
-            $addons = AddOn::all()->toArray();
-            $resultArray = array_reduce($addons, function ($carry, $item) {
-                // Check if both "module" and "name" keys exist in the current item
-                if (isset($item['module'])) {
-                    // Add a new key-value pair to the result array
-                    $carry[$item['module']]['monthly_price'] = $item['monthly_price'];
-                    $carry[$item['module']]['yearly_price'] = $item['yearly_price'];
-                }
-                return $carry;
-            }, []);
-        }
+        $addons = AddOn::all()->toArray();
+        $resultArray = array_reduce($addons, function ($carry, $item) {
+            // Check if both "module" and "name" keys exist in the current item
+            if (isset($item['module'])) {
+                // Add a new key-value pair to the result array
+                $carry[$item['module']]['monthly_price'] = $item['monthly_price'];
+                $carry[$item['module']]['yearly_price'] = $item['yearly_price'];
+            }
+            return $carry;
+        }, []);
 
         $module = Module::find($module_name);
 

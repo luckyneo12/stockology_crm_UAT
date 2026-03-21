@@ -39,15 +39,13 @@ class UserController extends Controller
             if (Auth::user()->type == 'super admin') {
                 $roles = [];
                 $users = User::where('type', 'company')->paginate(11);
-            }
-            else {
+            } else {
                 $roles = Role::where('created_by', creatorId())->pluck('name', 'id')->map(function ($name) {
                     return ucfirst($name);
                 });
                 if (Auth::user()->isAbleTo('workspace manage')) {
                     $users = User::where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace());
-                }
-                else {
+                } else {
                     $users = User::where('created_by', creatorId());
                 }
 
@@ -64,16 +62,14 @@ class UserController extends Controller
                 if ($request->status) {
                     if ($request->status == 'active') {
                         $users->where('is_disable', 0);
-                    }
-                    elseif ($request->status == 'inactive') {
+                    } elseif ($request->status == 'inactive') {
                         $users->where('is_disable', 1);
                     }
                 }
                 $users = $users->paginate(11);
             }
             return view('users.index', compact('users', 'roles'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -88,8 +84,7 @@ class UserController extends Controller
                 });
             }
             return $dataTable->render('users.list', compact('roles'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -129,8 +124,7 @@ class UserController extends Controller
             $reportingManagers = collect($reportingManagers);
 
             return view('users.create', compact('roles', 'departments', 'teams', 'users', 'reportingManagers'));
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -153,22 +147,25 @@ class UserController extends Controller
             if (Auth::user()->type == 'super admin') {
                 $validatorArray = [
                     'name' => 'required|max:120',
-                    'email' => ['required', 'email',
+                    'email' => [
+                        'required',
+                        'email',
                         Rule::unique('users')->where(function ($query) {
-                    return $query->where('created_by', creatorId());
-                })
+                            return $query->where('created_by', creatorId());
+                        })
                     ],
                 ];
-            }
-            else {
+            } else {
                 $validatorArray = [
                     'name' => 'required|max:120',
                     'roles' => 'required|exists:roles,id',
-                    'email' => ['required', 'email',
+                    'email' => [
+                        'required',
+                        'email',
                         Rule::unique('users')->where(function ($query) {
-                    return $query->where('created_by', creatorId())
-                    ->where('workspace_id', getActiveWorkSpace());
-                })
+                            return $query->where('created_by', creatorId())
+                                ->where('workspace_id', getActiveWorkSpace());
+                        })
                     ],
                 ];
             }
@@ -182,7 +179,8 @@ class UserController extends Controller
             if (!empty($request->password_switch) && $request->password_switch == 'on') {
                 $user['is_enable_login'] = 1;
                 $validator = Validator::make(
-                    $request->all(), ['password' => 'required|min:6']
+                    $request->all(),
+                    ['password' => 'required|min:6']
                 );
 
                 if ($validator->fails()) {
@@ -193,7 +191,8 @@ class UserController extends Controller
             }
             if ($request->input('mobile_no')) {
                 $validator = Validator::make(
-                    $request->all(), ['mobile_no' => 'nullable|regex:/^\+\d{1,3}\d{9,13}$/', ]
+                    $request->all(),
+                    ['mobile_no' => 'nullable|regex:/^\+\d{1,3}\d{9,13}$/',]
                 );
                 if ($validator->fails()) {
                     return redirect()->back()->with('error', $validator->errors()->first());
@@ -201,8 +200,7 @@ class UserController extends Controller
             }
             if (Auth::user()->type == 'super admin') {
                 $roles = Role::where('name', 'company')->first();
-            }
-            else {
+            } else {
                 $roles = Role::find($request->input('roles'));
             }
             $company_settings = getCompanyAllSetting();
@@ -211,9 +209,13 @@ class UserController extends Controller
             $user['name'] = $request->input('name');
             $user['email'] = $request->input('email');
             $user['mobile_no'] = $request->input('mobile_no');
+            $user['extension_1'] = $request->input('extension_1');
+            $user['extension_2'] = $request->input('extension_2');
+            $user['extension'] = $request->input('extension_1');
             $user['accessible_departments'] = $request->input('accessible_departments');
             $user['accessible_users'] = $request->input('accessible_users');
-            $user['password'] = !empty($userpassword) ?\Hash::make($userpassword) : null;
+            $user['allowed_login_ips'] = $request->input('allowed_login_ips');
+            $user['password'] = !empty($userpassword) ? \Hash::make($userpassword) : null;
             $user['lang'] = !empty($company_settings['defult_language']) ? $company_settings['defult_language'] : 'en';
             $user['type'] = $roles->name;
             $user['created_by'] = creatorId();
@@ -242,8 +244,7 @@ class UserController extends Controller
                 // If Team is selected, use it. If not, use Department.
                 if ($request->filled('team_id')) {
                     $employee->department_id = $request->team_id;
-                }
-                elseif ($request->filled('department_id')) {
+                } elseif ($request->filled('department_id')) {
                     $employee->department_id = $request->department_id;
                 }
 
@@ -286,8 +287,7 @@ class UserController extends Controller
 
 
                 $role_r = Role::where('name', 'company')->first();
-            }
-            else {
+            } else {
                 $role_r = Role::find($roles->id);
             }
 
@@ -300,13 +300,11 @@ class UserController extends Controller
                     //code...
                     $user->sendEmailVerificationNotification();
 
-                // event(new Registered($user));
-                }
-                catch (\Throwable $th) {
+                    // event(new Registered($user));
+                } catch (\Throwable $th) {
 
                 }
-            }
-            else {
+            } else {
                 $user_data = User::find($user->id);
                 $user_data->email_verified_at = date('Y-m-d h:i:s');
                 $user_data->save();
@@ -317,8 +315,7 @@ class UserController extends Controller
 
             if (Auth::user()->type == 'super admin') {
                 $msg = __('The customer has been created successfully.');
-            }
-            else {
+            } else {
                 $msg = __('The user has been created successfully.');
             }
             if ((!empty($company_settings['Create User']) && $company_settings['Create User'] == true)) {
@@ -331,8 +328,7 @@ class UserController extends Controller
             }
 
             return redirect()->back()->with('success', $msg);
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -414,8 +410,7 @@ class UserController extends Controller
             }
 
             return view('users.edit', compact('user', 'roles', 'pipelines', 'stagePermissions', 'departments', 'teams', 'users', 'reportingManagers', 'employee', 'webhookEndpoints'));
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -437,27 +432,27 @@ class UserController extends Controller
                         'required',
                         'email',
                         Rule::unique('users')->ignore($id)->where(function ($query) {
-                    return $query->where('created_by', creatorId());
-                }),
+                            return $query->where('created_by', creatorId());
+                        }),
                     ],
                 ];
-            }
-            else {
+            } else {
                 $validatorArray = [
                     'name' => 'required|max:120',
                     'email' => [
                         'required',
                         'email',
                         Rule::unique('users')->ignore($id)->where(function ($query) {
-                    return $query->where('created_by', creatorId())
-                    ->where('workspace_id', getActiveWorkSpace());
-                }),
+                            return $query->where('created_by', creatorId())
+                                ->where('workspace_id', getActiveWorkSpace());
+                        }),
                     ],
                 ];
             }
 
             $validator = Validator::make(
-                $request->all(), $validatorArray
+                $request->all(),
+                $validatorArray
             );
 
             if ($validator->fails()) {
@@ -465,7 +460,8 @@ class UserController extends Controller
             }
             if ($request->input('mobile_no')) {
                 $validator = Validator::make(
-                    $request->all(), ['mobile_no' => 'nullable|regex:/^\+\d{1,3}\d{9,13}$/']
+                    $request->all(),
+                    ['mobile_no' => 'nullable|regex:/^\+\d{1,3}\d{9,13}$/']
                 );
                 if ($validator->fails()) {
                     return redirect()->back()->with('error', $validator->errors()->first());
@@ -479,9 +475,14 @@ class UserController extends Controller
                 $user->name = $request->name;
                 $user->email = $request->email;
                 $user->mobile_no = $request->mobile_no;
+                $user->extension_1 = $request->extension_1;
+                $user->extension_2 = $request->extension_2;
+                // Keep 'extension' in sync for multi-module compatibility
+                $user->extension = ($user->active_extension == 2 && !empty($user->extension_2)) ? $user->extension_2 : $user->extension_1;
                 $user->visibility_level = $request->visibility_level;
                 $user->accessible_departments = $request->accessible_departments;
                 $user->accessible_users = $request->accessible_users;
+                $user->allowed_login_ips = $request->allowed_login_ips;
 
                 // Active/Inactive Logic
                 if ($request->has('is_active')) {
@@ -506,11 +507,9 @@ class UserController extends Controller
                     // Department/Team Logic
                     if ($request->filled('team_id')) {
                         $employee->department_id = $request->team_id;
-                    }
-                    elseif ($request->filled('department_id')) {
+                    } elseif ($request->filled('department_id')) {
                         $employee->department_id = $request->department_id;
-                    }
-                    else {
+                    } else {
                         // If both empty, maybe clear it? Or keep existing? 
                         // Let's assume clear if explicitly sent as empty, but here we just check filled.
                         // If user unselects everything, we might want to set to null.
@@ -522,8 +521,7 @@ class UserController extends Controller
                     // Reporting Manager
                     if ($request->filled('reporting_to')) {
                         $employee->parent_id = $request->reporting_to;
-                    }
-                    elseif ($request->has('reporting_to') && empty($request->reporting_to)) {
+                    } elseif ($request->has('reporting_to') && empty($request->reporting_to)) {
                         $employee->parent_id = null;
                     }
 
@@ -552,16 +550,15 @@ class UserController extends Controller
                             \Workdo\Lead\Entities\LeadStagePermission::where('stage_id', $stage_id)
                                 ->where('user_id', $user->id)
                                 ->delete();
-                        }
-                        else {
+                        } else {
                             // User wants a custom override
                             \Workdo\Lead\Entities\LeadStagePermission::updateOrCreate(
-                            ['stage_id' => $stage_id, 'user_id' => $user->id],
-                            [
-                                'can_view' => isset($perms['can_view']) ? 1 : 0,
-                                'can_move' => isset($perms['can_move']) ? 1 : 0,
-                                'workspace_id' => getActiveWorkSpace(),
-                            ]
+                                ['stage_id' => $stage_id, 'user_id' => $user->id],
+                                [
+                                    'can_view' => isset($perms['can_view']) ? 1 : 0,
+                                    'can_move' => isset($perms['can_move']) ? 1 : 0,
+                                    'workspace_id' => getActiveWorkSpace(),
+                                ]
                             );
                         }
                     }
@@ -577,21 +574,19 @@ class UserController extends Controller
                         $reqPerms = $request->webhook_permissions[$endpoint->id] ?? [];
 
                         if (isset($reqPerms['can_view'])) {
-                            if (!in_array((string)$user->id, $viewPerms)) {
-                                $viewPerms[] = (string)$user->id;
+                            if (!in_array((string) $user->id, $viewPerms)) {
+                                $viewPerms[] = (string) $user->id;
                             }
-                        }
-                        else {
-                            $viewPerms = array_values(array_diff($viewPerms, [(string)$user->id]));
+                        } else {
+                            $viewPerms = array_values(array_diff($viewPerms, [(string) $user->id]));
                         }
 
                         if (isset($reqPerms['can_edit'])) {
-                            if (!in_array((string)$user->id, $editPerms)) {
-                                $editPerms[] = (string)$user->id;
+                            if (!in_array((string) $user->id, $editPerms)) {
+                                $editPerms[] = (string) $user->id;
                             }
-                        }
-                        else {
-                            $editPerms = array_values(array_diff($editPerms, [(string)$user->id]));
+                        } else {
+                            $editPerms = array_values(array_diff($editPerms, [(string) $user->id]));
                         }
 
                         $endpoint->view_permissions = $viewPerms;
@@ -608,15 +603,13 @@ class UserController extends Controller
                             if (!$user->hasPermission($permission->name)) {
                                 $user->givePermission($permission);
                             }
-                        }
-                        else {
+                        } else {
                             if ($user->hasPermission($permission->name)) {
                                 $user->removePermission($permission);
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     // Checkbox unchecked (not present in request)
                     $permission = \App\Models\Permission::where('name', 'lead kyc comment')->first();
                     if ($permission && $user->hasPermission($permission->name)) {
@@ -632,15 +625,13 @@ class UserController extends Controller
                             if (!$user->hasPermission($permission->name)) {
                                 $user->givePermission($permission);
                             }
-                        }
-                        else {
+                        } else {
                             if ($user->hasPermission($permission->name)) {
                                 $user->removePermission($permission);
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     $permission = \App\Models\Permission::where('name', 'messenger group create')->first();
                     if ($permission && $user->hasPermission($permission->name)) {
                         $user->removePermission($permission);
@@ -650,17 +641,16 @@ class UserController extends Controller
                 event(new UpdateUser($user, $request));
                 if (Auth::user()->type == 'super admin') {
                     $msg = __('The customer details are updated successfully.');
-                }
-                else {
+                } else {
                     $msg = __('The user details are updated successfully.');
                 }
                 return redirect()->back()->with(
-                    'success', $msg
+                    'success',
+                    $msg
                 );
             }
             return redirect()->back()->with('error', __('Something is wrong.'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 
@@ -685,25 +675,22 @@ class UserController extends Controller
                 $tables_in_db = \DB::select('SHOW TABLES');
                 $db = "Tables_in_" . env('DB_DATABASE');
                 foreach ($tables_in_db as $table) {
-                    if (Schema::hasColumn($table->{ $db}, 'created_by')) {
-                        \DB::table($table->{ $db})->where('created_by', $user->id)->delete();
+                    if (Schema::hasColumn($table->{$db}, 'created_by')) {
+                        \DB::table($table->{$db})->where('created_by', $user->id)->delete();
                     }
                 }
                 ReferralTransaction::where('company_id', $id)->delete();
                 $user->delete();
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
 
             }
             if (Auth::user()->type == 'super admin') {
                 $msg = __('The customer has been deleted.');
-            }
-            else {
+            } else {
                 $msg = __('The user has been deleted');
             }
             return redirect()->back()->with('success', $msg);
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -713,8 +700,7 @@ class UserController extends Controller
             $userDetail = \Auth::user();
 
             return view('users.profile')->with('userDetail', $userDetail);
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -726,16 +712,17 @@ class UserController extends Controller
 
             $validator = \Validator::make(
                 $request->all(),
-            [
-                'name' => 'required|max:120',
-                'mobile_no' => 'nullable|regex:/^\+\d{1,3}\d{9,13}$/',
-                'email' => [
-                    'required',
-                    Rule::unique('users')->where(function ($query) use ($user) {
-                return $query->whereNotIn('id', [$user->id])->where('created_by', $user->created_by)->where('workspace_id', $user->workspace_id);
-            })
-                ],
-            ]
+                [
+                    'name' => 'required|max:120',
+                    'mobile_no' => 'nullable|regex:/^\+\d{1,3}\d{9,13}$/',
+                    'extension' => 'required|string|max:20',
+                    'email' => [
+                        'required',
+                        Rule::unique('users')->where(function ($query) use ($user) {
+                            return $query->whereNotIn('id', [$user->id])->where('created_by', $user->created_by)->where('workspace_id', $user->workspace_id);
+                        })
+                    ],
+                ]
             );
 
             if ($validator->fails()) {
@@ -766,6 +753,7 @@ class UserController extends Controller
             $user->name = $request['name'];
             $user->email = $request['email'];
             $user->mobile_no = $request['mobile_no'];
+            $user->extension = $request['extension'];
             $user->save();
             // Update the student's profile if the user is a student
             if ($user->hasRole('student')) {
@@ -793,8 +781,7 @@ class UserController extends Controller
             event(new EditProfileUser($request, $user));
 
             return redirect()->back()->with('success', __('Profile details are updated successfully'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -804,11 +791,11 @@ class UserController extends Controller
         if (Auth::user()->isAbleTo('user profile manage')) {
             if (\Auth::Check()) {
                 $request->validate(
-                [
-                    'current_password' => 'required',
-                    'new_password' => 'required|min:6',
-                    'confirm_password' => 'required|same:new_password',
-                ]
+                    [
+                        'current_password' => 'required',
+                        'new_password' => 'required|min:6',
+                        'confirm_password' => 'required|same:new_password',
+                    ]
                 );
                 $objUser = Auth::user();
                 $request_data = $request->All();
@@ -821,16 +808,13 @@ class UserController extends Controller
                     $obj_user->save();
 
                     return redirect()->route('profile', $objUser->id)->with('success', __('Password updated successfully'));
-                }
-                else {
+                } else {
                     return redirect()->route('profile', $objUser->id)->with('error', __('Please enter correct current password.'));
                 }
-            }
-            else {
+            } else {
                 return redirect()->route('profile', \Auth::user()->id)->with('error', __('Something is wrong.'));
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -851,10 +835,10 @@ class UserController extends Controller
 
                 ->addColumn('action', function ($row) {
 
-                $btn = '<a href="javascript:void(0)" class="edit-icon bg-info"><i class="fas fa-eye"></a>';
+                    $btn = '<a href="javascript:void(0)" class="edit-icon bg-info"><i class="fas fa-eye"></a>';
 
-                return $btn;
-            })
+                    return $btn;
+                })
                 ->rawColumns(['action'])
                 ->make(true);
 
@@ -869,20 +853,17 @@ class UserController extends Controller
 
                 if (Auth::user()->hasRole('super admin')) {
                     $user = User::where('id', $eId)->where('type', 'company')->first();
-                }
-                else {
+                } else {
                     $user = User::where('id', $eId)->where('workspace_id', getActiveWorkSpace())->where('created_by', creatorId())->first();
                 }
                 if ($user) {
                     return view('users.reset', compact('user'));
                 }
                 return response()->json(['error' => __('Something Went Wrong, User Not Found!')], 401);
-            }
-            catch (\Throwable $th) {
+            } catch (\Throwable $th) {
                 return response()->json(['error' => $th->getMessage()], 401);
             }
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
 
@@ -892,9 +873,10 @@ class UserController extends Controller
     {
         if (Auth::user()->isAbleTo('user reset password')) {
             $validator = \Validator::make(
-                $request->all(), [
-                'password' => 'required|confirmed|same:password_confirmation|min:6',
-            ]
+                $request->all(),
+                [
+                    'password' => 'required|confirmed|same:password_confirmation|min:6',
+                ]
             );
 
             if ($validator->fails()) {
@@ -908,8 +890,7 @@ class UserController extends Controller
 
                 if (Auth::user()->hasRole('super admin')) {
                     $user = User::where('id', $eId)->where('type', 'company')->first();
-                }
-                else {
+                } else {
                     $user = User::where('id', $eId)->where('workspace_id', getActiveWorkSpace())->where('created_by', creatorId())->first();
                 }
                 if ($user) {
@@ -918,24 +899,22 @@ class UserController extends Controller
                             'password' => Hash::make($request->password),
                             'is_enable_login' => 1,
                         ])->save();
-                    }
-                    else {
+                    } else {
                         $user->forceFill([
                             'password' => Hash::make($request->password),
                         ])->save();
                     }
 
                     return redirect()->route('users.index')->with(
-                        'success', __('The user password updated successfully')
+                        'success',
+                        __('The user password updated successfully')
                     );
                 }
                 return redirect()->back()->with('error', __('Something Went Wrong, User Not Found!'));
-            }
-            catch (\Throwable $th) {
+            } catch (\Throwable $th) {
                 return redirect()->back()->with('error', $th->getMessage());
             }
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -949,15 +928,13 @@ class UserController extends Controller
                 $user->is_enable_login = 0;
                 $user->save();
                 return redirect()->route('users.index')->with('success', __('User login disable successfully.'));
-            }
-            else {
+            } else {
                 $user->is_enable_login = 1;
                 $user->save();
                 return redirect()->route('users.index')->with('success', __('User login enable successfully.'));
             }
 
-        }
-        else {
+        } else {
             return redirect()->route('users.index')->with('error', __('Permission denied.'));
         }
     }
@@ -965,8 +942,7 @@ class UserController extends Controller
     {
         if (Auth::user()->isAbleTo('user import')) {
             return view('users.import');
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
 
@@ -1032,12 +1008,10 @@ class UserController extends Controller
 
                     }
                     $_SESSION['file_data'] = $temp_data;
-                }
-                else {
+                } else {
                     $error = 'Only <b>.csv</b> file allowed';
                 }
-            }
-            else {
+            } else {
                 $error = __('Please Select File');
             }
             $output = array(
@@ -1046,8 +1020,7 @@ class UserController extends Controller
             );
 
             return json_encode($output);
-        }
-        else {
+        } else {
             $output = array(
                 'error' => __('Permission denied.'),
                 'output' => '',
@@ -1062,8 +1035,7 @@ class UserController extends Controller
     {
         if (Auth::user()->isAbleTo('user import')) {
             return view('users.import_modal');
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -1088,21 +1060,22 @@ class UserController extends Controller
                         'name' => 'required|max:120',
                         'email' => 'required|email|max:100|unique:users,email',
                     ];
-                }
-                else {
+                } else {
                     $validatorArray = [
                         'name' => 'required|max:120',
                         'role' => 'required|exists:roles,id',
-                        'email' => ['required',
+                        'email' => [
+                            'required',
                             Rule::unique('users')->where(function ($query) {
-                        return $query->where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace());
-                    })
+                                return $query->where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace());
+                            })
                         ],
                     ];
                 }
 
                 $validator = Validator::make(
-                    $request->all(), $validatorArray
+                    $request->all(),
+                    $validatorArray
                 );
 
                 if ($validator->fails()) {
@@ -1121,8 +1094,8 @@ class UserController extends Controller
                         ]);
                     }
                 }
-                $check_user = user::where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace())->Where('email', $row[$request->email])->get();
-                if ($check_user->isEmpty()) {
+                $check_user = user::where('created_by', creatorId())->where('workspace_id', getActiveWorkSpace())->Where('email', $row[$request->email])->first();
+                if ($check_user === null) {
                     try {
 
                         $role_r = Role::find($request->role[$key]);
@@ -1155,16 +1128,14 @@ class UserController extends Controller
                                 $user_data->assignPlan($plan->id, 'Month', $plan->modules, 0, $user_data->id);
                             }
                         }
-                    }
-                    catch (\Exception $e) {
+                    } catch (\Exception $e) {
                         $flag = 1;
                         $html .= '<tr>';
                         $html .= '<td>' . $row[$request->name] . '</td>';
                         $html .= '<td>' . $row[$request->email] . '</td>';
                         $html .= '</tr>';
                     }
-                }
-                else {
+                } else {
                     $flag = 1;
                     $html .= '<tr>';
                     $html .= '<td>' . $row[$request->name] . '</td>';
@@ -1182,15 +1153,13 @@ class UserController extends Controller
                     'html' => true,
                     'response' => $html,
                 ]);
-            }
-            else {
+            } else {
                 return response()->json([
                     'html' => false,
                     'response' => __('Data Imported Successfully'),
                 ]);
             }
-        }
-        else {
+        } else {
             return response()->json([
                 'html' => false,
                 'response' => __('Permission denied.'),
@@ -1210,14 +1179,12 @@ class UserController extends Controller
                     ->join('users', 'login_details.user_id', '=', 'users.id')
                     ->select(\DB::raw('login_details.*, users.id as user_id , users.name as user_name , users.email as user_email ,users.type as user_type'))
                     ->where('login_details.type', 'company');
-            }
-            elseif (Auth::user()->type == 'company') {
+            } elseif (Auth::user()->type == 'company') {
                 $query = \DB::table('login_details')
                     ->join('users', 'login_details.user_id', '=', 'users.id')
                     ->select(\DB::raw('login_details.*, users.id as user_id , users.name as user_name , users.email as user_email ,users.type as user_type'))
                     ->where(['login_details.created_by' => creatorId()]);
-            }
-            else {
+            } else {
                 $query = \DB::table('login_details')
                     ->join('users', 'login_details.user_id', '=', 'users.id')
                     ->select(\DB::raw('login_details.*, users.id as user_id , users.name as user_name , users.email as user_email ,users.type as user_type'))
@@ -1228,8 +1195,7 @@ class UserController extends Controller
             if (!empty($request->month)) {
                 $query->whereMonth('date', date('m', strtotime($request->month)));
                 $query->whereYear('date', date('Y', strtotime($request->month)));
-            }
-            else {
+            } else {
                 $query->whereMonth('date', date('m'));
                 $query->whereYear('date', date('Y'));
             }
@@ -1240,8 +1206,7 @@ class UserController extends Controller
             $userdetails = $query->get()->sortDesc();
 
             return view('users.userlog', compact('userdetails', 'filteruser'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -1258,8 +1223,7 @@ class UserController extends Controller
             LoginDetail::where('id', $id)->delete();
 
             return redirect()->route('users.userlog.history')->with('success', __('The user logs has been deleted'));
-        }
-        else {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -1288,8 +1252,7 @@ class UserController extends Controller
                 $workspce_data = $data['response']['workspce_data'];
                 return view('users.companyinfo', compact('id', 'users_data', 'workspce_data'));
             }
-        }
-        else {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -1301,13 +1264,11 @@ class UserController extends Controller
                 User::where('id', $request->id)->update(['is_disable' => $request->is_disable]);
                 $data = $this->Counter($request->company_id);
 
-            }
-            elseif ($request->name == 'workspace') {
+            } elseif ($request->name == 'workspace') {
                 $company = User::find($request->company_id);
                 if ($company->active_workspace != $request->id) {
                     WorkSpace::where('id', $request->id)->update(['is_disable' => $request->is_disable]);
-                }
-                else {
+                } else {
                     return response()->json(['error' => __('Active Workspace can not disable.')]);
                 }
 
@@ -1322,8 +1283,7 @@ class UserController extends Controller
                 if ($request->is_disable == 1) {
 
                     return response()->json(['success' => __('Successfully Disabled.'), 'users_data' => $users_data, 'workspce_data' => $workspce_data]);
-                }
-                else {
+                } else {
                     return response()->json(['success' => __('Successfully Enabled.'), 'users_data' => $users_data, 'workspce_data' => $workspce_data]);
                 }
             }
@@ -1377,8 +1337,7 @@ class UserController extends Controller
 
         if (Auth::user()->type == 'super admin') {
             $msg = __('The customer has been verifed successfully.');
-        }
-        else {
+        } else {
             $msg = __('The user has been verifed successfully.');
         }
 

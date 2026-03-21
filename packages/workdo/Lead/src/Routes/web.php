@@ -13,6 +13,7 @@ use Workdo\Lead\Http\Controllers\SourceController;
 use Workdo\Lead\Http\Controllers\ReportController;
 use Workdo\Lead\Http\Controllers\DuplicateController;
 use Workdo\Lead\Http\Controllers\LeadTaskController;
+use Workdo\Lead\Http\Controllers\Company\SettingsController; // Imported SettingsController
 
 
 
@@ -20,6 +21,18 @@ use Workdo\Lead\Http\Controllers\LeadTaskController;
 
 
 Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead']], function () {
+    Route::post('lead/company/settings', [SettingsController::class, 'store'])->name('lead.setting.store');
+
+    // Click to Call routes
+    Route::post('lead/call/make', [\Workdo\Lead\Http\Controllers\CallController::class, 'makeCall'])->name('lead.call.make');
+
+
+    Route::post('lead/call/save-extension', [\Workdo\Lead\Http\Controllers\CallController::class, 'saveExtension'])->name('lead.call.save_extension');
+    Route::post('lead/call/switch-extension', [\Workdo\Lead\Http\Controllers\CallController::class, 'switchActiveExtension'])->name('lead.call.switch_extension');
+    Route::post('lead/call/switch-api', [\Workdo\Lead\Http\Controllers\CallController::class, 'switchActiveApi'])->name('lead.call.switch_api');
+    Route::get('lead/call/manager', [\Workdo\Lead\Http\Controllers\CallController::class, 'manager'])->name('lead.call.manager');
+    Route::post('lead/call/manager/save', [\Workdo\Lead\Http\Controllers\CallController::class, 'saveManagerSettings'])->name('lead.call.manager.save');
+
     Route::get('webhook/test/{url}', [\Workdo\Lead\Http\Controllers\WebhookEndpointController::class, 'testForm'])->name('webhook.test.form');
     Route::get('leads/duplicates', [DuplicateController::class, 'index'])->name('leads.duplicates');
     Route::delete('leads/duplicates/{id}', [DuplicateController::class, 'destroy'])->name('leads.duplicates.destroy');

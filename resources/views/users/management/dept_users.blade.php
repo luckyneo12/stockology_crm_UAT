@@ -52,14 +52,37 @@
 </div>
 
 <script>
+    // Function to refresh modal content with a slight fade effect
+    function refreshModal(deptId) {
+        var modalBody = $('#deptModalBody');
+        modalBody.css('opacity', '0.5');
+        $.ajax({
+            url: '{{ url("department-users") }}/' + deptId,
+            success: function(html) {
+                modalBody.html(html);
+                modalBody.css('opacity', '1');
+            },
+            error: function() {
+                modalBody.css('opacity', '1');
+                show_toastr('Error', '{{ __("Failed to refresh user list.") }}', 'error');
+            }
+        });
+    }
+
     $('#btn_add_user_to_dept').on('click', function() {
+        var btn = $(this);
         var userId = $('#user_to_add').val();
-        var deptId = $(this).data('dept-id');
+        var deptId = btn.data('dept-id');
 
         if(!userId) {
-            show_toastr('Error', 'Please select a user.', 'error');
+            show_toastr('Error', '{{ __("Please select a user.") }}', 'error');
             return;
         }
+
+        // Loading state
+        btn.attr('disabled', true);
+        var originalHtml = btn.html();
+        btn.html('<span class="spinner-border spinner-border-sm" role="status"></span> {{ __("Adding...") }}');
 
         $.ajax({
             url: '{{ route('department.user.add') }}',
@@ -72,54 +95,79 @@
             success: function(data) {
                 if(data.success) {
                     show_toastr('Success', data.message, 'success');
-                    // Refresh current modal content
-                    $.ajax({
-                        url: '{{ url("department-users") }}/' + deptId,
-                        success: function(html) {
-                            $('#deptModalBody').html(html);
-                        }
-                    });
+                    refreshModal(deptId);
                 } else {
                     show_toastr('Error', data.message, 'error');
+                    btn.attr('disabled', false).html(originalHtml);
                 }
+            },
+            error: function() {
+                show_toastr('Error', '{{ __("Something went wrong.") }}', 'error');
+                btn.attr('disabled', false).html(originalHtml);
             }
         });
     });
 
     // Remove user from department
     $(document).on('click', '.btn-remove-user', function() {
-        var empId = $(this).data('emp-id');
-        var deptId = $(this).data('dept-id');
+        var btn = $(this);
+        var empId = btn.data('emp-id');
+        var deptId = btn.data('dept-id');
         
-        if(!confirm('{{ __("Are you sure you want to remove this user from the department?") }}')) {
-            return;
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: '{{ __("Are you sure?") }}',
+                text: '{{ __("You want to remove this user from the department?") }}',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '{{ __("Yes, remove it!") }}',
+                cancelButtonText: '{{ __("No, cancel") }}',
+                customClass: {
+                    confirmButton: 'btn btn-danger',
+                    cancelButton: 'btn btn-secondary ms-2'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    executeRemove();
+                }
+            });
+        } else {
+            if(confirm('{{ __("Are you sure you want to remove this user from the department?") }}')) {
+                executeRemove();
+            }
         }
 
-        $.ajax({
-            url: '{{ route('department.user.remove') }}',
-            type: 'POST',
-            data: {
-                employee_id: empId,
-                department_id: deptId,
-                _token: '{{ csrf_token() }}'
-            },
-            success: function(data) {
-                if(data.success) {
-                    show_toastr('Success', data.message, 'success');
-                    // Refresh current modal content
-                    $.ajax({
-                        url: '{{ url("department-users") }}/' + deptId,
-                        success: function(html) {
-                            $('#deptModalBody').html(html);
-                        }
-                    });
-                } else {
-                    show_toastr('Error', data.message, 'error');
+        function executeRemove() {
+            // Loading state
+            btn.attr('disabled', true);
+            var originalHtml = btn.html();
+            btn.html('<span class="spinner-border spinner-border-sm" role="status"></span>');
+
+            $.ajax({
+                url: '{{ route('department.user.remove') }}',
+                type: 'POST',
+                data: {
+                    employee_id: empId,
+                    department_id: deptId,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(data) {
+                    if(data.success) {
+                        show_toastr('Success', data.message, 'success');
+                        refreshModal(deptId);
+                    } else {
+                        show_toastr('Error', data.message, 'error');
+                        btn.attr('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function() {
+                    show_toastr('Error', '{{ __("Something went wrong.") }}', 'error');
+                    btn.attr('disabled', false).html(originalHtml);
                 }
-            },
-            error: function() {
-                show_toastr('Error', '{{ __("Something went wrong.") }}', 'error');
-            }
-        });
+            });
+        }
     });
 </script>

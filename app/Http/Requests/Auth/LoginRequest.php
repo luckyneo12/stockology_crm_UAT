@@ -51,6 +51,36 @@ class LoginRequest extends FormRequest
                             'email' => __("Your account is disabled from company"),
                         ]);
                     }
+
+                    // IP Restriction Check
+                    if ($user->type != 'super admin') {
+                        $current_ip = $this->ip();
+                        $allowed_ips = [];
+
+                        // 1. Check User specific IP restriction
+                        if (!empty($user->allowed_login_ips)) {
+                            $allowed_ips = array_map('trim', explode(',', $user->allowed_login_ips));
+                        } 
+                        // 2. If no user restriction, check Role restrictions
+                        else {
+                            foreach ($user->roles as $role) {
+                                if (!empty($role->allowed_login_ips)) {
+                                    $role_ips = array_map('trim', explode(',', $role->allowed_login_ips));
+                                    $allowed_ips = array_merge($allowed_ips, $role_ips);
+                                }
+                            }
+                        }
+
+                        // If any restriction exists, validate the current IP
+                        if (!empty($allowed_ips)) {
+                            if (!in_array($current_ip, $allowed_ips)) {
+                                throw ValidationException::withMessages([
+                                    'email' => __("Login from this IP address is restricted. (Your IP: :ip)", ['ip' => $current_ip]),
+                                ]);
+                            }
+                        }
+                    }
+
                     $id = $user->id;
                     break;
                 }

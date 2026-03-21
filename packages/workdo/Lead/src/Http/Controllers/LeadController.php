@@ -100,14 +100,22 @@ class LeadController extends Controller
             ->where('workspace', $workspace)
             ->whereIn('status', ['pending', 'in_progress', 'overdue'])
             ->orderBy('date', 'asc')
-            ->get();
+            ->get()
+            ->filter(function ($task) use ($user) {
+                return $task->lead && $task->lead->isAccessible($user);
+            });
 
         // 2. My Reminders (Today & Upcoming)
         $reminders = \Workdo\Lead\Entities\Reminder::where('user_id', $user->id)
             ->where('workspace_id', $workspace)
             ->where('is_sent', 0)
             ->orderBy('remind_at', 'asc')
-            ->get();
+            ->get()
+            ->filter(function ($reminder) use ($user) {
+                return $reminder->remindable_type === 'Workdo\Lead\Entities\Lead'
+                    ? ($reminder->remindable && $reminder->remindable->isAccessible($user))
+                    : true;
+            });
 
         // 3. Performance Metrics
         $totalTasks = \Workdo\Lead\Entities\LeadTask::where('user_id', $user->id)->where('workspace', $workspace)->count();
@@ -2822,7 +2830,6 @@ class LeadController extends Controller
     public function fileImport(Request $request)
     {
         if (Auth::user()->isAbleTo('lead import')) {
-            session_start();
 
             $error = '';
 
@@ -2842,8 +2849,8 @@ class LeadController extends Controller
                     $file_header = fgetcsv($file_data);
                     fclose($file_data);
 
-                    $_SESSION['import_file_path'] = $filePath;
-                    $_SESSION['file_header'] = $file_header;
+                    session()->put('import_file_path', $filePath);
+                    session()->put('file_header', $this->cleanUtf8($file_header));
                     // For progress bar calculation, we need total rows. Let's count quickly and safely.
                     $total_rows = 0;
                     $handle = fopen($filePath, "r");
@@ -2857,7 +2864,8 @@ class LeadController extends Controller
                         fclose($handle);
                         $total_rows = max(0, $total_rows - 1); // Subtract 1 for header
                     }
-                    $_SESSION['import_total_rows'] = $total_rows;
+                    session()->put('import_total_rows', $total_rows);
+                    session()->save();
                 } else {
                     $error = 'Only <b>.csv</b> file allowed';
                 }
@@ -2870,7 +2878,7 @@ class LeadController extends Controller
                 'output' => $html,
             );
 
-            return json_encode($output);
+            return response()->json($output);
         } else {
             return redirect()->back()->with('error', __('permission Denied'));
         }
@@ -2878,9 +2886,6 @@ class LeadController extends Controller
 
     public function fileImportModal()
     {
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
         if (Auth::user()->isAbleTo('lead import')) {
             if (Auth::user()->type == "company") {
                 $users = User::where('created_by', '=', creatorId())->where('type', '!=', 'client')->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
@@ -2891,7 +2896,7 @@ class LeadController extends Controller
             $pipelines = Pipeline::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
             $sources = \Workdo\Lead\Entities\Source::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
             $file_data = [];
-            $filePath = $_SESSION['import_file_path'] ?? null;
+            $filePath = session()->get('import_file_path') ?? null;
             if ($filePath && file_exists($filePath)) {
                 $file_handle = fopen($filePath, 'r');
                 fgetcsv($file_handle); // Skip header
@@ -2902,7 +2907,7 @@ class LeadController extends Controller
                 }
                 fclose($file_handle);
             }
-            $file_header = $_SESSION['file_header'] ?? [];
+            $file_header = session()->get('file_header') ?? [];
 
             return view('lead::leads.import_modal', compact('users', 'pipelines', 'file_data', 'file_header', 'sources'));
         } else {
@@ -2919,118 +2924,103 @@ class LeadController extends Controller
 
     public function leadImportdata(Request $request)
     {
-        if (Auth::user()->isAbleTo('lead import')) {
-            $creatorId = creatorId();
-            $getActiveWorkSpace = getActiveWorkSpace();
-            session_start();
-            $filePath = $_SESSION['import_file_path'] ?? null;
-            $file_header = $_SESSION['file_header'] ?? [];
-            $total_items = $_SESSION['import_total_rows'] ?? 0;
+        try {
+            if (Auth::user()->isAbleTo('lead import')) {
+                $creatorId = creatorId();
+                $getActiveWorkSpace = getActiveWorkSpace();
+                $filePath = session()->get('import_file_path') ?? null;
+                $file_header = session()->get('file_header') ?? [];
+                $total_items = session()->get('import_total_rows') ?? 0;
 
-            if (!$filePath || !file_exists($filePath)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('Import file not found or expired. Please re-upload.'),
-                ]);
-            }
+                if (!$filePath || !file_exists($filePath)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('Import file not found or expired. Please re-upload.'),
+                    ]);
+                }
 
-            $is_chunk = $request->input('is_chunk', false);
-            $chunk_index = $request->input('chunk_index', 0);
-            $chunk_size = $request->input('chunk_size', 50);
+                $is_chunk = $request->input('is_chunk', false);
+                $chunk_index = $request->input('chunk_index', 0);
+                $chunk_size = $request->input('chunk_size', 50);
 
-            $process_data = [];
-            $file_handle = fopen($filePath, 'r');
-            fgetcsv($file_handle); // Skip header
+                $process_data = [];
+                $file_handle = fopen($filePath, 'r');
+                fgetcsv($file_handle); // Skip header
 
-            $current_row = 0;
-            while (($row = fgetcsv($file_handle)) !== false) {
-                if ($current_row >= $chunk_index && $current_row < ($chunk_index + $chunk_size)) {
-                    $temp_row = [];
-                    foreach ($file_header as $i => $header) {
-                        $temp_row[$i] = $row[$i] ?? '';
+                $current_row = 0;
+                while (($row = fgetcsv($file_handle)) !== false) {
+                    if ($current_row >= $chunk_index && $current_row < ($chunk_index + $chunk_size)) {
+                        $temp_row = [];
+                        foreach ($file_header as $i => $header) {
+                            $temp_row[$i] = $row[$i] ?? '';
+                        }
+                        $process_data[] = $temp_row;
                     }
-                    $process_data[] = $temp_row;
+                    $current_row++;
+                    if ($current_row >= ($chunk_index + $chunk_size))
+                        break;
                 }
-                $current_row++;
-                if ($current_row >= ($chunk_index + $chunk_size))
-                    break;
-            }
-            fclose($file_handle);
+                fclose($file_handle);
 
-            // Initialize or retrieve error HTML from session
-            if (!$is_chunk || $chunk_index == 0) {
-                $_SESSION['import_error_html'] = '<h3 class="text-danger text-center">Below data is not inserted</h3></br>
-                <table class="table table-bordered"><tr>
-                    <th>' . __('Subject') . '</th>
-                    <th>' . __('Name') . '</th>
-                    <th>' . __('Email') . '</th>
-                    <th>' . __('Phone') . '</th>
-                </tr>';
-                $_SESSION['import_error_flag'] = 0;
-            }
+                // Initialize or retrieve error HTML from session
+                if (!$is_chunk || $chunk_index == 0) {
+                    session()->put('import_error_html', '<h3 class="text-danger text-center">Below data is not inserted</h3></br>
+                    <table class="table table-bordered"><tr>
+                        <th>' . __('Subject') . '</th>
+                        <th>' . __('Name') . '</th>
+                        <th>' . __('Email') . '</th>
+                        <th>' . __('Phone') . '</th>
+                    </tr>');
+                    session()->put('import_error_flag', 0);
+                    session()->put('duplicate_leads', []); // Also reset duplicates on first chunk
+                }
 
-            foreach ($process_data as $validationKey => $value) {
-                $validator = \Validator::make([
-                    'name' => $value[$request->name] ?? null,
-                    'email' => $value[$request->email] ?? null,
-                    'phone' => $value[$request->phone] ?? null,
-                ], [
-                    'name' => 'nullable|string|max:255',
-                    'email' => 'nullable|email|max:255',
-                    'phone' => 'required'
-                ]);
-
-                if ($validator->fails()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $validator->errors()->first() . ' at row ' . ($chunk_index + $validationKey + 1),
+                foreach ($process_data as $validationKey => $value) {
+                    $validator = \Validator::make([
+                        'name' => $value[$request->name] ?? null,
+                        'email' => $value[$request->email] ?? null,
+                        'phone' => $value[$request->phone] ?? null,
+                    ], [
+                        'name' => 'nullable|string|max:255',
+                        'email' => 'nullable|email|max:255',
+                        'phone' => 'required'
                     ]);
+
+                    if ($validator->fails()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $validator->errors()->first() . ' at row ' . ($chunk_index + $validationKey + 1),
+                        ]);
+                    }
                 }
-            }
 
-            \Log::info("Lead Import Started: Chunk Index: {$chunk_index}, Total Rows in File: {$total_items}");
-            \Log::info("Lead Import Request ALL Params: " . json_encode($request->all()));
-
-            $pipeline = null;
-            if ($request->has('global_pipeline') && !empty($request->global_pipeline)) {
-                $pipeline = Pipeline::where('id', $request->global_pipeline)
-                    ->where('workspace_id', $getActiveWorkSpace)
-                    ->first();
-
-                if (!$pipeline) {
-                    \Log::error("Lead Import: Pipeline ID {$request->global_pipeline} not found for workspace {$getActiveWorkSpace}");
-                    return response()->json([
-                        'success' => false,
-                        'message' => __('Selected pipeline not found or access denied.'),
-                    ]);
+                $pipeline = null;
+                if ($request->has('global_pipeline') && !empty($request->global_pipeline)) {
+                    $pipeline = Pipeline::where('id', $request->global_pipeline)
+                        ->where('workspace_id', $getActiveWorkSpace)
+                        ->first();
                 }
-            }
 
-            if (empty($pipeline)) {
-                $user = Auth::user();
-                if ($user->default_pipeline) {
-                    $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->where('id', '=', $user->default_pipeline)->first();
-                }
                 if (empty($pipeline)) {
-                    $pipeline = Pipeline::where('created_by', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
+                    $user = Auth::user();
+                    if ($user->default_pipeline) {
+                        $pipeline = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->where('id', '=', $user->default_pipeline)->first();
+                    }
+                    if (empty($pipeline)) {
+                        $pipeline = Pipeline::where('created_by', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
+                    }
                 }
-                \Log::info("Lead Import: Falling back to pipeline: " . ($pipeline ? $pipeline->id : 'NONE'));
-            }
 
-            if (!empty($pipeline)) {
+                if (empty($pipeline)) {
+                    return response()->json(['success' => false, 'message' => __('Please create pipeline.')]);
+                }
+
                 $stage = null;
                 if ($request->has('global_stage') && !empty($request->global_stage)) {
                     $stage = LeadStage::where('id', $request->global_stage)
                         ->where('pipeline_id', $pipeline->id)
                         ->where('workspace_id', $getActiveWorkSpace)
                         ->first();
-
-                    if (!$stage) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => __('Selected stage not found or does not belong to the selected pipeline.'),
-                        ]);
-                    }
                 }
 
                 if (empty($stage)) {
@@ -3038,182 +3028,176 @@ class LeadController extends Controller
                 }
 
                 if (empty($stage)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => __('Please create stage for this pipeline.'),
-                    ]);
+                    return response()->json(['success' => false, 'message' => __('Please create stage for this pipeline.')]);
                 }
+
+                $duplicate_count = count(session()->get('duplicate_leads') ?? []);
+                $duplicate_leads_in_chunk = [];
+
+                // Performance Optimization: Pre-fetch all emails and phones for duplicate check
+                $emails_in_chunk = [];
+                $phones_in_chunk = [];
+                foreach ($process_data as $row) {
+                    if (isset($request->email) && isset($row[$request->email]) && !empty($row[$request->email])) {
+                        $emails_in_chunk[] = $row[$request->email];
+                    }
+                    if (isset($request->phone) && isset($row[$request->phone]) && !empty($row[$request->phone])) {
+                        $phones_in_chunk[] = $row[$request->phone];
+                    }
+                }
+
+                $existing_leads = Lead::where('workspace_id', $getActiveWorkSpace)
+                    ->where(function ($query) use ($emails_in_chunk, $phones_in_chunk) {
+                        if (!empty($emails_in_chunk)) {
+                            $query->orWhereIn('email', $emails_in_chunk);
+                        }
+                        if (!empty($phones_in_chunk)) {
+                            $query->orWhereIn('phone', $phones_in_chunk);
+                        }
+                    })->get()->keyBy(function ($item) {
+                        return ($item->email ?? '') . '|' . ($item->phone ?? '');
+                    });
+
+                $existing_emails = $existing_leads->pluck('email')->filter()->flip()->toArray();
+                $existing_phones = $existing_leads->pluck('phone')->filter()->flip()->toArray();
+
+                foreach ($process_data as $key => $row) {
+                    $user_id = $creatorId;
+                    if ($request->has('global_user') && !empty($request->global_user)) {
+                        $user_id = $request->global_user;
+                    }
+
+                    $email = (isset($request->email) && $request->email != '' && isset($row[$request->email])) ? $row[$request->email] : '';
+                    $name = (isset($request->name) && $request->name != '' && isset($row[$request->name])) ? $row[$request->name] : '';
+                    $phone = (isset($request->phone) && $request->phone != '' && isset($row[$request->phone])) ? $row[$request->phone] : '';
+                    $subject = 'Lead from Import ' . date('Y-m-d');
+
+                    if (empty($name)) {
+                        $name = $phone;
+                    }
+                    if (empty($name)) {
+                        $name = $subject;
+                    }
+
+                    $is_duplicate = false;
+                    if (!empty($email) && isset($existing_emails[$email])) {
+                        $is_duplicate = true;
+                    }
+                    if (!$is_duplicate && !empty($phone) && isset($existing_phones[$phone])) {
+                        $is_duplicate = true;
+                    }
+
+                    if ($is_duplicate) {
+                        $dup_row = [
+                            'row' => $chunk_index + $key + 1,
+                            'name' => $name,
+                            'email' => $email,
+                            'phone' => $phone,
+                            'reason' => 'Already exists in Database'
+                        ];
+                        $duplicate_leads = session()->get('duplicate_leads') ?? [];
+                        $duplicate_leads[] = $dup_row;
+                        session()->put('duplicate_leads', $duplicate_leads);
+                        $duplicate_leads_in_chunk[] = $dup_row;
+                        $duplicate_count++;
+                        continue;
+                    }
+
+                    try {
+                        $user_to_assign = $user_id;
+                        if (!empty($request->user) && isset($request->user[$key])) {
+                            $usr = User::find($request->user[$key]);
+                            if ($usr)
+                                $user_to_assign = $usr->id;
+                        }
+
+                        $lead = Lead::create([
+                            'subject' => $subject,
+                            'name' => $name,
+                            'user_id' => $user_to_assign,
+                            'email' => $email,
+                            'phone' => $phone,
+                            'pipeline_id' => $pipeline->id,
+                            'stage_id' => $stage->id,
+                            'sources' => $request->global_source ?? null,
+                            'created_by' => $creatorId,
+                            'workspace_id' => $getActiveWorkSpace,
+                            'date' => date('Y-m-d'),
+                        ]);
+
+                        $usrLeads = [$user_to_assign];
+                        foreach ($usrLeads as $usrLead) {
+                            UserLead::firstOrCreate(['user_id' => $usrLead, 'lead_id' => $lead->id]);
+                        }
+
+                        $lead->activities()->create([
+                            'user_id' => Auth::user()->id,
+                            'log_type' => 'Lead Imported',
+                            'remark' => json_encode(['message' => __('Lead imported via CSV by ') . Auth::user()->name]),
+                        ]);
+
+                    } catch (\Exception $e) {
+                        session()->put('import_error_flag', 1);
+                        $error_html = session()->get('import_error_html') . '<tr><td>' . $subject . '</td><td>' . $name . '</td><td>' . (empty($email) ? '-' : $email) . '</td><td>' . (empty($phone) ? '-' : $phone) . '</td></tr>';
+                        session()->put('import_error_html', $error_html);
+                        \Log::error("Lead Import Creation Error: " . $e->getMessage());
+                    }
+                }
+
+                $current_count = $chunk_index + count($process_data);
+                $is_finished = ($current_count >= $total_items);
+
+                if ($is_finished) {
+                    $html = session()->get('import_error_html');
+                    $flag = session()->get('import_error_flag');
+                    session()->forget('import_error_html');
+                    session()->forget('import_error_flag');
+                } else {
+                    $flag = 0;
+                    $html = '';
+                }
+
+                if ($is_finished && !empty($filePath) && file_exists($filePath)) {
+                    @unlink($filePath);
+                    session()->forget('import_file_path');
+                }
+
+                $log_data = [
+                    'success' => true,
+                    'current' => $current_count,
+                    'total' => $total_items,
+                    'is_finished' => $is_finished,
+                    'html' => ($is_finished && $flag == 1),
+                    'response' => $is_finished ? ($flag == 1 ? $html . '</table><br />' : __('Data has been imported.')) : __('Processing...'),
+                    'duplicates_count' => $duplicate_count,
+                    'chunk_duplicates' => $duplicate_leads_in_chunk,
+                    'latest_duplicates' => array_slice(session()->get('duplicate_leads') ?? [], -5, 5)
+                ];
+
+                return response()->json($this->cleanUtf8($log_data));
+
             } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('Please create pipeline.'),
-                ]);
+                return response()->json(['success' => false, 'message' => __('Permission Denied')]);
             }
-
-            // Initialize Duplicate Storage on first chunk
-            if (!$is_chunk || $chunk_index == 0) {
-                $_SESSION['duplicate_leads'] = [];
-            }
-            $duplicate_count = count($_SESSION['duplicate_leads'] ?? []);
-
-            $duplicate_leads_in_chunk = [];
-
-            // Performance Optimization: Pre-fetch all emails and phones in this chunk for batch duplicate check
-            $emails_in_chunk = [];
-            $phones_in_chunk = [];
-            foreach ($process_data as $row) {
-                if (isset($request->email) && isset($row[$request->email]) && !empty($row[$request->email])) {
-                    $emails_in_chunk[] = $row[$request->email];
-                }
-                if (isset($request->phone) && isset($row[$request->phone]) && !empty($row[$request->phone])) {
-                    $phones_in_chunk[] = $row[$request->phone];
-                }
-            }
-
-            $existing_leads = Lead::where('workspace_id', $getActiveWorkSpace)
-                ->where(function ($query) use ($emails_in_chunk, $phones_in_chunk) {
-                    if (!empty($emails_in_chunk)) {
-                        $query->orWhereIn('email', $emails_in_chunk);
-                    }
-                    if (!empty($phones_in_chunk)) {
-                        $query->orWhereIn('phone', $phones_in_chunk);
-                    }
-                })->get()->keyBy(function ($item) {
-                    return ($item->email ?? '') . '|' . ($item->phone ?? '');
-                });
-
-            // Map existing leads for faster lookup
-            $existing_emails = $existing_leads->pluck('email')->filter()->flip()->toArray();
-            $existing_phones = $existing_leads->pluck('phone')->filter()->flip()->toArray();
-
-            foreach ($process_data as $key => $row) {
-                $user_id = $creatorId;
-                if ($request->has('global_user') && !empty($request->global_user)) {
-                    $user_id = $request->global_user;
-                }
-
-                $email = (isset($request->email) && $request->email != '' && isset($row[$request->email])) ? $row[$request->email] : '';
-                $name = (isset($request->name) && $request->name != '' && isset($row[$request->name])) ? $row[$request->name] : '';
-                $phone = (isset($request->phone) && $request->phone != '' && isset($row[$request->phone])) ? $row[$request->phone] : '';
-                $subject = 'Lead from Import ' . date('Y-m-d');
-
-                if (empty($name)) {
-                    $name = $phone;
-                }
-                if (empty($name)) {
-                    $name = $subject;
-                }
-
-                // Optimized Duplicate Detection using pre-fetched array
-                $is_duplicate = false;
-                if (!empty($email) && isset($existing_emails[$email])) {
-                    $is_duplicate = true;
-                }
-                if (!$is_duplicate && !empty($phone) && isset($existing_phones[$phone])) {
-                    $is_duplicate = true;
-                }
-
-                if ($is_duplicate) {
-                    $dup_row = [
-                        'row' => $chunk_index + $key + 1,
-                        'name' => $name,
-                        'email' => $email,
-                        'phone' => $phone,
-                        'reason' => 'Already exists in Database'
-                    ];
-                    $_SESSION['duplicate_leads'][] = $dup_row;
-                    $duplicate_leads_in_chunk[] = $dup_row;
-                    $duplicate_count++;
-                    continue;
-                }
-
-                try {
-                    $user_to_assign = $user_id;
-                    if (!empty($request->user) && isset($request->user[$key])) {
-                        $usr = User::find($request->user[$key]);
-                        if ($usr)
-                            $user_to_assign = $usr->id;
-                    }
-
-                    $lead = Lead::create([
-                        'subject' => $subject,
-                        'name' => $name,
-                        'user_id' => $user_to_assign,
-                        'email' => $email,
-                        'phone' => $phone,
-                        'pipeline_id' => $pipeline->id,
-                        'stage_id' => $stage->id,
-                        'sources' => $request->global_source ?? null,
-                        'created_by' => $creatorId,
-                        'workspace_id' => $getActiveWorkSpace,
-                        'date' => date('Y-m-d'),
-                    ]);
-
-                    // Reduced logging - only log every 50th lead or on first/last of chunk
-                    if ($key % 50 == 0) {
-                        \Log::debug("Lead Created: ID {$lead->id} assigned to UID {$user_to_assign} in Pipeline {$pipeline->id}");
-                    }
-
-                    $usrLeads = [$user_to_assign];
-                    foreach ($usrLeads as $usrLead) {
-                        UserLead::firstOrCreate(['user_id' => $usrLead, 'lead_id' => $lead->id]);
-                    }
-
-                    // Activity log for import
-                    $lead->activities()->create([
-                        'user_id' => Auth::user()->id,
-                        'log_type' => 'Lead Imported',
-                        'remark' => json_encode(['message' => __('Lead imported via CSV by ') . Auth::user()->name]),
-                    ]);
-
-                } catch (\Exception $e) {
-                    $_SESSION['import_error_flag'] = 1;
-                    $_SESSION['import_error_html'] .= '<tr><td>' . $subject . '</td><td>' . $name . '</td><td>' . (empty($email) ? '-' : $email) . '</td><td>' . (empty($phone) ? '-' : $phone) . '</td></tr>';
-                    \Log::error("Lead Import Creation Error: " . $e->getMessage());
-                }
-            }
-
-            $current_count = $chunk_index + count($process_data);
-            $is_finished = ($current_count >= $total_items);
-
-            if ($is_finished) {
-                $html = $_SESSION['import_error_html'];
-                $flag = $_SESSION['import_error_flag'];
-                unset($_SESSION['import_error_html']);
-                unset($_SESSION['import_error_flag']);
-            } else {
-                $flag = 0;
-                $html = '';
-            }
-
-            if ($is_finished && !empty($filePath) && file_exists($filePath)) {
-                @unlink($filePath);
-                unset($_SESSION['import_file_path']);
-                \Log::info("Lead Import: Temp file cleaned up.");
-            }
-
-            $log_data = [
-                'success' => true,
-                'current' => $current_count,
-                'total' => $total_items,
-                'is_finished' => $is_finished,
-                'html' => ($is_finished && $flag == 1),
-                'response' => $is_finished ? ($flag == 1 ? $html . '</table><br />' : __('Data has been imported.')) : __('Processing...'),
-                'duplicates_count' => $duplicate_count,
-                'chunk_duplicates' => $duplicate_leads_in_chunk,
-                'latest_duplicates' => array_slice($_SESSION['duplicate_leads'] ?? [], -5, 5) // Last 5 duplicates
-            ];
-
-            \Log::info("Lead Import Chunk Finished: Success Count={$current_count}, Duplicates={$duplicate_count}");
-            if ($is_finished) {
-                $finalCount = Lead::where('workspace_id', $getActiveWorkSpace)->where('pipeline_id', $pipeline->id)->count();
-                \Log::info("Lead Import TOTALLY FINISHED. Total leads in DB for Pipeline {$pipeline->id} and Workspace {$getActiveWorkSpace}: {$finalCount}");
-            }
-
-            return response()->json($log_data);
-        } else {
-            return response()->json(['success' => false, 'message' => __('Permission Denied')]);
+        } catch (\Exception $e) {
+            \Log::error("CRITICAL LEAD IMPORT ERROR: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            return response()->json([
+                'success' => false,
+                'message' => 'Critical Error: ' . $this->cleanUtf8($e->getMessage())
+            ], 500);
         }
+    }
+
+    private function cleanUtf8($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->cleanUtf8($value);
+            }
+        } elseif (is_string($data)) {
+            return mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+        }
+        return $data;
     }
 
 

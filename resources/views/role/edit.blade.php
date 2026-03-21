@@ -27,6 +27,11 @@
                                 </small>
                             @enderror
                         </div>
+                        <div class="mt-2">
+                            {{ Form::label('allowed_login_ips', __('Allowed IP Addresses (Optional)'), ['class' => 'form-label']) }}
+                            {{ Form::text('allowed_login_ips', $role->allowed_login_ips, ['class' => 'form-control', 'placeholder' => __('Enter IP addresses separated by comma (e.g. 192.168.1.1, 203.0.113.5)')]) }}
+                            <small class="text-muted">{{ __('Leave empty for no restriction.') }}</small>
+                        </div>
                     </div>
                 </div>
                 <div class="card sticky-top roles-sidebar">

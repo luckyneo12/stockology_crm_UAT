@@ -12,10 +12,10 @@
             <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-2">
                 @if($lead->phone)
                     <a href="javascript:void(0)" 
-                       onclick="callWithZoiper('{{ $lead->phone }}', this)" 
-                       class="call-btn-enhanced" 
+                       class="call-btn-enhanced click-to-call" 
+                       data-phone="{{ $lead->phone }}"
                        data-bs-toggle="tooltip" 
-                       title="{{__('Copy & Call with Zoiper')}}">
+                       title="{{__('Click to Call')}}">
                         <i class="ti ti-phone-call f-14"></i>
                     </a>
                 @endif
@@ -120,8 +120,14 @@
                 ?>
                 @if($user)
                     <?php
-                        $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
-                        $tName = $emp && $emp->department ? $emp->department->name : '';
+                        static $employeeDeptCache = [];
+                        if (isset($employeeDeptCache[$user->id])) {
+                            $tName = $employeeDeptCache[$user->id];
+                        } else {
+                            $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
+                            $tName = $emp && $emp->department ? $emp->department->name : '';
+                            $employeeDeptCache[$user->id] = $tName;
+                        }
                     ?>
                     <div class="d-flex flex-wrap align-items-center justify-content-end mb-1 gap-1" style="max-width: 100%;">
                         <span class="badge rounded-pill bg-white border d-flex align-items-center shadow-sm px-2 mb-1" 
@@ -146,35 +152,6 @@
     </div>
 </div>
 
-<script>
-    if (typeof callWithZoiper === 'undefined') {
-        function callWithZoiper(phoneNumber, element) {
-            phoneNumber = phoneNumber.replace(/[^0-9+]/g, '');
-            const icon = element.querySelector('i');
-            const originalClass = icon.className;
-
-            navigator.clipboard.writeText(phoneNumber).then(function() {
-                // Visual feedback for copy
-                icon.className = 'ti ti-check text-success f-20';
-                
-                // Trigger Zoiper
-                window.location.href = 'zoiper:' + phoneNumber;
-
-                setTimeout(() => {
-                    icon.className = originalClass;
-                }, 2000);
-                
-                // Optional: show toast if show_toastr exists
-                if(typeof show_toastr === 'function'){
-                    show_toastr('Success', 'Number copied to clipboard', 'success');
-                }
-            }, function(err) {
-                console.error('Could not copy text: ', err);
-                window.location.href = 'zoiper:' + phoneNumber;
-            });
-        }
-    }
-</script>
 
 <style>
     :root {

@@ -1,7 +1,12 @@
 <?php
 
 
+Route::get('/test-routing', function () {
+    return "Routing is working!";
+});
+
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
@@ -466,3 +471,18 @@ Route::get('composer/json', function () {
         }
         return $require . '<br><br><br>' . $repo;
     });
+
+// Temporary Fix for Live Server 500 Error
+Route::get('/run-fix-live-server', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        \Illuminate\Support\Facades\Artisan::call('view:clear');
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        return "Migrations and Cache Cleared successfully! Please try to login now.";
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
+});

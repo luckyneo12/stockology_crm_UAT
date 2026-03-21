@@ -484,7 +484,7 @@
                 });
             }
 
-            setInterval(updateCounts, 10000);
+            setInterval(updateCounts, 60000);
 
             $('#notification-bell').on('click', function () {
                 $.get('{{ route("notifications.index") }}', function (notifications) {

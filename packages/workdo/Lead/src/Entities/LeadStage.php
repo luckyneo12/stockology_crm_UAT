@@ -24,6 +24,10 @@ class LeadStage extends Model
     public function lead(Request $request = null, $limit = null, $offset = 0)
     {
         $user = Auth::user();
+        if (!$user || !$this->permissions($user)->can_view) {
+            return collect(); // Return empty collection if user is not authenticated or cannot view stage
+        }
+
         $query = Lead::where('leads.stage_id', '=', $this->id)
             ->where('leads.workspace_id', '=', getActiveWorkSpace())
             ->with(['users', 'tasks', 'complete_tasks', 'stage', 'reminders']);
@@ -144,6 +148,10 @@ class LeadStage extends Model
     public function leadCount(Request $request = null)
     {
         $user = Auth::user();
+        if (!$user || !$this->permissions($user)->can_view) {
+            return 0; // Return 0 if user is not authenticated or cannot view stage
+        }
+
         $query = Lead::where('leads.stage_id', '=', $this->id)
             ->where('leads.workspace_id', '=', getActiveWorkSpace());
 

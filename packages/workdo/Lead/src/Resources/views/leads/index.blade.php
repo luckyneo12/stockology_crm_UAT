@@ -189,7 +189,7 @@
     <script>
         // Real-time Kanban polling — shows other users' stage moves
         (function ($) {
-            var POLL_INTERVAL = 20000; // Increased to 20s for 1000 users performance
+            var POLL_INTERVAL = 40000; // Increased to 40s to reduce server load
             var IDLE_TIMEOUT = 300000; // 5 minutes
             var pipelineId = '{{ $pipeline ? $pipeline->id : 0 }}';
             if (!pipelineId || pipelineId === '0') return;
@@ -265,7 +265,7 @@
                             var $targetBox = $('#task-list-' + newStage);
 
                             if ($card.length) {
-                                var curStage = String($card.closest('.kanban-box').attr('data-id'));
+                                var curStage = $card.closest('.kanban-box').attr('data-id');
 
                                 if (curStage === newStage) {
                                     // RE-SORT: Move to top of SAME column if new activity occurred
@@ -295,6 +295,15 @@
                                 setTimeout(function () { $hint.fadeOut(400, function () { $(this).remove(); }); }, 4000);
                             }
                         });
+                    },
+                    error: function (xhr) {
+                        if (xhr.status === 401 || xhr.status === 419) {
+                            pollingActive = false;
+                            console.error("Kanban Polling: Session expired.");
+                            if (typeof show_toastr === 'function') {
+                                show_toastr('Session Expired', 'Please refresh or log in again to continue seeing updates.', 'warning');
+                            }
+                        }
                     }
                 });
             }
@@ -530,17 +539,17 @@
                         @if(request()->all())
                             @foreach(request()->all() as $key => $value)
                                 @if($key != 'stage_id')
-                                                                                                                                        @if(is_array($value))
-                                                                                                                                            @foreach($value as $v)
-                                                                                                                                                "{{ $key }}[]": "{{ $v }}",
-                                                                                                                                            @endforeach
-                                                                                                                                        @else
+                                                                                                                                                                                                    @if(is_array($value))
+                                                                                                                                                                                                        @foreach($value as $v)
+                                                                                                                                                                                                            "{{ $key }}[]": "{{ $v }}",
+                                                                                                                                                                                                        @endforeach
+                                                                                                                                                                                                    @else
                                         "{{ $key }}": "{{ $value }}",
                                     @endif
                                 @endif
                             @endforeach
                         @endif
-                                            },
+                                                        },
             success: function(data) {
                 if (data.success) {
                     sentinel.before(data.html);
@@ -563,7 +572,7 @@
                 sentinel.addClass('d-none');
             }
         });
-                                    }
+                                                }
 
         function checkAndLoad(stage_id) {
             var container = $('#task-list-' + stage_id);
@@ -637,6 +646,7 @@
                 }
             }, 150);
         });
-                                });
+                                            });
     </script>
+    @include('lead::leads.click_to_call_script')
 @endpush

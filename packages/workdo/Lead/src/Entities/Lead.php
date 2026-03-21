@@ -140,6 +140,11 @@ class Lead extends Model
             return false;
         }
 
+        // Enforce stage-based visibility permissions
+        if ($this->stage && !$this->stage->permissions($user)->can_view) {
+            return false;
+        }
+
         if ($user->type == 'company' || $user->type == 'client' || $user->visibility_level == 'all') {
             return true;
         }

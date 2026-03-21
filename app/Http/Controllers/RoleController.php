@@ -82,6 +82,7 @@ class RoleController extends Controller
             $role             = new Role();
             $role->name       = $name;
             $role->created_by = creatorId();
+            $role->allowed_login_ips = $request->allowed_login_ips;
             $permissions      = $request['permissions'];
             $role->save();
 
@@ -147,7 +148,10 @@ class RoleController extends Controller
                 return redirect()->back()->with('error', $messages->first());
             }
             $permissions = $request['permissions'];
-            $role->fill(['name'=>$request->name])->save();
+            $role->fill([
+                'name' => $request->name,
+                'allowed_login_ips' => $request->allowed_login_ips,
+            ])->save();
 
             $p_all = Permission::all();
 
@@ -167,8 +171,8 @@ class RoleController extends Controller
                     \Workdo\Lead\Entities\LeadStagePermission::updateOrCreate(
                         ['stage_id' => $stage_id, 'role_id' => $role->id],
                         [
-                            'can_view' => isset($perms['can_view']) ? 1 : 0,
-                            'can_move' => isset($perms['can_move']) ? 1 : 0,
+                            'can_view' => isset($perms['can_view']) && $perms['can_view'] ? 1 : 0,
+                            'can_move' => isset($perms['can_move']) && $perms['can_move'] ? 1 : 0,
                             'workspace_id' => getActiveWorkSpace(),
                         ]
                     );

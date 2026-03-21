@@ -19,7 +19,8 @@
                     </div>
                     <p class="text-muted text-sm mt-4 mb-2">{{ __('Completion Rate') }}</p>
                     <h6 class="mb-3">{{ __('Tasks Completed') }}</h6>
-                    <h3 class="mb-0">{{ $completionRate }}% <span class="text-sm text-muted">({{ $completedTasks }}/{{ $totalTasks }})</span></h3>
+                    <h3 class="mb-0">{{ $completionRate }}% <span
+                            class="text-sm text-muted">({{ $completedTasks }}/{{ $totalTasks }})</span></h3>
                 </div>
             </div>
         </div>
@@ -118,9 +119,9 @@
                                         $remindAt = \Carbon\Carbon::parse($reminder->remind_at);
                                         $now = now();
                                         $colorClass = 'bg-success'; // Future
-                                        if($remindAt->lt($now)) {
+                                        if ($remindAt->lt($now)) {
                                             $colorClass = 'bg-danger'; // Overdue/Now
-                                        } elseif($remindAt->diffInHours($now) < 24) {
+                                        } elseif ($remindAt->diffInHours($now) < 24) {
                                             $colorClass = 'bg-warning'; // Soon
                                         }
                                     @endphp
@@ -144,3 +145,53 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).ready(function () {
+            var userExtension = "{{ Auth::user()->extension_1 }}";
+
+            if (!userExtension || userExtension === "") {
+                Swal.fire({
+                    title: '{{ __("Required: Extension Number") }}',
+                    text: '{{ __("Please enter your extension number to enable calling features.") }}',
+                    input: 'text',
+                    inputPlaceholder: '{{ __("Enter Extension (e.g., 3025)") }}',
+                    icon: 'warning',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    confirmButtonText: '{{ __("Save Extension") }}',
+                    showLoaderOnConfirm: true,
+                    preConfirm: (extension) => {
+                        if (!extension) {
+                            Swal.showValidationMessage('{{ __("Extension number is required") }}');
+                            return false;
+                        }
+                        return $.ajax({
+                            url: '{{ route("lead.call.save_extension") }}',
+                            method: 'POST',
+                            data: {
+                                extension_1: extension,
+                                _token: '{{ csrf_token() }}'
+                            },
+                        }).done(response => {
+                            return response;
+                        }).fail(error => {
+                            Swal.showValidationMessage(
+                                `Request failed: ${error.responseJSON.message || error.statusText}`
+                            );
+                        });
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: '{{ __("Saved!") }}',
+                            text: '{{ __("Your extension has been updated successfully.") }}',
+                            icon: 'success'
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+@endpush

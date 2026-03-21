@@ -277,12 +277,18 @@ class LeadUtility extends Model
         return true;
     }
 
+    public static $visibilityRules = null;
+
     public static function getFieldDisplay($lead, $fieldName, $originalValue, $stripHtml = false)
     {
-        // 1. Check Visibility Rules
-        $rules = \Workdo\Lead\Entities\LeadFieldVisibility::where('field_name', $fieldName)
-            ->where('workspace_id', getActiveWorkSpace())
-            ->get();
+        // 1. Check Visibility Rules (Static Cache)
+        if (self::$visibilityRules === null) {
+            self::$visibilityRules = \Workdo\Lead\Entities\LeadFieldVisibility::where('workspace_id', getActiveWorkSpace())
+                ->get()
+                ->groupBy('field_name');
+        }
+
+        $rules = self::$visibilityRules->get($fieldName) ?? collect();
 
         $isMasked = false;
 

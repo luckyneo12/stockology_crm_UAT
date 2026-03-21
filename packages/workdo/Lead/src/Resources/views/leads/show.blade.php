@@ -797,7 +797,7 @@
                                                 <label class="stat-label text-danger d-block mb-1">{{ __('Phone Number') }}</label>
                                                 <span class="h6 mb-0 text-dark fw-bold">{!! \Workdo\Lead\Entities\LeadUtility::getFieldDisplay($lead, 'phone', $lead->phone) !!}
                                                     @if($lead->phone)
-                                                        <a href="{{ sip_link($lead->phone) }}" class="ms-2 text-primary hover-scale" data-bs-toggle="tooltip" title="{{ __('Call') }}">
+                                                        <a href="javascript:void(0)" class="ms-2 text-primary hover-scale click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
                                                             <i class="ti ti-phone-call"></i>
                                                         </a>
                                                     @endif
@@ -895,7 +895,7 @@
                                                                         @case('phone') 
                                                                             {{ $lead->phone }}
                                                                             @if($lead->phone)
-                                                                                <a href="{{ sip_link($lead->phone) }}" class="ms-1 text-primary" data-bs-toggle="tooltip" title="{{ __('Call') }}">
+                                                                                <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
                                                                                     <i class="ti ti-phone-call"></i>
                                                                                 </a>
                                                                             @endif
@@ -1272,3 +1272,7 @@
     </div>
 
 @endsection
+
+@push('scripts')
+    @include('lead::leads.click_to_call_script')
+@endpush

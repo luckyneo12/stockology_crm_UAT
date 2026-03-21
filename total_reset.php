@@ -18,6 +18,8 @@ Artisan::call('config:clear');
 Artisan::call('view:clear');
 Artisan::call('route:clear');
 Artisan::call('optimize:clear');
+Artisan::call('permission:cache-reset');
+Artisan::call('auth:clear-resets');
 echo "Caches Cleared Successfully!<br><br>";
 
 echo "Resetting Session...<br>";

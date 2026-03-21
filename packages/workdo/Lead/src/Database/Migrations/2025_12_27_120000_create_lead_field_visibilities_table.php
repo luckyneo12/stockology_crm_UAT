@@ -21,7 +21,7 @@ return new class extends Migration
                 $table->integer('pipeline_id')->nullable();
                 $table->integer('stage_id')->nullable();
                 $table->enum('encryption_type', ['none', 'mask', 'hide'])->default('none');
-                $table->enum('masking_type', ['partial', 'full', 'hide'])->default('partial')->after('encryption_type');
+                $table->enum('masking_type', ['partial', 'full', 'hide'])->default('partial');
                 $table->integer('workspace_id');
                 $table->integer('created_by');
                 $table->timestamps();

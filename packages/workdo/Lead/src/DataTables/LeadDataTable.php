@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Workdo\Lead\Entities\Lead;
 use Workdo\Lead\Entities\LeadUtility;
 use Workdo\Lead\Entities\Pipeline;
+use Workdo\Lead\Entities\LeadStage;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
@@ -53,7 +54,7 @@ class LeadDataTable extends DataTable
                     return $phone;
                 }
                 if (!empty($lead->phone)) {
-                    return $phone . ' <a href="' . sip_link($lead->phone) . '" class="ms-1 text-primary" data-bs-toggle="tooltip" title="' . __('Call') . '"><i class="ti ti-phone-call"></i></a>';
+                    return $phone . ' <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="' . $lead->phone . '" data-bs-toggle="tooltip" title="' . __('Call') . '"><i class="ti ti-phone-call"></i></a>';
                 }
                 return $phone;
             })
@@ -115,13 +116,20 @@ class LeadDataTable extends DataTable
                 return $lead->updatedBy ? $lead->updatedBy->name : '-';
             })
             ->addColumn('team', function (Lead $lead) {
+                static $employeeDeptCache = [];
                 if (module_is_active('Hrm') && $lead->user_id) {
+                    if (isset($employeeDeptCache[$lead->user_id])) {
+                        return $employeeDeptCache[$lead->user_id];
+                    }
+                    $departmentName = '-';
                     $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $lead->user_id)->first();
                     if ($employee && $employee->department_id) {
                         $department = \Workdo\Hrm\Entities\Department::find($employee->department_id);
                         if ($department)
-                            return $department->name;
+                            $departmentName = $department->name;
                     }
+                    $employeeDeptCache[$lead->user_id] = $departmentName;
+                    return $departmentName;
                 }
                 return '-';
             });
@@ -180,6 +188,21 @@ class LeadDataTable extends DataTable
                         }
                     );
             });
+        }
+
+        // Apply Stage-based visibility (Restrict leads from hidden stages)
+        // If user is not 'company', they only see leads from stages where they have 'can_view' permission
+        if ($user->type != 'company') {
+            $hiddenStageIds = [];
+            $allStagesInPipeline = LeadStage::where('pipeline_id', $pipeline_id)->where('workspace_id', getActiveWorkSpace())->get();
+            foreach ($allStagesInPipeline as $s) {
+                if (!$s->permissions($user)->can_view) {
+                    $hiddenStageIds[] = $s->id;
+                }
+            }
+            if (!empty($hiddenStageIds)) {
+                $query->whereNotIn('leads.stage_id', $hiddenStageIds);
+            }
         }
 
         // Apply Custom Filters
@@ -358,24 +381,35 @@ class LeadDataTable extends DataTable
             ->columns($this->getColumns())
             ->ajax([
                 'data' => 'function(d) {
-                    var pipeline = $("select[name=default_pipeline_id]").val();
-                    d.default_pipeline_id = pipeline;
-                    
-                    if (typeof window.selectedLeads !== "undefined" && window.selectedLeads.length > 0) {
-                        d.export_selected_ids = window.selectedLeads.join(",");
-                    }
-                    
-                    // Pass all custom filters from URL
-                    var urlParams = new URL(window.location.href).searchParams;
-                    urlParams.forEach(function(value, key) {
-                        if (key.endsWith("[]")) {
-                            var cleanKey = key.replace("[]", "");
-                            if (!d[cleanKey]) d[cleanKey] = [];
-                            if (!d[cleanKey].includes(value)) d[cleanKey].push(value);
-                        } else {
-                            d[key] = value;
+                    try {
+                        var pipeline = $("select[name=default_pipeline_id]").val();
+                        d.default_pipeline_id = pipeline;
+                        
+                        // Ensure selectedLeads is properly initialized
+                        if (typeof window.selectedLeads === "undefined") {
+                            window.selectedLeads = [];
                         }
-                    });
+                        
+                        if (window.selectedLeads && window.selectedLeads.length > 0) {
+                            d.export_selected_ids = window.selectedLeads.join(",");
+                        }
+                        
+                        // Pass all custom filters from URL
+                        var urlParams = new URL(window.location.href).searchParams;
+                        urlParams.forEach(function(value, key) {
+                            if (key.endsWith("[]")) {
+                                var cleanKey = key.replace("[]", "");
+                                if (!d[cleanKey]) d[cleanKey] = [];
+                                if (!d[cleanKey].includes(value)) d[cleanKey].push(value);
+                            } else {
+                                d[key] = value;
+                            }
+                        });
+                    } catch (error) {
+                        console.error(\'DataTable AJAX Error:\', error);
+                        // Return empty data on error to prevent further issues
+                        return [];
+                    }
                 }',
             ])
             ->orderBy(1) // Sort by the first data column, not checkboxes

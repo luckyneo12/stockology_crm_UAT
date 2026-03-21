@@ -140,8 +140,9 @@ function toastrs(text, message, type) {
 
 // Global Notification Polling
 function globalNotificationPoll() {
+    const baseUrl = $('meta[name="base-url"]').attr('content') || '';
     // Poll for general notifications
-    $.get('/notifications/latest-unread', function (notification) {
+    $.get(baseUrl + '/notifications/latest-unread', function (notification) {
         if (notification && notification.id) {
             let lastNotifiedId = localStorage.getItem('last_notified_notification_id');
             if (lastNotifiedId != notification.id) {
@@ -184,11 +185,15 @@ function globalNotificationPoll() {
                 toastrs(title, body, icon);
             }
         }
+    }).fail(function (xhr) {
+        if (xhr.status === 401 || xhr.status === 419) {
+            console.error("Global Polling: Session expired.");
+        }
     });
 
     // Also poll for messenger if not on messenger page
     if (!window.location.pathname.includes('/messenger')) {
-        $.get('/messenger/latest-unread', function (message) {
+        $.get(baseUrl + '/messenger/latest-unread', function (message) {
             if (message && message.id) {
                 let lastNotifiedMsgId = localStorage.getItem('last_notified_message_id');
                 if (lastNotifiedMsgId != message.id) {
@@ -201,14 +206,18 @@ function globalNotificationPoll() {
                     toastrs('New Message', senderName + ': ' + body, 'info');
                 }
             }
+        }).fail(function (xhr) {
+            if (xhr.status === 401 || xhr.status === 419) {
+                console.error("Messenger Polling: Session expired.");
+            }
         });
     }
 }
 
 $(document).ready(function () {
     if (typeof AuthUser !== 'undefined' || $('meta[name="user-id"]').length > 0) {
-        // Run every 10 seconds
-        setInterval(globalNotificationPoll, 10000);
+        // Run every 60 seconds
+        setInterval(globalNotificationPoll, 60000);
         // Run once on load
         setTimeout(globalNotificationPoll, 2000);
     }

@@ -43,5 +43,8 @@ class EventServiceProvider extends Provider
         GivePermissionToRole::class => [
             GiveRoleToPermission::class
         ],
+        \App\Events\CompanySettingEvent::class => [
+            \Workdo\Lead\Listeners\CompanySettingListener::class
+        ],
     ];
 }

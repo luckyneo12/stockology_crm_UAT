@@ -50,36 +50,42 @@ class InvoiceDataTable extends DataTable
                 }
             })
             ->addColumn('total_amount', function (Invoice $invoice) {
+                try {
                     return currency_format_with_sym($invoice->getTotal());
+                } catch (\Exception $e) {
+                    return '-';
+                }
             })
             ->addColumn('due_amount', function (Invoice $invoice) {
-                return currency_format_with_sym($invoice->getDue());
+                try {
+                    return currency_format_with_sym($invoice->getDue());
+                } catch (\Exception $e) {
+                    return '-';
+                }
             })
             ->editColumn('status', function (Invoice $invoice) {
-                if ($invoice->status == 0)
-                {
-                    $class = 'bg-info';
+                try {
+                    if (!isset(Invoice::$statues[$invoice->status])) {
+                        return '<span class="badge fix_badges bg-dark p-2 px-3">' . __('Unknown') . '</span>';
+                    }
+
+                    if ($invoice->status == 0) {
+                        $class = 'bg-info';
+                    } elseif ($invoice->status == 1) {
+                        $class = 'bg-primary';
+                    } elseif ($invoice->status == 2) {
+                        $class = 'bg-secondary';
+                    } elseif ($invoice->status == 3) {
+                        $class = 'bg-warning';
+                    } elseif ($invoice->status == 4) {
+                        $class = 'bg-success';
+                    } else {
+                        $class = 'bg-dark';
+                    }
+                    return '<span class="badge fix_badges ' . $class . ' p-2 px-3">' . Invoice::$statues[$invoice->status] . '</span>';
+                } catch (\Exception $e) {
+                    return '<span class="badge fix_badges bg-danger p-2 px-3">' . __('Error') . '</span>';
                 }
-                elseif($invoice->status == 1)
-                {
-                    $class = 'bg-primary';
-                }
-                elseif($invoice->status == 2)
-                {
-                    $class = 'bg-secondary';
-                }
-                elseif($invoice->status == 3)
-                {
-                    $class = 'bg-warning';
-                }
-                elseif($invoice->status == 4)
-                {
-                    $class = 'bg-success';
-                }else
-                {
-                    $class = 'bg-dark';
-                }
-                return '<span class="badge fix_badges '.$class.' p-2 px-3">'. Invoice::$statues[$invoice->status] .'</span>';
 
             })
             ->addColumn('action', function (Invoice $invoice) {

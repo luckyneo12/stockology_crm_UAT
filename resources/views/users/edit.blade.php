@@ -64,6 +64,19 @@
                 <x-mobile value="{{ !empty($user->mobile_no) ? $user->mobile_no : null }}"></x-mobile>
             </div>
 
+            <div class="col-md-6">
+                <div class="form-group">
+                    {{Form::label('extension_1',__('Extension 1'),['class'=>'form-label'])}}
+                    {{Form::text('extension_1',null,array('class'=>'form-control','placeholder'=>__('Enter Extension 1')))}}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    {{Form::label('extension_2',__('Extension 2'),['class'=>'form-label'])}}
+                    {{Form::text('extension_2',null,array('class'=>'form-control','placeholder'=>__('Enter Extension 2')))}}
+                </div>
+            </div>
+
             <div class="col-md-12 mt-3 mb-3">
                  <div class="form-check form-switch custom-switch-v1 d-flex align-items-center justify-content-between border p-2 rounded">
                     <label class="form-check-label" for="is_active">{{ __('Active Status') }}</label>
@@ -114,6 +127,13 @@
                     <div class="form-group">
                         {{Form::label('accessible_users',__('Accessible Users'),['class'=>'form-label'])}}
                         {{Form::select('accessible_users[]',$users,$user->accessible_users,array('class'=>'form-control choices','id'=>'accessible_users','multiple'=>'multiple'))}}
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        {{Form::label('allowed_login_ips', __('Allowed IP Addresses (Optional)'), ['class' => 'form-label'])}}
+                        {{Form::text('allowed_login_ips', $user->allowed_login_ips, array('class' => 'form-control', 'placeholder' => __('Enter IP addresses separated by comma (e.g. 192.168.1.1, 203.0.113.5)')))}}
+                        <small class="text-muted">{{ __('Leave empty for no restriction.') }}</small>
                     </div>
                 </div>
 
