@@ -1018,46 +1018,90 @@
                                     <table class="table table-sm table-hover mb-0">
                                         <thead>
                                             <tr class="text-muted text-xxs uppercase">
-                                                <th>{{ __('Target Name') }}</th>
-                                                <th>{{ __('Month') }}</th>
+                                                <th>{{ __('Target Name / Period') }}</th>
                                                 <th class="text-center">{{ __('Quota Assigned') }}</th>
                                                 <th class="text-center">{{ __('Quota Achieved') }}</th>
                                                 <th class="text-center">{{ __('Achievement Rate') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse($targets as $t)
+                                            @php
+                                                $hasAnyTargets = false;
+                                            @endphp
+                                            @foreach($stats['monthly_labels'] as $idx => $monthLabel)
                                                 @php
-                                                    $tVal = $t->target_value;
-                                                    $aVal = $t->achieved_value;
-                                                    $rate = $tVal > 0 ? round(($aVal / $tVal) * 100, 1) : 0;
-                                                    $monthLabel = $t->start_date ? date('M Y', strtotime($t->start_date)) : __('N/A');
-                                                    $tStatusBadge = $t->status == 'Completed' ? 'bg-light-success text-success' : 'bg-light-warning text-warning';
+                                                    $mNumber = $idx + 1;
+                                                    $mTargets = $monthlyTargetsList[$mNumber] ?? [];
+                                                    $monthTotalTarget = count($mTargets) > 0 ? collect($mTargets)->sum('target_value') : 0;
+                                                    $monthTotalAchieved = count($mTargets) > 0 ? collect($mTargets)->sum('achieved_value') : 0;
                                                 @endphp
-                                                <tr class="text-xs">
-                                                    <td class="font-weight-bold text-dark">
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <i class="ti ti-target text-primary fs-6"></i>
-                                                            <span class="text-truncate" style="max-width: 250px;">{{ $t->target_name }}</span>
-                                                            <span class="badge {{ $tStatusBadge }} text-xxs px-2 py-0.5" style="border-radius: 6px;">{{ __($t->status) }}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td class="text-muted">{{ $monthLabel }}</td>
-                                                    <td class="text-center font-weight-bold">{{ $tVal }}</td>
-                                                    <td class="text-center text-success font-weight-bold">{{ $aVal }}</td>
-                                                    <td class="text-center">
-                                                        <span class="badge {{ $rate >= 80 ? 'bg-light-success text-success' : ($rate >= 45 ? 'bg-light-primary text-primary' : 'bg-light-danger text-danger') }}">
-                                                            {{ $rate }}%
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            @empty
+                                                @if(count($mTargets) > 0)
+                                                    @php
+                                                        $hasAnyTargets = true;
+                                                    @endphp
+                                                    <!-- Month Header Row -->
+                                                    <tr class="table-month-header-row" style="background-color: #fafbfc; border-top: 1.5px solid #edf2f7; border-bottom: 1.5px solid #edf2f7;">
+                                                        <td style="padding: 12px 24px;">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="badge bg-light-primary text-primary rounded-circle p-1.5 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                                                    <i class="ti ti-calendar" style="font-size: 14px;"></i>
+                                                                </span>
+                                                                <span class="text-dark font-weight-bold" style="font-size: 0.95rem;">{{ $monthLabel }} {{ date('Y') }}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center font-weight-bold" style="vertical-align: middle;">{{ $monthTotalTarget }}</td>
+                                                        <td class="text-center text-success font-weight-bold" style="vertical-align: middle;">{{ $monthTotalAchieved }}</td>
+                                                        <td class="text-center" style="vertical-align: middle;">
+                                                            @php
+                                                                $monthRate = $monthTotalTarget > 0 ? round(($monthTotalAchieved / $monthTotalTarget) * 100, 1) : 0;
+                                                            @endphp
+                                                            <span class="badge {{ $monthRate >= 80 ? 'bg-light-success text-success' : ($monthRate >= 45 ? 'bg-light-primary text-primary' : 'bg-light-danger text-danger') }}">
+                                                                {{ $monthRate }}%
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+
+                                                    <!-- Month Targets Rows -->
+                                                    @foreach($mTargets as $t)
+                                                        @php
+                                                            $tVal = $t->target_value;
+                                                            $aVal = $t->achieved_value;
+                                                            $rate = $tVal > 0 ? round(($aVal / $tVal) * 100, 1) : 0;
+                                                            $tStatusBadge = $t->status == 'Completed' ? 'bg-light-success text-success' : 'bg-light-warning text-warning';
+                                                        @endphp
+                                                        <tr class="text-xs">
+                                                            <td class="font-weight-bold text-dark" style="padding-left: 48px; vertical-align: middle;">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <i class="ti ti-target text-muted fs-6"></i>
+                                                                    <span class="text-truncate" style="max-width: 250px;">{{ $t->target_name }}</span>
+                                                                    <span class="badge {{ $tStatusBadge }} text-xxs px-2 py-0.5" style="border-radius: 6px;">{{ __($t->status) }}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center font-weight-bold" style="vertical-align: middle;">{{ $tVal }}</td>
+                                                            <td class="text-center text-success font-weight-bold" style="vertical-align: middle;">{{ $aVal }}</td>
+                                                            <td class="text-center" style="vertical-align: middle;">
+                                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                                    <div class="progress" style="width: 70px; height: 6px; border-radius: 3px; margin-bottom: 0;">
+                                                                        <div class="progress-bar {{ $rate >= 80 ? 'bg-success' : ($rate >= 45 ? 'bg-primary' : 'bg-danger') }}" role="progressbar" style="width: {{ $rate }}%;"></div>
+                                                                    </div>
+                                                                    <span class="badge {{ $rate >= 80 ? 'bg-light-success text-success' : ($rate >= 45 ? 'bg-light-primary text-primary' : 'bg-light-danger text-danger') }}">
+                                                                        {{ $rate }}%
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                @endif
+                                            @endforeach
+
+                                            @if(!$hasAnyTargets)
                                                 <tr>
-                                                    <td colspan="5" class="text-center py-4 text-muted">
-                                                        {{ __('No targets found.') }}
+                                                    <td colspan="4" class="text-center py-5 text-muted">
+                                                        <i class="ti ti-calendar-off fs-1"></i>
+                                                        <p class="mt-2 text-sm">{{ __('No targets found for the current year.') }}</p>
                                                     </td>
                                                 </tr>
-                                            @endforelse
+                                            @endif
                                         </tbody>
                                     </table>
                                 </div>
