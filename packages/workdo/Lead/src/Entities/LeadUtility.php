@@ -292,7 +292,7 @@ class LeadUtility extends Model
 
         $isMasked = false;
 
-        $leadInstance = is_object($lead) ? $lead : Lead::find($lead);
+        $leadInstance = $lead instanceof \Workdo\Lead\Entities\Lead ? $lead : Lead::find($lead);
         if (!$leadInstance)
             return $originalValue;
 

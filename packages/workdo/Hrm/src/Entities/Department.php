@@ -13,7 +13,9 @@ class Department extends Model
         'branch_id',
         'parent_id',
         'manager_id',
+        'levers_user_id',
         'name',
+        'logo',
         'type',
         'workspace',
         'created_by'

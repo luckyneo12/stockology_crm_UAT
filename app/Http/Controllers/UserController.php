@@ -13,6 +13,7 @@ use App\Models\Plan;
 use App\Models\ReferralTransaction;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserActivityLog;
 use App\Models\WorkSpace;
 use Illuminate\Http\Request;
 use DataTables;
@@ -215,6 +216,8 @@ class UserController extends Controller
             $user['accessible_departments'] = $request->input('accessible_departments');
             $user['accessible_users'] = $request->input('accessible_users');
             $user['allowed_login_ips'] = $request->input('allowed_login_ips');
+            $user['kyc_portal_access'] = $request->has('kyc_portal_access') ? 1 : 0;
+            $user['kyc_portal_stages'] = $request->has('kyc_portal_stages') ? json_encode($request->input('kyc_portal_stages')) : null;
             $user['password'] = !empty($userpassword) ? \Hash::make($userpassword) : null;
             $user['lang'] = !empty($company_settings['defult_language']) ? $company_settings['defult_language'] : 'en';
             $user['type'] = $roles->name;
@@ -483,10 +486,19 @@ class UserController extends Controller
                 $user->accessible_departments = $request->accessible_departments;
                 $user->accessible_users = $request->accessible_users;
                 $user->allowed_login_ips = $request->allowed_login_ips;
+                $user->kyc_portal_access = $request->has('kyc_portal_access') ? 1 : 0;
+                $user->kyc_portal_stages = $request->has('kyc_portal_stages') ? json_encode($request->kyc_portal_stages) : null;
 
                 // Active/Inactive Logic
+                $wasActive = $user->is_disable == 0;
                 if ($request->has('is_active')) {
-                    $user->is_disable = $request->input('is_active') == 'on' ? 0 : 1;
+                    $newDisableState = $request->input('is_active') == 'on' ? 0 : 1;
+                    $user->is_disable = $newDisableState;
+
+                    // If user is being SET to inactive (was active before), reassign leads
+                    if ($wasActive && $newDisableState == 1 && module_is_active('Lead')) {
+                        $this->reassignUserLeadsToTeam($user->id, $user->created_by, $user->workspace_id);
+                    }
                 }
 
                 $user->save();
@@ -557,6 +569,7 @@ class UserController extends Controller
                                 [
                                     'can_view' => isset($perms['can_view']) ? 1 : 0,
                                     'can_move' => isset($perms['can_move']) ? 1 : 0,
+                                    'can_edit' => isset($perms['can_edit']) ? 1 : 0,
                                     'workspace_id' => getActiveWorkSpace(),
                                 ]
                             );
@@ -662,10 +675,79 @@ class UserController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+    /**
+     * Reassign all leads owned by $userId to their team's Levers Account.
+     * Priority: 1. Team Levers Account (levers_user_id) → 2. Team Manager → 3. Any Active Team Member → 4. Company Creator
+     */
+    private function reassignUserLeadsToTeam($userId, $createdBy, $workspaceId)
+    {
+        if (!module_is_active('Lead')) {
+            return;
+        }
+
+        $newResponsibleUserId = null;
+
+        if (module_is_active('Hrm')) {
+            // Find the employee record for this user
+            $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $userId)->first();
+
+            if ($employee && $employee->department_id) {
+                // Find the team/department this employee belongs to
+                $team = \Workdo\Hrm\Entities\Department::find($employee->department_id);
+
+                if ($team) {
+                    // PRIORITY 1: Team's dedicated Levers Account
+                    if ($team->levers_user_id && $team->levers_user_id != $userId) {
+                        $leversUser = \App\Models\User::find($team->levers_user_id);
+                        if ($leversUser) {
+                            $newResponsibleUserId = $leversUser->id;
+                        }
+                    }
+
+                    // PRIORITY 2: Team Manager
+                    if (!$newResponsibleUserId && $team->manager_id) {
+                        $managerEmployee = \Workdo\Hrm\Entities\Employee::find($team->manager_id);
+                        if ($managerEmployee && $managerEmployee->user_id && $managerEmployee->user_id != $userId) {
+                            $newResponsibleUserId = $managerEmployee->user_id;
+                        }
+                    }
+
+                    // PRIORITY 3: Any other active member of the same team
+                    if (!$newResponsibleUserId) {
+                        $otherMember = \Workdo\Hrm\Entities\Employee::where('department_id', $employee->department_id)
+                            ->where('user_id', '!=', $userId)
+                            ->whereHas('user', function ($q) {
+                                $q->where('is_disable', 0);
+                            })
+                            ->first();
+                        if ($otherMember) {
+                            $newResponsibleUserId = $otherMember->user_id;
+                        }
+                    }
+                }
+            }
+        }
+
+        // PRIORITY 4: Company Creator (final fallback)
+        if (!$newResponsibleUserId) {
+            $newResponsibleUserId = $createdBy;
+        }
+
+        // Reassign all leads where this user is the responsible person
+        \Workdo\Lead\Entities\Lead::where('user_id', $userId)
+            ->where('workspace_id', $workspaceId)
+            ->update(['user_id' => $newResponsibleUserId]);
+    }
+
     public function destroy($id)
     {
         if (Auth::user()->isAbleTo('user delete')) {
             $user = User::findOrFail($id);
+
+            // Reassign leads BEFORE destroying the user (while employee record still exists)
+            if (module_is_active('Lead')) {
+                $this->reassignUserLeadsToTeam($user->id, $user->created_by, $user->workspace_id);
+            }
 
             // first parameter user
             event(new DestroyUser($user));
@@ -1353,5 +1435,202 @@ class UserController extends Controller
             return redirect()->back()->with('success', __('User status updated successfully.'));
         }
         return redirect()->back()->with('error', __('User not found.'));
+    }
+
+
+    /**
+     * Company Activity Dashboard
+     */
+    public function CompanyActivityDashboard(Request $request)
+    {
+        if (Auth::user()->isAbleTo('user logs history')) {
+            try {
+                // Get current company user
+                $currentUser = Auth::user();
+
+                if ($currentUser->type != 'company') {
+                    return redirect()->back()->with('error', __('Access denied. Company users only.'));
+                }
+
+                // Redirect to independent dashboard
+                return redirect('/company_activity_dashboard.php');
+
+            } catch (\Exception $e) {
+                return view('users.activity_simple', [
+                    'error' => 'Error loading company dashboard: ' . $e->getMessage(),
+                    'activities' => collect([])
+                ]);
+            }
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    /**
+     * View detailed activity information
+     */
+    public function UserActivityView($id)
+    {
+        if (Auth::user()->isAbleTo('user logs history')) {
+            $activity = UserActivityLog::with('user')->findOrFail($id);
+
+            return view('users.activity_view', compact('activity'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    /**
+     * Delete specific activity log
+     */
+    public function UserActivityDestroy($id)
+    {
+        if (Auth::user()->isAbleTo('user delete')) {
+            UserActivityLog::where('id', $id)->delete();
+
+            return redirect()->route('users.activity.history')->with('success', __('Activity log deleted successfully.'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    /**
+     * Get user's daily activity summary
+     */
+    public function UserActivitySummary(Request $request)
+    {
+        if (Auth::user()->isAbleTo('user logs history')) {
+            $userId = $request->user_id;
+            $date = $request->date ?: date('Y-m-d');
+
+            $user = User::find($userId);
+
+            if (!$user) {
+                return response()->json(['error' => 'User not found'], 404);
+            }
+
+            // Get activities for the specific day
+            $activities = UserActivityLog::where('user_id', $userId)
+                ->whereDate('created_at', $date)
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // Group by hour
+            $hourlyActivities = [];
+            $totalActivities = $activities->count();
+            $modulesWorked = $activities->pluck('module')->unique()->count();
+            $firstActivity = $activities->first()?->created_at;
+            $lastActivity = $activities->last()?->created_at;
+
+            foreach ($activities as $activity) {
+                $hour = $activity->created_at->format('H:00');
+                if (!isset($hourlyActivities[$hour])) {
+                    $hourlyActivities[$hour] = [];
+                }
+                $hourlyActivities[$hour][] = $activity;
+            }
+
+            return response()->json([
+                'user' => $user->name,
+                'date' => $date,
+                'total_activities' => $totalActivities,
+                'modules_worked' => $modulesWorked,
+                'first_activity' => $firstActivity?->format('h:i A'),
+                'last_activity' => $lastActivity?->format('h:i A'),
+                'hourly_activities' => $hourlyActivities,
+                'activities' => $activities
+            ]);
+        } else {
+            return response()->json(['error' => 'Permission denied'], 403);
+        }
+    }
+
+    /**
+     * Export activity logs to CSV
+     */
+    public function UserActivityExport(Request $request)
+    {
+        if (Auth::user()->isAbleTo('user logs history')) {
+
+            $query = UserActivityLog::with('user');
+
+            // Apply same filters as in UserActivityHistory
+            if ($request->filled('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+
+            if ($request->filled('module')) {
+                $query->where('module', $request->module);
+            }
+
+            if ($request->filled('activity_type')) {
+                $query->where('activity_type', $request->activity_type);
+            }
+
+            if ($request->filled('date_from')) {
+                $query->where('created_at', '>=', $request->date_from . ' 00:00:00');
+            }
+
+            if ($request->filled('date_to')) {
+                $query->where('created_at', '<=', $request->date_to . ' 23:59:59');
+            }
+
+            $activities = $query->orderBy('created_at', 'desc')->get();
+
+            $csvFileName = 'user_activity_logs_' . date('Y-m-d_H-i-s') . '.csv';
+
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $csvFileName . '"',
+            ];
+
+            $callback = function () use ($activities) {
+                $file = fopen('php://output', 'w');
+
+                // CSV Header
+                fputcsv($file, [
+                    'Date & Time',
+                    'User Name',
+                    'User Email',
+                    'Activity Type',
+                    'Module',
+                    'Description',
+                    'IP Address',
+                    'Location',
+                    'Device',
+                    'Browser',
+                    'OS',
+                    'URL',
+                    'Method',
+                    'Response Time (ms)'
+                ]);
+
+                // CSV Data
+                foreach ($activities as $activity) {
+                    fputcsv($file, [
+                        $activity->created_at->format('Y-m-d H:i:s'),
+                        $activity->user->name ?? 'Unknown',
+                        $activity->user->email ?? 'Unknown',
+                        $activity->activity_type,
+                        $activity->module,
+                        $activity->description,
+                        $activity->ip_address,
+                        $activity->location,
+                        $activity->device_type,
+                        $activity->browser,
+                        $activity->os,
+                        $activity->url,
+                        $activity->method,
+                        $activity->response_time_ms
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
     }
 }

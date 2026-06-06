@@ -22,7 +22,7 @@ class CompanyMenuListener
             'depend_on' => [],
             'route' => 'ekyc.dashboard',
             'module' => $module,
-            'permission' => 'ekyc manage'
+            'permission' => ''
         ]);
         $menu->add([
             'category' => 'General',
@@ -35,7 +35,7 @@ class CompanyMenuListener
             'depend_on' => [],
             'route' => '',
             'module' => $module,
-            'permission' => 'ekyc manage'
+            'permission' => ''
         ]);
         $menu->add([
             'category' => 'General',
@@ -48,7 +48,7 @@ class CompanyMenuListener
             'depend_on' => [],
             'route' => 'ekyc.index',
             'module' => $module,
-            'permission' => 'ekyc manage'
+            'permission' => ''
         ]);
         $menu->add([
             'category' => 'General',
@@ -61,7 +61,7 @@ class CompanyMenuListener
             'depend_on' => [],
             'route' => 'ekyc.admin.submissions.index',
             'module' => $module,
-            'permission' => 'ekyc manage'
+            'permission' => ''
         ]);
         $menu->add([
             'category' => 'General',
@@ -74,7 +74,7 @@ class CompanyMenuListener
             'depend_on' => [],
             'route' => 'ekyc.settings',
             'module' => $module,
-            'permission' => 'ekyc manage'
+            'permission' => ''
         ]);
     }
 }

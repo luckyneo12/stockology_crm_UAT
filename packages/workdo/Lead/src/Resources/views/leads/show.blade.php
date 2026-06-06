@@ -8,6 +8,70 @@
         .nav-tabs .nav-link-tabs.active {
             background: none;
         }
+        /* Bento Grid Layout Styles */
+        .bento-card {
+            border: 1px solid rgba(24, 191, 107, 0.12) !important;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 253, 249, 0.9) 100%) !important;
+            backdrop-filter: blur(10px);
+            border-radius: 12px !important;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            position: relative;
+            overflow: hidden;
+            border-left: 4px solid #18bf6b !important;
+            min-height: 90px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+        }
+        .bento-card:hover {
+            transform: translateY(-4px) scale(1.01) !important;
+            border-left-color: #20c997 !important;
+            box-shadow: 0 10px 25px rgba(24, 191, 107, 0.1) !important;
+            border-color: rgba(24, 191, 107, 0.25) !important;
+        }
+        .bento-card-large {
+            background: linear-gradient(135deg, rgba(240, 249, 244, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%) !important;
+            border-left: 4px solid #157e3f !important;
+        }
+        .bento-card-large:hover {
+            box-shadow: 0 12px 30px rgba(21, 126, 63, 0.12) !important;
+        }
+        .bento-icon-container {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(24, 191, 107, 0.08);
+            color: #18bf6b;
+            transition: all 0.3s ease;
+        }
+        .bento-card:hover .bento-icon-container {
+            transform: scale(1.15) rotate(8deg);
+            background: #18bf6b;
+            color: #fff;
+        }
+        .editable-field {
+            cursor: pointer;
+            border-bottom: 1px dashed rgba(24, 191, 107, 0.4);
+            padding-bottom: 2px;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        .editable-field:hover {
+            color: #18bf6b !important;
+            border-bottom-color: #18bf6b;
+        }
+        .editable-field::after {
+            content: " ✎";
+            font-size: 0.75rem;
+            opacity: 0.3;
+            transition: opacity 0.2s ease;
+            color: #18bf6b;
+            margin-left: 4px;
+        }
+        .editable-field:hover::after {
+            opacity: 1;
+        }
         /* Modern UI Enhancements */
         :root {
             --glass-border: rgba(255, 255, 255, 0.2);
@@ -247,6 +311,97 @@
             width: 4px;
             height: 100%;
             border-radius: 4px 0 0 4px;
+        }
+
+        /* Section Layout Enhancements */
+        .section-layout-standard {
+            border-left: 4px solid #94a3b8 !important;
+        }
+        .section-layout-card {
+            border-left: 4px solid #3b82f6 !important;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.08) !important;
+        }
+        .section-layout-bento {
+            border-left: 4px solid #18bf6b !important;
+            background: radial-gradient(circle, rgba(24, 191, 107, 0.03) 1px, transparent 1px) #fff;
+            background-size: 24px 24px;
+            box-shadow: 0 10px 25px rgba(24, 191, 107, 0.08) !important;
+        }
+
+        /* Premium Card Styles (for fields) */
+        .premium-card {
+            border: 1px solid rgba(59, 130, 246, 0.15) !important;
+            background: linear-gradient(135deg, #ffffff 0%, #f4f7fe 100%) !important;
+            border-radius: 14px !important;
+            border-top: 4px solid #3b82f6 !important;
+            min-height: 90px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.04) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            position: relative;
+            overflow: hidden;
+        }
+        .premium-card:hover {
+            transform: translateY(-5px) !important;
+            box-shadow: 0 12px 30px rgba(59, 130, 246, 0.12) !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        .premium-card-large {
+            background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%) !important;
+            border-top: 4px solid #1d4ed8 !important;
+        }
+        .premium-card-large:hover {
+            box-shadow: 0 15px 35px rgba(29, 78, 216, 0.15) !important;
+        }
+        .premium-icon-container {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.08);
+            color: #3b82f6;
+            transition: all 0.3s ease;
+        }
+        .premium-card:hover .premium-icon-container {
+            transform: scale(1.15) rotate(-8deg);
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        /* Standard Card Styles (for fields) */
+        .standard-card {
+            border: 1px solid #e2e8f0 !important;
+            background: #f8fafc !important;
+            border-radius: 8px !important;
+            min-height: 80px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .standard-card:hover {
+            border-color: #cbd5e1 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+            background: #f1f5f9 !important;
+        }
+        .standard-card-large {
+            background: #f1f5f9 !important;
+            border-left: 3px solid #64748b !important;
+        }
+        .standard-icon-container {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            background: rgba(148, 163, 184, 0.1);
+            color: #64748b;
+            transition: all 0.2s ease;
+        }
+        .standard-card:hover .standard-icon-container {
+            background: rgba(148, 163, 184, 0.2);
+            color: #1e293b;
         }
     </style>
     <link rel="stylesheet" href="{{ asset('assets/js/plugins/summernote-0.8.18-dist/summernote-lite.min.css') }}">
@@ -608,13 +763,7 @@
                                     <span class="d-flex align-items-center"><i class="ti ti-activity me-2"></i> {{ __('Activity') }}</span>
                                     <div class="float-end"><i class="ti ti-chevron-right" style="font-size: 0.8rem;"></i></div>
                                 </a>
-                                @if($lead->isResponsible())
-                                    <a class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between px-3 py-2"
-                                        href="#kyc-discussions">
-                                        <span class="d-flex align-items-center"><i class="ti ti-shield-check me-2"></i> {{ __('KYC Comments') }}</span>
-                                        <div class="float-end"><i class="ti ti-chevron-right" style="font-size: 0.8rem;"></i></div>
-                                    </a>
-                                @endif
+
                             @endif
                             @stack('indiamart_tab')
 
@@ -734,7 +883,7 @@
                                                 <div class="flex-shrink-0 bg-warning text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
                                                     <i class="ti ti-target f-16"></i>
                                                 </div>
-                                                <h5 class="text-white mb-0 ms-2 fw-bold">{{ $lead->stage->name ?? '-' }}</h5>
+                                                <h5 class="text-white mb-0 ms-2 fw-bold">{{ $lead->stage?->name ?? '-' }}</h5>
                                             </div>
                                          </div>
 
@@ -855,18 +1004,72 @@
                                 </div>
                              </div>
                         </div>
-                        
-                        @if(isset($leadSections) && $leadSections->count() > 0)
+                                               @if(isset($leadSections) && $leadSections->count() > 0)
                             @foreach($leadSections as $section)
-                                <div class="card card-modern mb-4 shadow-sm border-0 fade-in-up" id="section-{{ $section->id }}">
+                                @php
+                                    $layoutType = $section->layout_type ?? 'section';
+                                    $sectionClass = 'section-layout-standard';
+                                    $iconShapeClass = 'bg-secondary-subtle text-secondary';
+                                    $iconClass = 'ti-folder';
+                                    if ($layoutType === 'card') {
+                                        $sectionClass = 'section-layout-card';
+                                        $iconShapeClass = 'bg-primary-subtle text-primary';
+                                        $iconClass = 'ti-id-badge';
+                                    } elseif ($layoutType === 'bento') {
+                                        $sectionClass = 'section-layout-bento';
+                                        $iconShapeClass = 'bg-success-subtle text-success';
+                                        $iconClass = 'ti-layout-grid';
+                                    }
+
+                                    // Dynamic percentage calculation for fields in this section
+                                    $totalFields = 0;
+                                    $filledFields = 0;
+                                    $hasApi = false;
+                                    foreach($section->fields as $f) {
+                                        if (!empty($f->visible_stages) && !in_array($lead->stage_id, $f->visible_stages)) { continue; }
+                                        if (!empty($f->visible_roles)) {
+                                            $userRoleIds = Auth::user()->roles->pluck('id')->toArray();
+                                            if (empty(array_intersect($userRoleIds, $f->visible_roles))) { continue; }
+                                        }
+                                        $totalFields++;
+                                        $val = $f->is_system ? $lead->{$f->system_field_id} : ($leadCustomFieldValues[$f->id] ?? '');
+                                        if ($val !== null && $val !== '' && $val !== '-') {
+                                            $filledFields++;
+                                        }
+                                        if (!empty($f->api_url)) {
+                                            $hasApi = true;
+                                        }
+                                    }
+                                    $sectionPercentage = $totalFields > 0 ? round(($filledFields / $totalFields) * 100) : 0;
+                                @endphp
+                                <div class="card card-modern mb-4 shadow-sm border-0 fade-in-up {{ $sectionClass }}" id="section-{{ $section->id }}">
                                     <div class="card-body p-4">
-                                        <h5 class="mb-4 d-flex align-items-center section-title">
-                                            <span class="icon-shape bg-success-subtle text-success rounded-circle me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-                                                <i class="ti ti-folder"></i>
+                                        <h5 class="mb-4 d-flex align-items-center section-title w-100">
+                                            <span class="icon-shape {{ $iconShapeClass }} rounded-circle me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="ti {{ $iconClass }}"></i>
                                             </span>
-                                            {{ $section->name }}
+                                            <span class="fw-bold">{{ $section->name }}</span>
+                                            @if($hasApi)
+                                                <a href="javascript:void(0);" class="btn btn-sm btn-icon btn-light-success ms-2 sync-section-api-btn" 
+                                                   data-section-id="{{ $section->id }}" 
+                                                   data-lead-id="{{ $lead->id }}"
+                                                   data-bs-toggle="tooltip" 
+                                                   title="{{ __('Sync API Data') }}"
+                                                   style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; padding: 0;">
+                                                    <i class="ti ti-refresh text-success fs-5"></i>
+                                                </a>
+                                            @endif
+                                            @if($layoutType === 'card')
+                                                <i class="ti ti-circle-check-filled text-primary fs-4 ms-2" data-bs-toggle="tooltip" title="Verified"></i>
+                                                @if(stripos($section->name, 'basic') !== false)
+                                                    <span class="badge bg-light-primary text-primary ms-3 border border-primary border-opacity-25 rounded-pill px-3 py-1 text-capitalize" style="font-size: 0.75rem; font-weight: 500;">Existing and Valid. Aadhaar Seeding is Successful.</span>
+                                                @elseif(stripos($section->name, 'address') !== false)
+                                                    <span class="badge bg-light-primary text-primary ms-3 border border-primary border-opacity-25 rounded-pill px-3 py-1 text-capitalize" style="font-size: 0.75rem; font-weight: 500;">Address Verification is Successful.</span>
+                                                @endif
+                                                <span class="badge bg-success ms-auto rounded-pill px-3 py-1" style="font-size: 0.75rem; font-weight: 600;">{{ $sectionPercentage }}%</span>
+                                            @endif
                                         </h5>
-                                        <div class="row g-4">
+                                        <div class="row g-3">
                                             @foreach($section->fields as $field)
                                                 @php
                                                     // VISIBILITY CHECKS
@@ -875,56 +1078,205 @@
                                                         $userRoleIds = Auth::user()->roles->pluck('id')->toArray();
                                                         if (empty(array_intersect($userRoleIds, $field->visible_roles))) { continue; }
                                                     }
-                                                    $colWidth = 12 / ($section->columns > 0 ? $section->columns : 3);
-                                                    $colClass = 'col-md-'.(int)$colWidth . ' col-sm-6';
+                                                    
+                                                    // DYNAMIC BENTO GRID WIDTH CALCULATION
+                                                    $sectionCols = $section->columns > 0 ? $section->columns : 3;
+                                                    $fieldWidth = $field->width > 0 ? $field->width : 1;
+                                                    $calculatedGridCols = min(12, (12 / $sectionCols) * $fieldWidth);
+                                                    $colClass = 'col-md-'.(int)$calculatedGridCols . ' col-sm-12';
+                                                    
+                                                    // Determine bento card style based on size
+                                                    $isLargeCard = $calculatedGridCols >= 8;
+                                                    
+                                                    // Determine layout classes
+                                                    if ($layoutType === 'card') {
+                                                        $cardClass = 'premium-card' . ($isLargeCard ? ' premium-card-large' : '');
+                                                        $iconContainerClass = 'premium-icon-container';
+                                                    } elseif ($layoutType === 'bento') {
+                                                        $cardClass = 'bento-card' . ($isLargeCard ? ' bento-card-large' : '');
+                                                        $iconContainerClass = 'bento-icon-container';
+                                                    } else {
+                                                        $cardClass = 'standard-card' . ($isLargeCard ? ' standard-card-large' : '');
+                                                        $iconContainerClass = 'standard-icon-container';
+                                                    }
                                                 @endphp
                                                 <div class="{{ $colClass }}">
-                                                    <div class="p-3 border rounded-3 bg-light-subtle h-100 position-relative hover-shadow-sm transition-300">
-                                                        <small class="text-muted d-block mb-1 fw-bold text-xs text-uppercase">{{ $field->name }}</small>
-                                                        <div class="d-flex align-items-center">
-                                                            @if($field->type == 'file' || $field->type == 'attachment')
-                                                                <i class="ti ti-file me-2 text-success"></i>
-                                                            @else
-                                                                <i class="ti ti-{{ $field->icon ?? 'circle-dot' }} me-2 text-success opacity-50"></i>
-                                                            @endif
-                                                            
-                                                            <span class="fw-bold text-dark text-break">
-                                                                @if($field->is_system)
-                                                                    @switch($field->system_field_id)
-                                                                        @case('email') {{ $lead->email }} @break
-                                                                        @case('phone') 
-                                                                            {{ $lead->phone }}
-                                                                            @if($lead->phone)
-                                                                                <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
-                                                                                    <i class="ti ti-phone-call"></i>
-                                                                                </a>
-                                                                            @endif
-                                                                        @break
-                                                                        @case('pipeline') {{ $lead->pipeline->name ?? '-' }} @break
-                                                                        @case('stage') {{ $lead->stage->name ?? '-' }} @break
-                                                                        @case('created_at') {{ company_date_formate($lead->created_at) }} @break
-                                                                        @case('percentage') {{ $percentage }}% @break
-                                                                        @case('pan_number') {{ $lead->pan_number ?? '-' }} @break
-                                                                        @case('aadhar_number') {{ $lead->aadhar_number ?? '-' }} @break
-                                                                        @default -
-                                                                    @endswitch
+                                                    @if($layoutType === 'card')
+                                                        {{-- Clean row layout for premium card mode --}}
+                                                        <div class="py-3 px-2 border-bottom d-flex align-items-center justify-content-between flex-wrap" style="border-color: #edf2f7 !important; min-height: 52px;">
+                                                            <small class="text-muted fw-bold text-xs text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem; min-width: 140px;">{{ $field->name }}</small>
+                                                            <div class="d-flex align-items-center text-end flex-grow-1 justify-content-end">
+                                                                @php
+                                                                    $canEditInline = (!$field->is_system || in_array($field->system_field_id, ['email', 'phone', 'pan_number', 'aadhar_number'])) && Auth::user()->isAbleTo('lead edit');
+                                                                    $rawVal = $field->is_system ? $lead->{$field->system_field_id} : ($leadCustomFieldValues[$field->id] ?? '');
+                                                                    
+                                                                    // Add custom green class for premium style matched fields or values containing X
+                                                                    $textClass = 'text-dark';
+                                                                    if (strpos(strtoupper($rawVal), 'XXXX') !== false || in_array(strtolower($field->name), ['full name', 'name as per it site', 'name as per esign', 'political relation'])) {
+                                                                        $textClass = 'text-success';
+                                                                    }
+                                                                @endphp
+                                                                
+                                                                @if($canEditInline)
+                                                                    <span class="fs-6 fw-bold {{ $textClass }} text-break editable-field w-100"
+                                                                          data-name="{{ $field->is_system ? $field->system_field_id : $field->id }}"
+                                                                          data-system="{{ $field->is_system ? 1 : 0 }}"
+                                                                          data-type="{{ $field->type }}"
+                                                                          data-options="{{ $field->options ?? '' }}"
+                                                                          data-value="{{ $rawVal }}">
                                                                 @else
-                                                                    @php $value = $leadCustomFieldValues[$field->id] ?? '-'; @endphp
-                                                                    @if($field->type == 'multi_select' && $value !== '-')
-                                                                        @foreach(explode(',', $value) as $item)
-                                                                            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2 py-1 me-1">{{ $item }}</span>
-                                                                        @endforeach
-                                                                    @elseif($field->type == 'file' && $value !== '-')
-                                                                        <a href="{{ asset('storage/uploads/custom_fields/'.$value) }}" download class="btn btn-xs btn-outline-success rounded-pill">
-                                                                            <i class="ti ti-download me-1"></i> {{ __('Download') }}
-                                                                        </a>
-                                                                    @else
-                                                                        {{ $value }}
-                                                                    @endif
+                                                                    <span class="fs-6 fw-bold {{ $textClass }} text-break">
                                                                 @endif
-                                                            </span>
+                                 
+                                                                    @if($field->is_system)
+                                                                        @switch($field->system_field_id)
+                                                                            @case('email') 
+                                                                                @if($lead->email)
+                                                                                    <a href="mailto:{{ $lead->email }}" class="text-primary hover-underline">{{ $lead->email }}</a>
+                                                                                @else
+                                                                                    <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                @endif
+                                                                            @break
+                                                                            @case('phone') 
+                                                                                @if($lead->phone)
+                                                                                    {{ $lead->phone }}
+                                                                                    <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
+                                                                                        <i class="ti ti-phone-call"></i>
+                                                                                    </a>
+                                                                                @else
+                                                                                    <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                @endif
+                                                                            @break
+                                                                            @case('pipeline') {{ $lead->pipeline->name ?? '-' }} @break
+                                                                            @case('stage') {{ $lead->stage?->name ?? '-' }} @break
+                                                                            @case('created_at') {{ company_date_formate($lead->created_at) }} @break
+                                                                            @case('percentage') {{ $percentage }}% @break
+                                                                            @case('pan_number') 
+                                                                                @if($lead->pan_number)
+                                                                                    {{ $lead->pan_number }}
+                                                                                @else
+                                                                                    <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                @endif
+                                                                            @break
+                                                                            @case('aadhar_number') 
+                                                                                @if($lead->aadhar_number)
+                                                                                    {{ $lead->aadhar_number }}
+                                                                                @else
+                                                                                    <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                @endif
+                                                                            @break
+                                                                            @default -
+                                                                        @endswitch
+                                                                    @else
+                                                                        @php $value = $leadCustomFieldValues[$field->id] ?? ''; @endphp
+                                                                        @if($value === '-' || empty($value))
+                                                                            <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                        @elseif($field->type == 'multi_select')
+                                                                            @foreach(explode(',', $value) as $item)
+                                                                                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2 py-1 me-1">{{ $item }}</span>
+                                                                            @endforeach
+                                                                        @elseif($field->type == 'file')
+                                                                            <a href="{{ asset('storage/uploads/custom_fields/'.$value) }}" download class="btn btn-xs btn-outline-success rounded-pill">
+                                                                                <i class="ti ti-download me-1"></i> {{ __('Download') }}
+                                                                            </a>
+                                                                        @else
+                                                                            {{ $value }}
+                                                                        @endif
+                                                                    @endif
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    @else
+                                                        {{-- Original Card layouts (Bento/Standard) --}}
+                                                        <div class="p-3 {{ $cardClass }} d-flex flex-column justify-content-between">
+                                                            <div>
+                                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                                    <small class="text-muted fw-bold text-xs text-uppercase" style="letter-spacing: 0.5px;">{{ $field->name }}</small>
+                                                                    <div class="{{ $iconContainerClass }}">
+                                                                        @if($field->type == 'file' || $field->type == 'attachment')
+                                                                            <i class="ti ti-file fs-6"></i>
+                                                                        @else
+                                                                            <i class="ti ti-{{ $field->icon ?? 'circle-dot' }} fs-6"></i>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                                 <div class="d-flex align-items-center mt-2 w-100">
+                                                                    @php
+                                                                        $canEditInline = (!$field->is_system || in_array($field->system_field_id, ['email', 'phone', 'pan_number', 'aadhar_number'])) && Auth::user()->isAbleTo('lead edit');
+                                                                        $rawVal = $field->is_system ? $lead->{$field->system_field_id} : ($leadCustomFieldValues[$field->id] ?? '');
+                                                                    @endphp
+                                                                    
+                                                                    @if($canEditInline)
+                                                                        <span class="{{ $isLargeCard ? 'fs-5' : 'fs-6' }} fw-bold text-dark text-break editable-field w-100"
+                                                                              data-name="{{ $field->is_system ? $field->system_field_id : $field->id }}"
+                                                                              data-system="{{ $field->is_system ? 1 : 0 }}"
+                                                                              data-type="{{ $field->type }}"
+                                                                              data-options="{{ $field->options ?? '' }}"
+                                                                              data-value="{{ $rawVal }}">
+                                                                    @else
+                                                                        <span class="{{ $isLargeCard ? 'fs-5' : 'fs-6' }} fw-bold text-dark text-break">
+                                                                    @endif
+                                     
+                                                                        @if($field->is_system)
+                                                                            @switch($field->system_field_id)
+                                                                                @case('email') 
+                                                                                    @if($lead->email)
+                                                                                        <a href="mailto:{{ $lead->email }}" class="text-primary hover-underline">{{ $lead->email }}</a>
+                                                                                    @else
+                                                                                        <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                    @endif
+                                                                                @break
+                                                                                @case('phone') 
+                                                                                    @if($lead->phone)
+                                                                                        {{ $lead->phone }}
+                                                                                        <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
+                                                                                            <i class="ti ti-phone-call"></i>
+                                                                                        </a>
+                                                                                    @else
+                                                                                        <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                    @endif
+                                                                                @break
+                                                                                @case('pipeline') {{ $lead->pipeline->name ?? '-' }} @break
+                                                                                @case('stage') {{ $lead->stage?->name ?? '-' }} @break
+                                                                                @case('created_at') {{ company_date_formate($lead->created_at) }} @break
+                                                                                @case('percentage') {{ $percentage }}% @break
+                                                                                @case('pan_number') 
+                                                                                    @if($lead->pan_number)
+                                                                                        {{ $lead->pan_number }}
+                                                                                    @else
+                                                                                        <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                    @endif
+                                                                                @break
+                                                                                @case('aadhar_number') 
+                                                                                    @if($lead->aadhar_number)
+                                                                                        {{ $lead->aadhar_number }}
+                                                                                    @else
+                                                                                        <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                                    @endif
+                                                                                @break
+                                                                                @default -
+                                                                            @endswitch
+                                                                        @else
+                                                                            @php $value = $leadCustomFieldValues[$field->id] ?? ''; @endphp
+                                                                            @if($value === '-' || empty($value))
+                                                                                <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
+                                                                            @elseif($field->type == 'multi_select')
+                                                                                @foreach(explode(',', $value) as $item)
+                                                                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2 py-1 me-1">{{ $item }}</span>
+                                                                                @endforeach
+                                                                            @elseif($field->type == 'file')
+                                                                                <a href="{{ asset('storage/uploads/custom_fields/'.$value) }}" download class="btn btn-xs btn-outline-success rounded-pill">
+                                                                                    <i class="ti ti-download me-1"></i> {{ __('Download') }}
+                                                                                </a>
+                                                                                @else
+                                                                                {{ $value }}
+                                                                            @endif
+                                                                        @endif
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @endforeach
                                         </div>
@@ -936,6 +1288,51 @@
                                 <div class="card-body">
                                     <div class="row">
                                          <div class="col-12 text-center">{{ __('No Layout Configured. Please run the seeder or configure the builder.') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($lead->isResponsible())
+                            <div id="kyc-discussions" class="mb-4 mt-4">
+                                <div class="card card-modern border-0 shadow-sm">
+                                    <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center pt-4 px-4">
+                                        <h5 class="mb-0 section-title"><i class="ti ti-shield-check me-2"></i> {{ __('KYC Comments') }}</h5>
+                                        @permission('lead kyc comment')
+                                            <a href="#" class="btn btn-sm btn-success rounded-pill shadow-sm" data-url="{{ route('leads.discussions.create', $lead->id) }}?is_kyc=1" data-ajax-popup="true" data-title="{{__('Add KYC Comment')}}" data-size="md">
+                                                <i class="ti ti-plus text-white"></i> {{__('Add Comment')}}
+                                            </a>
+                                        @endpermission
+                                    </div>
+                                    <div class="card-body p-4 pt-0">
+                                        <ul class="list-group list-group-flush mt-3">
+                                            @forelse ($kycComments as $discussion)
+                                                <li class="list-group-item px-0 py-3 border-0 border-bottom">
+                                                    <div class="d-flex align-items-start">
+                                                        @php
+                                                            $avatar = 'uploads/users-avatar/avatar.png';
+                                                            if(!empty($discussion->user->avatar) && check_file($discussion->user->avatar)) {
+                                                                $avatar = $discussion->user->avatar;
+                                                            }
+                                                        @endphp
+                                                        <img src="{{ get_file($avatar) }}" 
+                                                             class="rounded-circle me-3" style="width: 40px; height: 40px;" alt="avatar">
+                                                        <div class="w-100">
+                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                <h6 class="mb-0 fw-bold">{{ $discussion->user->name }}</h6>
+                                                                <small class="text-muted">{{ $discussion->created_at->diffForHumans() }}</small>
+                                                            </div>
+                                                            <p class="text-sm text-dark mb-0">{{ $discussion->comment }}</p>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            @empty
+                                                <div class="text-center text-muted py-4">
+                                                    <i class="ti ti-message-off display-6 d-block mb-3 opacity-25"></i>
+                                                    <small>{{ __('No KYC comments found') }}</small>
+                                                </div>
+                                            @endforelse
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -1219,50 +1616,7 @@
                                 </div>
                             </div>
 
-                            @if($lead->isResponsible())
-                                <div id="kyc-discussions">
-                                    <div class="card card-modern border-0 shadow-sm">
-                                        <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center pt-4 px-4">
-                                            <h5 class="mb-0 section-title"><i class="ti ti-shield-check me-2"></i> {{ __('KYC Comments') }}</h5>
-                                            @permission('lead kyc comment')
-                                                <a href="#" class="btn btn-sm btn-success rounded-pill shadow-sm" data-url="{{ route('leads.discussions.create', $lead->id) }}?is_kyc=1" data-ajax-popup="true" data-title="{{__('Add KYC Comment')}}" data-size="md">
-                                                    <i class="ti ti-plus text-white"></i> {{__('Add Comment')}}
-                                                </a>
-                                            @endpermission
-                                        </div>
-                                        <div class="card-body p-4 pt-0">
-                                            <ul class="list-group list-group-flush mt-3">
-                                                @forelse ($kycComments as $discussion)
-                                                    <li class="list-group-item px-0 py-3 border-0 border-bottom">
-                                                        <div class="d-flex align-items-start">
-                                                            @php
-                                                                $avatar = 'uploads/users-avatar/avatar.png';
-                                                                if(!empty($discussion->user->avatar) && check_file($discussion->user->avatar)) {
-                                                                    $avatar = $discussion->user->avatar;
-                                                                }
-                                                            @endphp
-                                                            <img src="{{ get_file($avatar) }}" 
-                                                                 class="rounded-circle me-3" style="width: 40px; height: 40px;" alt="avatar">
-                                                            <div class="w-100">
-                                                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                                                    <h6 class="mb-0 fw-bold">{{ $discussion->user->name }}</h6>
-                                                                    <small class="text-muted">{{ $discussion->created_at->diffForHumans() }}</small>
-                                                                </div>
-                                                                <p class="text-sm text-dark mb-0">{{ $discussion->comment }}</p>
-                                                            </div>
-                                                        </div>
-                                                    </li>
-                                                @empty
-                                                    <div class="text-center text-muted py-4">
-                                                        <i class="ti ti-message-off display-6 d-block mb-3 opacity-25"></i>
-                                                        <small>{{ __('No KYC comments found') }}</small>
-                                                    </div>
-                                                @endforelse
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
+
                         @endif
                     </div>
                     @stack('indiamart_div')
@@ -1275,4 +1629,218 @@
 
 @push('scripts')
     @include('lead::leads.click_to_call_script')
+    
+    <script>
+        $(document).ready(function() {
+            // Click to edit
+            $(document).on('click', '.editable-field', function(e) {
+                // Ignore if clicked on buttons inside editor or if already editing
+                if ($(e.target).closest('.inline-edit-container').length > 0 || $(this).find('.inline-edit-container').length > 0) {
+                    return;
+                }
+                
+                var $span = $(this);
+                var originalHTML = $span.html();
+                var fieldName = $span.data('name');
+                var isSystem = $span.data('system');
+                var fieldType = $span.data('type');
+                var rawValue = $span.attr('data-value') !== undefined ? $span.attr('data-value') : '';
+                var optionsStr = $span.data('options') || '';
+                
+                // Prevent links / click-to-call during edit trigger
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var inputHTML = '';
+                if (fieldType === 'select' && optionsStr) {
+                    var options = optionsStr.split(',');
+                    inputHTML = '<select class="form-select form-select-sm inline-edit-input">';
+                    options.forEach(function(opt) {
+                        opt = opt.trim();
+                        var selected = (opt === rawValue) ? 'selected' : '';
+                        inputHTML += '<option value="' + opt + '" ' + selected + '>' + opt + '</option>';
+                    });
+                    inputHTML += '</select>';
+                } else if (fieldType === 'multi_select' && optionsStr) {
+                    var options = optionsStr.split(',');
+                    var selectedOpts = rawValue ? rawValue.split(',') : [];
+                    selectedOpts = selectedOpts.map(function(item) { return item.trim(); });
+                    inputHTML += '<div class="w-100 select2-container-inline">';
+                    inputHTML += '<select class="form-select form-select-sm inline-edit-input select2-modal-inline" multiple style="min-width: 150px;">';
+                    options.forEach(function(opt) {
+                        opt = opt.trim();
+                        var selected = (selectedOpts.indexOf(opt) !== -1) ? 'selected' : '';
+                        inputHTML += '<option value="' + opt + '" ' + selected + '>' + opt + '</option>';
+                    });
+                    inputHTML += '</select></div>';
+                } else if (fieldType === 'textarea') {
+                    inputHTML = '<textarea class="form-control form-control-sm inline-edit-input" rows="2">' + rawValue + '</textarea>';
+                } else if (fieldType === 'date') {
+                    inputHTML = '<input type="date" class="form-control form-control-sm inline-edit-input" value="' + rawValue + '">';
+                } else if (fieldType === 'number') {
+                    inputHTML = '<input type="number" class="form-control form-control-sm inline-edit-input" value="' + rawValue + '">';
+                } else if (fieldType === 'file') {
+                    inputHTML = '<input type="file" class="form-control form-control-sm inline-edit-input">';
+                } else {
+                    inputHTML = '<input type="text" class="form-control form-control-sm inline-edit-input" value="' + rawValue + '">';
+                }
+                
+                var containerHTML = '<div class="inline-edit-container d-flex align-items-center w-100 mt-1">' +
+                    inputHTML +
+                    '<button class="btn btn-sm btn-success p-1 ms-2 btn-inline-save" type="button"><i class="ti ti-check text-white fs-6"></i></button>' +
+                    '<button class="btn btn-sm btn-danger p-1 ms-1 btn-inline-cancel" type="button"><i class="ti ti-x text-white fs-6"></i></button>' +
+                    '</div>';
+                    
+                $span.data('original-html', originalHTML);
+                $span.html(containerHTML);
+                $span.find('.inline-edit-input').focus();
+            });
+            
+            // Cancel inline edit
+            $(document).on('click', '.btn-inline-cancel', function(e) {
+                e.stopPropagation();
+                var $span = $(this).closest('.editable-field');
+                $span.html($span.data('original-html'));
+            });
+            
+            // Save inline edit
+            $(document).on('click', '.btn-inline-save', function(e) {
+                e.stopPropagation();
+                var $btn = $(this);
+                var $span = $btn.closest('.editable-field');
+                var fieldName = $span.data('name');
+                var isSystem = $span.data('system');
+                var fieldType = $span.data('type');
+                
+                var $input = $span.find('.inline-edit-input');
+                var fieldValue = $input.val();
+                
+                var formData = new FormData();
+                formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+                formData.append('field_name', fieldName);
+                formData.append('is_system', isSystem);
+                
+                if (fieldType === 'file') {
+                    if ($input[0].files.length > 0) {
+                        formData.append('field_value', $input[0].files[0]);
+                    } else {
+                        $span.html($span.data('original-html'));
+                        return;
+                    }
+                } else if (fieldType === 'multi_select') {
+                    var selectedVals = $input.val() || [];
+                    selectedVals.forEach(function(val) {
+                        formData.append('field_value[]', val);
+                    });
+                } else {
+                    formData.append('field_value', fieldValue);
+                }
+                
+                $btn.prop('disabled', true).html('<i class="spinner-border spinner-border-sm text-white"></i>');
+                
+                $.ajax({
+                    url: "{{ route('leads.inline-update', $lead->id) }}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(res) {
+                        if (res.is_success) {
+                            var displayVal = res.value !== undefined ? res.value : fieldValue;
+                            $span.attr('data-value', displayVal);
+                            
+                            if (!displayVal || displayVal === '-') {
+                                $span.html('<span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __("Not Provided") }}</span>');
+                            } else if (fieldType === 'multi_select') {
+                                var items = displayVal.split(',');
+                                var badgesHTML = '';
+                                items.forEach(function(item) {
+                                    badgesHTML += '<span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2 py-1 me-1">' + item.trim() + '</span>';
+                                });
+                                $span.html(badgesHTML);
+                            } else if (fieldType === 'file') {
+                                $span.html('<a href="{{ asset("storage/uploads/custom_fields") }}/' + displayVal + '" download class="btn btn-xs btn-outline-success rounded-pill"><i class="ti ti-download me-1"></i> {{ __("Download") }}</a>');
+                            } else if (fieldName === 'email' && displayVal) {
+                                $span.html('<a href="mailto:' + displayVal + '" class="text-primary hover-underline">' + displayVal + '</a>');
+                            } else if (fieldName === 'phone' && displayVal) {
+                                $span.html(displayVal + ' <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="' + displayVal + '" data-bs-toggle="tooltip" title="{{ __("Call") }}"><i class="ti ti-phone-call"></i></a>');
+                            } else {
+                                $span.text(displayVal);
+                            }
+                            
+                            toastrs('Success', res.message || "{{ __('Field updated successfully.') }}", 'success');
+                        } else {
+                            toastrs('Error', res.error || "{{ __('Failed to update field.') }}", 'error');
+                            $span.html($span.data('original-html'));
+                        }
+                    },
+                    error: function(xhr) {
+                        var err = xhr.responseJSON ? xhr.responseJSON.error : "{{ __('Failed to update field.') }}";
+                        toastrs('Error', err, 'error');
+                        $span.html($span.data('original-html'));
+                    }
+                });
+            });
+
+            // AJAX trigger for Section API Sync
+            $(document).on('click', '.sync-section-api-btn', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var $icon = $btn.find('i');
+                var sectionId = $btn.data('section-id');
+                var leadId = $btn.data('lead-id');
+
+                $icon.removeClass('ti-refresh').addClass('ti-loader animate-spin');
+                $btn.addClass('disabled');
+
+                $.ajax({
+                    url: '{{ route("leads.sync-section-api") }}',
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        lead_id: leadId,
+                        section_id: sectionId
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastrs('Success', response.success, 'success');
+                            if (response.values) {
+                                $.each(response.values, function(fieldId, value) {
+                                    var $fieldSpan = $('[data-name="' + fieldId + '"]');
+                                    if ($fieldSpan.length > 0) {
+                                        $fieldSpan.attr('data-value', value);
+                                        $fieldSpan.text(value);
+                                    }
+                                });
+                                // Reload to update fields properly
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 800);
+                            }
+                        } else {
+                            toastrs('Error', response.error || 'Sync failed', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        var err = xhr.responseJSON ? xhr.responseJSON.error : 'Network error';
+                        toastrs('Error', err, 'error');
+                    },
+                    complete: function() {
+                        $icon.removeClass('ti-loader animate-spin').addClass('ti-refresh');
+                        $btn.removeClass('disabled');
+                    }
+                });
+            });
+        });
+    </script>
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            display: inline-block;
+            animation: spin 1.5s linear infinite;
+        }
+    </style>
 @endpush

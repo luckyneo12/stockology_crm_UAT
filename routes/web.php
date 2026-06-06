@@ -24,16 +24,10 @@ use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\HelpdeskConversionController;
 use App\Http\Controllers\HelpdeskTicketCategoryController;
 use App\Http\Controllers\HelpdeskTicketController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\PurchaseController;
-use App\Http\Controllers\PurchaseDebitNoteController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\MetaController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlanController;
-use App\Http\Controllers\ProposalController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\WarehouseTransferController;
@@ -121,6 +115,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('department-user/remove', [\App\Http\Controllers\UserManagementHubController::class , 'removeDepartmentUser'])->name('department.user.remove');
     Route::post('department-convert/{id}', [\App\Http\Controllers\UserManagementHubController::class , 'convertToTeam'])->name('department.convert');
 
+    // Targets
+    Route::get('targets/get-unit-users', [\App\Http\Controllers\TargetController::class, 'getUnitUsers'])->name('targets.get.unit.users');
+    Route::get('targets/get-pipeline-stages', [\App\Http\Controllers\TargetController::class, 'getPipelineStages'])->name('targets.get.pipeline.stages');
+    Route::get('targets/team/{id}/members', [\App\Http\Controllers\TargetController::class, 'getTeamMembersPerformance'])->name('targets.team.members.performance');
+    Route::get('targets/department/{id}/teams', [\App\Http\Controllers\TargetController::class, 'getDepartmentTeamsPerformance'])->name('targets.department.teams.performance');
+    Route::get('targets/templates/create', [\App\Http\Controllers\TargetController::class, 'templateCreate'])->name('targets.templates.create');
+    Route::post('targets/templates', [\App\Http\Controllers\TargetController::class, 'templateStore'])->name('targets.templates.store');
+    Route::get('targets/templates/{id}/edit', [\App\Http\Controllers\TargetController::class, 'templateEdit'])->name('targets.templates.edit');
+    Route::put('targets/templates/{id}', [\App\Http\Controllers\TargetController::class, 'templateUpdate'])->name('targets.templates.update');
+    Route::delete('targets/templates/{id}', [\App\Http\Controllers\TargetController::class, 'templateDestroy'])->name('targets.templates.destroy');
+    Route::get('targets/templates/{id}/assign', [\App\Http\Controllers\TargetController::class, 'templateAssignView'])->name('targets.templates.assign.view');
+    Route::post('targets/templates/{id}/assign', [\App\Http\Controllers\TargetController::class, 'templateAssignStore'])->name('targets.templates.assign.store');
+    Route::get('targets/{id}/progress', [\App\Http\Controllers\TargetController::class, 'progressView'])->name('targets.progress.view');
+    Route::post('targets/{id}/progress', [\App\Http\Controllers\TargetController::class, 'updateProgress'])->name('targets.progress.update');
+    Route::post('targets/{id}/status', [\App\Http\Controllers\TargetController::class, 'updateStatus'])->name('targets.status.update');
+    Route::post('targets/bulk-destroy', [\App\Http\Controllers\TargetController::class, 'bulkDestroy'])->name('targets.bulk-destroy');
+    Route::resource('targets', \App\Http\Controllers\TargetController::class);
+
     //users
     Route::resource('users', UserController::class);
     Route::get('users/list/view', [UserController::class , 'List'])->name('users.list.view');
@@ -136,31 +148,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('user-verified/{id}', [UserController::class , 'verifeduser'])->name('user.verified');
     Route::get('users/{id}/status', [UserController::class , 'updateStatus'])->name('users.status');
 
-    // Premium Messaging System
-    Route::get('messenger', [\App\Http\Controllers\MessagingController::class , 'index'])->name('messenger.index');
-    Route::get('messenger/users', [\App\Http\Controllers\MessagingController::class , 'getUsers'])->name('messenger.users');
-    Route::get('messenger/messages/{userId}', [\App\Http\Controllers\MessagingController::class , 'getMessages'])->name('messenger.messages');
-    Route::post('messenger/send', [\App\Http\Controllers\MessagingController::class , 'sendMessage'])->name('messenger.send');
-    Route::get('messenger/files/{userId}', [\App\Http\Controllers\MessagingController::class , 'getSharedFiles'])->name('messenger.files');
-    Route::get('messenger/download/{messageId}', [\App\Http\Controllers\MessagingController::class , 'downloadFile'])->name('messenger.download');
-    Route::get('messenger/unread-count', [\App\Http\Controllers\MessagingController::class , 'getUnreadCount'])->name('messenger.unread.count');
-    Route::get('messenger/latest-unread', [\App\Http\Controllers\MessagingController::class , 'getLatestUnread'])->name('messenger.latest.unread');
-    Route::post('messenger/update-last-seen', [\App\Http\Controllers\MessagingController::class , 'updateLastSeen'])->name('messenger.update.last.seen');
-    Route::delete('messenger/delete/{id}', [\App\Http\Controllers\MessagingController::class , 'deleteMessage'])->name('messenger.delete');
-
-    // Admin Audit Routes
-    Route::get('messenger/audit', [\App\Http\Controllers\MessagingController::class , 'adminMessageAudit'])->name('messenger.audit');
-    Route::get('messenger/audit/force-delete/{id}', [\App\Http\Controllers\MessagingController::class , 'adminForceDelete'])->name('messenger.audit.force_delete');
-
-    // Group Messaging Routes
-    Route::get('messenger/groups', [\App\Http\Controllers\MessagingController::class , 'getGroups'])->name('messenger.groups');
-    Route::post('messenger/groups/create', [\App\Http\Controllers\MessagingController::class , 'createGroup'])->name('messenger.groups.create');
-    Route::get('messenger/group-messages/{id}', [\App\Http\Controllers\MessagingController::class , 'getGroupMessages'])->name('messenger.group.messages');
-    Route::post('messenger/group-send', [\App\Http\Controllers\MessagingController::class , 'sendGroupMessage'])->name('messenger.group.send');
-    Route::get('messenger/shared-files/{id}/{type}', [\App\Http\Controllers\MessagingController::class , 'getSharedFiles'])->name('messenger.shared.files');
-    Route::post('messenger/groups/add-members', [\App\Http\Controllers\MessagingController::class , 'addUserMembers'])->name('messenger.groups.add_members');
-    Route::post('messenger/groups/remove-member', [\App\Http\Controllers\MessagingController::class , 'removeMember'])->name('messenger.groups.remove_member');
-    Route::post('messenger/groups/update-settings', [\App\Http\Controllers\MessagingController::class , 'updateGroupSettings'])->name('messenger.groups.update_settings');
+    // Messenger functionality removed - causing high CPU load
+    // All messenger routes have been disabled to stop API polling
 
     // User Notifications
     Route::get('notifications', [\App\Http\Controllers\UserNotificationController::class , 'index'])->name('notifications.index');
@@ -169,9 +158,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('notifications/count', [\App\Http\Controllers\UserNotificationController::class , 'getCount'])->name('notifications.count');
 
     //User Log
-    Route::get('users/logs/history', [UserController::class , 'UserLogHistory'])->name('users.userlog.history');
+    Route::get('/users/logs/history', [UserController::class , 'UserLogHistory'])->name('users.userlog.history');
     Route::get('users/logs/{id}', [UserController::class , 'UserLogView'])->name('users.userlog.view');
     Route::delete('users/logs/destroy/{id}', [UserController::class , 'UserLogDestroy'])->name('users.userlog.destroy');
+
+    // Comprehensive User Activity Tracking
+    Route::get('/users/activity/history', [\App\Http\Controllers\UserController_Activity::class, 'UserActivityHistory'])->name('users.activity.history');
+    Route::get('users/activity/{id}', [UserController::class , 'UserActivityView'])->name('users.activity.view');
+    Route::delete('users/activity/destroy/{id}', [UserController::class , 'UserActivityDestroy'])->name('users.activity.destroy');
+    Route::get('users/activity/summary', [UserController::class , 'UserActivitySummary'])->name('users.activity.summary');
+    Route::get('users/activity/export', [UserController::class , 'UserActivityExport'])->name('users.activity.export');
+
+    // Company Activity Dashboard
+    Route::get('company/activity/dashboard', [UserController::class , 'CompanyActivityDashboard'])->name('company.activity.dashboard');
+
+    // Standalone Activity Monitors
+    Route::get('users-activity-monitor', function () {
+        return redirect('/users_activity_simple.php');
+    })->name('users.activity.monitor');
+
+    Route::get('leads-activity-monitor', function () {
+        return redirect('/leads_activity_monitor.php');
+    })->name('leads.activity.monitor');
 
     // users import
     Route::get('users/import/export', [UserController::class , 'fileImportExport'])->name('users.file.import');
@@ -254,135 +262,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // End helpdesk
 
 
-    Route::group(['middleware' => 'PlanModuleCheck:Account-Taskly'], function () {
-            // invoice
-            Route::post('invoice/customer', [InvoiceController::class , 'customer'])->name('invoice.customer');
-            Route::post('invoice-attechment/{id}', [InvoiceController::class , 'invoiceAttechment'])->name('invoice.file.upload');
-            Route::delete('invoice-attechment/destroy/{id}', [InvoiceController::class , 'invoiceAttechmentDestroy'])->name('invoice.attachment.destroy');
-            Route::post('invoice/product', [InvoiceController::class , 'product'])->name('invoice.product');
-            Route::get('invoice/{id}/duplicate', [InvoiceController::class , 'duplicate'])->name('invoice.duplicate');
-            Route::get('invoice/{id}/recurring', [InvoiceController::class , 'recurring'])->name('invoice.recurring');
-            Route::get('invoice/items', [InvoiceController::class , 'items'])->name('invoice.items');
-            Route::post('invoice/product/destroy', [InvoiceController::class , 'productDestroy'])->name('invoice.product.destroy');
-            Route::get('invoice/grid/view', [InvoiceController::class , 'Grid'])->name('invoice.grid.view');
-            Route::resource('invoice', InvoiceController::class)->except(['create']);
-            Route::get('invoice/create/{cid}', [InvoiceController::class , 'create'])->name('invoice.create');
-            Route::get('/invoice/pay/{invoice}', [InvoiceController::class , 'payinvoice'])->name('pay.invoice');
-            Route::get('invoice/{id}/sent', [InvoiceController::class , 'sent'])->name('invoice.sent');
-            Route::get('invoice/{id}/resent', [InvoiceController::class , 'resent'])->name('invoice.resent');
-            Route::get('invoice/{id}/payment/reminder', [InvoiceController::class , 'paymentReminder'])->name('invoice.payment.reminder');
-            Route::get('invoice/pdf/{id}', [InvoiceController::class , 'invoice'])->name('invoice.pdf');
-            Route::get('invoice/{id}/payment', [InvoiceController::class , 'payment'])->name('invoice.payment');
-            Route::post('invoice/{id}/payment/store', [InvoiceController::class , 'createPayment'])->name('invoice.payment.store');
-            Route::post('invoice/{id}/payment/{pid}/', [InvoiceController::class , 'paymentDestroy'])->name('invoice.payment.destroy');
-            Route::get('invoice/{id}/send', [InvoiceController::class , 'customerInvoiceSend'])->name('invoice.send');
-            Route::post('invoice/{id}/send/mail', [InvoiceController::class , 'customerInvoiceSendMail'])->name('invoice.send.mail');
-            Route::post('invoice/section/type', [InvoiceController::class , 'InvoiceSectionGet'])->name('invoice.section.type');
-            Route::get('delivery-form/pdf/{id}', [InvoiceController::class , 'pdf'])->name('delivery-form.pdf');
 
-            Route::post('/get-invoice-customers', [InvoiceController::class , 'getInvoiceCustomers'])->name('invoice.customers');
-
-            Route::post('invoice-item-detail', [InvoiceController::class , 'getInvoicItemeDetail'])->name('newspaper.invoice.item.details');
-
-            Route::post('invoice/course', [InvoiceController::class , 'course'])->name('invoice.course');
-            Route::get('invoice/status/view', [InvoiceController::class , 'InvocieStatus'])->name('invoice.status.view');
-
-            // Proposal
-            Route::post('proposal-attechment/{id}', [ProposalController::class , 'proposalAttechment'])->name('proposal.file.upload');
-            Route::delete('proposal-attechment/destroy/{id}', [ProposalController::class , 'proposalAttechmentDestroy'])->name('proposal.attachment.destroy');
-            Route::post('proposal/customer', [ProposalController::class , 'customer'])->name('proposal.customer');
-            Route::post('proposal/product', [ProposalController::class , 'product'])->name('proposal.product');
-            Route::get('proposal/{id}/convert', [ProposalController::class , 'convert'])->name('proposal.convert');
-            Route::get('proposal/{id}/duplicate', [ProposalController::class , 'duplicate'])->name('proposal.duplicate');
-            Route::get('proposal/items', [ProposalController::class , 'items'])->name('proposal.items');
-            Route::post('proposal/product/destroy', [ProposalController::class , 'productDestroy'])->name('proposal.product.destroy');
-            Route::resource('proposal', ProposalController::class)->except(['create']);
-            Route::get('proposal/grid/view', [ProposalController::class , 'Grid'])->name('proposal.grid.view');
-            Route::get('proposal/create/{cid}', [ProposalController::class , 'create'])->name('proposal.create');
-            Route::get('proposal/{id}/status/change', [ProposalController::class , 'statusChange'])->name('proposal.status.change');
-            Route::get('proposal/{id}/resent', [ProposalController::class , 'resent'])->name('proposal.resent');
-            Route::post('proposal/section/type', [ProposalController::class , 'ProposalSectionGet'])->name('proposal.section.type');
-            Route::get('proposal/{id}/sent', [ProposalController::class , 'sent'])->name('proposal.sent');
-            Route::get('proposal/stats/view', [ProposalController::class , 'ProposalQuickStats'])->name('proposal.stats.view');
-
-            // purchase
-            Route::resource('purchases', PurchaseController::class)->except(['create']);
-            Route::get('purchases-grid', [PurchaseController::class , 'grid'])->name('purchases.grid');
-            Route::post('purchases/items', [PurchaseController::class , 'items'])->name('purchases.items');
-            Route::get('purchases/{id}/payment', [PurchaseController::class , 'payment'])->name('purchases.payment');
-            Route::post('purchases/{id}/payment/store', [PurchaseController::class , 'createPayment'])->name('purchases.payment.store');
-            Route::post('purchases/{id}/payment/{pid}/destroy', [PurchaseController::class , 'paymentDestroy'])->name('purchases.payment.destroy');
-
-            Route::post('purchases/product/destroy', [PurchaseController::class , 'productDestroy'])->name('purchases.product.destroy');
-            Route::post('purchases/vender', [PurchaseController::class , 'vender'])->name('purchases.vender');
-            Route::post('purchases/product', [PurchaseController::class , 'product'])->name('purchases.product');
-            Route::get('purchases/create/{cid}', [PurchaseController::class , 'create'])->name('purchases.create');
-            Route::get('purchases/{id}/sent', [PurchaseController::class , 'sent'])->name('purchases.sent');
-            Route::get('purchases/{id}/resent', [PurchaseController::class , 'resent'])->name('purchases.resent');
-
-
-            Route::get('purchases/{id}/debit-note', [PurchaseDebitNoteController::class , 'create'])->name('purchases.debit.note')->middleware(
-            [
-                'auth',
-            ]
-            );
-            Route::post('purchases/{id}/debit-note/store', [PurchaseDebitNoteController::class , 'store'])->name('purchases.debit.note.store')->middleware(
-            [
-                'auth',
-            ]
-            );
-            Route::get('purchases/{id}/debit-note/edit/{cn_id}', [PurchaseDebitNoteController::class , 'edit'])->name('purchases.edit.debit.note')->middleware(
-            [
-                'auth',
-            ]
-            );
-            Route::post('purchases/{id}/debit-note/update/{cn_id}', [PurchaseDebitNoteController::class , 'update'])->name('purchases.update.debit.note')->middleware(
-            [
-                'auth',
-            ]
-            );
-            Route::delete('purchases/{id}/debit-note/delete/{cn_id}', [PurchaseDebitNoteController::class , 'destroy'])->name('purchases.delete.debit.note')->middleware(
-            [
-                'auth',
-            ]
-            );
-
-            Route::post('purchase/{id}/file', [PurchaseController::class , 'fileUpload'])->name('purchases.files.upload')->middleware(['auth']);
-            Route::delete("purchase/{id}/destroy", [PurchaseController::class , 'fileUploadDestroy'])->name("purchases.attachment.destroy")->middleware(['auth']);
-            //warehouse
-    
-            Route::resource('warehouses', WarehouseController::class)->middleware(['auth', ]);
-
-            //warehouse import
-            Route::get('warehouses/import/export', [WarehouseController::class , 'fileImportExport'])->name('warehouses.file.import')->middleware(['auth']);
-            Route::post('warehouses/import', [WarehouseController::class , 'fileImport'])->name('warehouses.import')->middleware(['auth']);
-            Route::get('warehouses/import/modal', [WarehouseController::class , 'fileImportModal'])->name('warehouses.import.modal')->middleware(['auth']);
-            Route::post('warehouses/data/import/', [WarehouseController::class , 'warehouseImportdata'])->name('warehouses.import.data')->middleware(['auth']);
-
-            Route::get('productservice/{id}/detail', [WarehouseController::class , 'warehouseDetail'])->name('productservices.detail');
-
-            //warehouse-transfer
-            Route::resource('warehouses-transfer', WarehouseTransferController::class)->middleware(['auth']);
-            Route::post('warehouses-transfer/getproduct', [WarehouseTransferController::class , 'getproduct'])->name('warehouses-transfer.getproduct')->middleware(['auth']);
-            Route::post('warehouses-transfer/getquantity', [WarehouseTransferController::class , 'getquantity'])->name('warehouses-transfer.getquantity')->middleware(['auth']);
-
-            //Reports
-            Route::get('reports-warehouses', [ReportController::class , 'warehouseReport'])->name('reports.warehouse')->middleware(['auth']);
-            Route::get('reports-daily-purchases', [ReportController::class , 'purchaseDailyReport'])->name('reports.daily.purchase')->middleware(['auth']);
-            Route::get('reports-monthly-purchases', [ReportController::class , 'purchaseMonthlyReport'])->name('reports.monthly.purchase')->middleware(['auth']);
-        }
-        );
-        // invoices template setting save
-        Route::post('/invoices/template/setting', [InvoiceController::class , 'saveTemplateSettings'])->name('invoice.template.setting');
-        Route::get('/invoices/preview/{template}/{color}', [InvoiceController::class , 'previewInvoice'])->name('invoice.preview');
-
-        // proposal template setting save
-        Route::get('/proposal/preview/{template}/{color}', [ProposalController::class , 'previewInvoice'])->name('proposal.preview');
-        Route::post('/proposal/template/setting', [ProposalController::class , 'saveTemplateSettings'])->name('proposal.template.setting');
-
-        // purchase template setting save
-        Route::get('purchases/preview/{template}/{color}', [PurchaseController::class , 'previewPurchase'])->name('purchases.preview');
-        Route::post('/purchase/template/setting', [PurchaseController::class , 'savePurchaseTemplateSettings'])->name('purchases.template.setting');
 
 
         //notification
@@ -432,20 +312,7 @@ Route::post('site/optimize', function () {
 Route::post('helpdesk-ticket/{id}', [HelpdeskTicketController::class , 'reply'])->name('helpdesk-ticket.reply');
 Route::get('helpdesk-ticket-show/{id}', [HelpdeskTicketController::class , 'show'])->name('helpdesk.view');
 
-// invoice
-Route::get('/invoice/pay/{invoice}', [InvoiceController::class , 'payinvoice'])->name('pay.invoice');
-Route::get('invoice/pdf/{id}', [InvoiceController::class , 'invoice'])->name('invoice.pdf');
-Route::post('/bank/transfer/invoice', [BanktransferController::class , 'invoicePayWithBank'])->name('invoice.pay.with.bank');
 
-// proposal
-Route::get('/proposal/pay/{proposal}', [ProposalController::class , 'payproposal'])->name('pay.proposalpay');
-Route::get('proposal/pdf/{id}', [ProposalController::class , 'proposal'])->name('proposal.pdf');
-
-
-// purchase
-Route::get('/vendor/purchases/{id}/', [PurchaseController::class , 'purchaseLink'])->name('purchases.link.copy');
-Route::get('/vend0r/bill/{id}/', [PurchaseController::class , 'invoiceLink'])->name('bill.link.copy')->middleware(['auth']);
-Route::get('purchases/pdf/{id}', [PurchaseController::class , 'purchase'])->name('purchases.pdf');
 
 //instgram & facebook webhook call
 Route::any('/meta/callback', [MetaController::class , 'handleWebhook'])->name('meta.callback')->withoutMiddleware([VerifyCsrfToken::class]);

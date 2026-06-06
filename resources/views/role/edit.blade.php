@@ -142,6 +142,7 @@
                                                             <th>{{__('Stage Name')}}</th>
                                                             <th>{{__('Can View')}}</th>
                                                             <th>{{__('Can Move')}}</th>
+                                                            <th>{{__('Can Edit')}}</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -151,7 +152,7 @@
                                                             </tr>
                                                             @foreach($pipeline->leadStages as $stage)
                                                                 @php
-                                                                    $perm = $stagePermissions->get($stage->id) ? $stagePermissions->get($stage->id)->first() : (object)['can_view' => 1, 'can_move' => 1];
+                                                                    $perm = $stagePermissions->get($stage->id) ? $stagePermissions->get($stage->id)->first() : (object)['can_view' => 1, 'can_move' => 1, 'can_edit' => 1];
                                                                 @endphp
                                                                 <tr>
                                                                     <td>{{ $stage->name }}</td>
@@ -165,9 +166,45 @@
                                                                             <input type="checkbox" name="stage_permissions[{{$stage->id}}][can_move]" class="form-check-input" {{ $perm->can_move ? 'checked' : '' }}>
                                                                         </div>
                                                                     </td>
+                                                                    <td>
+                                                                        <div class="form-check form-switch custom-switch-v1">
+                                                                            <input type="checkbox" name="stage_permissions[{{$stage->id}}][can_edit]" class="form-check-input" {{ (isset($perm->can_edit) && $perm->can_edit) ? 'checked' : '' }}>
+                                                                        </div>
+                                                                    </td>
                                                                 </tr>
                                                             @endforeach
                                                         @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if ($module == 'Ekyc' && !empty($kyc_stages))
+                                        @php
+                                            $role_kyc_stages = !empty($role->kyc_portal_stages) ? json_decode($role->kyc_portal_stages, true) : [];
+                                        @endphp
+                                        <div class="mt-4">
+                                            <hr>
+                                            <h5>{{ __('Allowed KYC Stages (eKYC Portal)') }}</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-roles mb-0 mt-3">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>
+                                                                <label class="form-check-label pointer" style="word-break: break-word;">{{ __('Assign Stages') }}</label>
+                                                            </td>
+                                                            <td class="ps-4">
+                                                                <div class="row">
+                                                                    @foreach($kyc_stages as $stage)
+                                                                        <div class="col-xl-3 col-sm-6 form-check mb-2">
+                                                                            <input type="checkbox" name="kyc_portal_stages[]" value="{{ $stage }}" class="form-check-input pointer" id="kyc_stage_{{ $loop->index }}" {{ in_array($stage, $role_kyc_stages) ? 'checked' : '' }}>
+                                                                            <label class="form-check-label pointer" for="kyc_stage_{{ $loop->index }}" style="white-space: normal; word-break: break-word;">{{ $stage }}</label>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+                                                            </td>
+                                                        </tr>
                                                     </tbody>
                                                 </table>
                                             </div>

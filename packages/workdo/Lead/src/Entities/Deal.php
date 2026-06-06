@@ -4,7 +4,6 @@ namespace Workdo\Lead\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Workdo\ProductService\Entities\ProductService;
 use Illuminate\Support\Facades\Auth;
 
 class Deal extends Model
@@ -95,12 +94,7 @@ class Deal extends Model
 
     public function products()
     {
-        if($this->products)
-        {
-            return ProductService::whereIn('id', explode(',', $this->products))->get();
-        }
-
-        return [];
+        return collect();
     }
 
     public function sources()

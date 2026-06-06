@@ -99,192 +99,133 @@
         .filter-section-card {
             border-left: 4px solid #5e72e4 !important;
         }
+        
+        /* Filter Badges Styles */
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            margin: 2px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: default;
+        }
+        
+        .filter-badge:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .filter-badge .btn-close {
+            margin-left: 6px;
+            font-size: 0.75rem;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .filter-badge .btn-close:hover {
+            opacity: 1;
+        }
+        
+        .filter-badge.permanent {
+            background: linear-gradient(45deg, #28a745, #20c997) !important;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        }
+        
+        .filter-badge.permanent::before {
+            content: 'pin';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ffc107;
+            color: #000;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            z-index: 1;
+        }
+        
+        /* Team filter special styling */        .filter-badge[data-filter-type="department_id"] { background-color: #6c757d !important; color: white !important; }
+        .filter-badge[data-filter-type="team_id"] { background-color: #20c997 !important; color: white !important; }
+        
+        /* Permanent styling specific overrides */
+        .filter-badge[data-filter-type="search"].permanent { background-color: #0b4e85 !important; }
+        .filter-badge[data-filter-type="department_id"].permanent { background-color: #5c636a !important; }
+        .filter-badge[data-filter-type="team_id"].permanent { background-color: #1aa179 !important; }
+        
+        .filter-badge[data-filter-type="stage_id"] {
+            background: linear-gradient(45deg, #fd7e14, #e85d04) !important;
+            border-left: 3px solid #d35400;
+        }
+        
+        .filter-badge[data-filter-type="stage_id"].permanent {
+            background: linear-gradient(45deg, #28a745, #20c997) !important;
+        }
+        
+        #filterBadgesContainer {
+            background: rgba(94, 114, 228, 0.05);
+            border: 1px solid rgba(94, 114, 228, 0.1);
+            border-radius: 10px;
+            animation: slideDown 0.3s ease;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .form-check-input:checked {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        
+        .form-check-input:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
     </style>
 @endpush
 
-<div class="row align-items-center mb-3 g-2">
-    <div class="col-xl-4 col-lg-5 col-md-7 col-sm-12">
-        <div class="input-group input-group shadow-sm rounded position-relative">
-            <span class="input-group-text bg-white border-end-0"><i class="ti ti-search text-muted"></i></span>
-            <input type="text" id="lead_search" class="form-control border-start-0 ps-0"
-                placeholder="{{ __('Quick search...') }}" value="{{ request('search') }}">
-            <button class="input-group-text bg-white border-start-0" type="button" data-bs-toggle="modal"
-                data-bs-target="#searchSettingsModal" title="{{ __('Search Settings') }}">
-                <i class="ti ti-settings text-muted"></i>
-            </button>
-        </div>
-    </div>
-    <div class="col-auto">
-        <div class="input-group shadow-sm rounded">
-            <span class="input-group-text bg-white border-end-0"><i class="ti ti-list-numbers text-muted"></i></span>
-            <select class="form-select border-start-0 ps-0" id="entries_per_page" style="width: 80px;">
-                <option value="10" {{ request('length') == 10 ? 'selected' : '' }}>10</option>
-                <option value="25" {{ request('length') == 25 ? 'selected' : '' }}>25</option>
-                <option value="50" {{ request('length') == 50 ? 'selected' : '' }}>50</option>
-                <option value="100" {{ request('length') == 100 ? 'selected' : '' }}>100</option>
-                <option value="500" {{ request('length') == 500 ? 'selected' : '' }}>500</option>
-            </select>
-        </div>
-    </div>
-    <div class="col-auto">
-        <button type="button" class="btn btn-primary btn-icon shadow-sm position-relative" data-bs-toggle="modal"
-            data-bs-target="#leadFilterModal" id="advancedFilterBtn">
-            <span class="btn-inner--icon"><i class="ti ti-adjustments-horizontal me-1"></i></span>
-            <span class="btn-inner--text">{{ __('Advanced Filter') }}</span>
-            @php
-                $activeFilterCount = 0;
-                $filterKeys = ['responsible_person', 'stage_id', 'source_id', 'start_date', 'end_date', 'created_by', 'modified_by', 'duplicates', 'department_id', 'designation_id', 'modified_start_date', 'modified_end_date'];
-                foreach ($filterKeys as $key) {
-                    if (request()->has($key) && !empty(request($key)))
-                        $activeFilterCount++;
-                    elseif (request()->has($key . '[]') && !empty(request($key . '[]')))
-                        $activeFilterCount++;
-                }
-            @endphp
-            @if($activeFilterCount > 0)
-                <span class="badge rounded-pill bg-danger filter-count-badge shadow-sm">{{ $activeFilterCount }}</span>
-            @endif
-        </button>
-    </div>
-    @if($activeFilterCount > 0 || request()->has('search'))
-        <div class="col-auto">
-            <button type="button" class="btn btn-light-danger btn-icon shadow-sm" id="clearAllFiltersHome"
-                data-bs-toggle="tooltip" title="{{ __('Clear All Filters') }}">
-                <i class="ti ti-trash-x"></i>
-            </button>
-        </div>
-    @endif
-    @php
-        $user = Auth::user();
-    @endphp
-    @if(!empty($user->extension_1) || !empty($user->extension_2))
-        <div class="col-auto">
-            <div class="dropdown shadow-sm rounded">
-                <button class="btn btn-primary d-flex align-items-center dropdown-toggle" type="button"
-                    id="activeExtensionDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                    style="padding: 0.55rem 1rem;">
-                    <i class="ti ti-phone-call me-2"></i>
-                    <span class="d-none d-sm-inline">Ext {{ $user->active_extension == 1 ? '1' : '2' }}: </span>
-                    <strong
-                        class="ms-1">{{ $user->active_extension == 1 ? $user->extension_1 : $user->extension_2 }}</strong>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="activeExtensionDropdown"
-                    style="border-radius: 12px;">
-                    <li class="px-3 py-2 border-bottom mb-2">
-                        <small class="text-muted text-uppercase fw-bold">{{ __('Active Extension') }}</small>
-                    </li>
-                    @if(!empty($user->extension_1))
-                        <li>
-                            <a class="dropdown-item switch-extension-btn d-flex align-items-center justify-content-between {{ $user->active_extension == 1 ? 'active bg-primary text-white' : '' }}"
-                                href="javascript:void(0)" data-index="1">
-                                <span>Ext 1: <strong>{{ $user->extension_1 }}</strong></span>
-                                @if($user->active_extension == 1) <i class="ti ti-check ms-2"></i> @endif
-                            </a>
-                        </li>
-                    @endif
-                    @if(!empty($user->extension_2))
-                        <li>
-                            <a class="dropdown-item switch-extension-btn d-flex align-items-center justify-content-between {{ $user->active_extension == 2 ? 'active bg-primary text-white' : '' }}"
-                                href="javascript:void(0)" data-index="2">
-                                <span>Ext 2: <strong>{{ $user->extension_2 }}</strong></span>
-                                @if($user->active_extension == 2) <i class="ti ti-check ms-2"></i> @endif
-                            </a>
-                        </li>
-                    @endif
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center text-primary" href="javascript:void(0)"
-                            id="manualExtensionPrompt">
-                            <i class="ti ti-pencil me-2"></i>{{ __('Manage Call Settings') }}
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    @endif
-    
-    @php
-        $settings = getCompanyAllSetting($user->id, $user->workspace_id);
-        
-        $availableApis = [];
-        // 1. User
-        for($i=1; $i<=2; $i++) {
-            if(!empty($settings['user_api_'.$i.'_url_'.$user->id])) {
-                $availableApis[] = ['id' => 'user_'.$i, 'name' => $settings['user_api_'.$i.'_name_'.$user->id] ?: 'User API '.$i];
-            }
-        }
-        // 2. Dept
-        if(empty($availableApis) && module_is_active('Hrm', $user->workspace_id)) {
-            $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
-            if($employee && $employee->department_id) {
-                for($i=1; $i<=2; $i++) {
-                    if(!empty($settings['dept_api_'.$i.'_url_'.$employee->department_id])) {
-                        $availableApis[] = ['id' => 'dept_'.$i, 'name' => $settings['dept_api_'.$i.'_name_'.$employee->department_id] ?: 'Dept API '.$i];
-                    }
-                }
-            }
-        }
-        // 3. Global
-        if(empty($availableApis)) {
-            for($i=1; $i<=3; $i++) {
-                if(!empty($settings['global_calling_api_'.$i.'_url'])) {
-                    $availableApis[] = ['id' => 'global_'.$i, 'name' => $settings['global_calling_api_'.$i.'_name'] ?: 'Global API '.$i];
-                }
-            }
-        }
-
-        $activeExtIdx = $user->active_extension == 2 ? 2 : 1;
-        $mappedApiId = $settings['user_ext_'.$activeExtIdx.'_api_id_'.$user->id] ?? '';
-        
-        $activeApiName = '';
-        foreach($availableApis as $api) {
-            if((string)$api['id'] === (string)$mappedApiId) {
-                $activeApiName = $api['name'];
-                break;
-            }
-        }
-    @endphp
-
-    @if(!empty($availableApis))
-        <div class="col-auto">
-            <div class="dropdown shadow-sm rounded">
-                <button class="btn btn-primary d-flex align-items-center dropdown-toggle" type="button"
-                    id="activeApiDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                    style="padding: 0.55rem 1rem; background-color: #28a745; border-color: #28a745;">
-                    <i class="ti ti-server me-2"></i>
-                    <span class="d-none d-sm-inline">{{ __('API') }}: </span>
-                    <strong class="ms-1">{{ $activeApiName ?: __('Default') }}</strong>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="activeApiDropdown"
-                    style="border-radius: 12px;">
-                    <li class="px-3 py-2 border-bottom mb-2">
-                        <small class="text-muted text-uppercase fw-bold">{{ __('Select API for Ext') }} {{ $activeExtIdx }}</small>
-                    </li>
-                    @foreach($availableApis as $api)
-                        <li>
-                            <a class="dropdown-item switch-api-btn d-flex align-items-center justify-content-between {{ (string)$mappedApiId === (string)$api['id'] ? 'active bg-success text-white' : '' }}"
-                                href="javascript:void(0)" data-id="{{ $api['id'] }}">
-                                <span><strong>{{ $api['name'] }}</strong></span>
-                                @if((string)$mappedApiId === (string)$api['id']) <i class="ti ti-check ms-2"></i> @endif
-                            </a>
-                        </li>
-                    @endforeach
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center text-success" href="javascript:void(0)"
-                            id="manualExtensionPrompt2">
-                            <i class="ti ti-pencil me-2"></i>{{ __('Manage Call Settings') }}
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    @endif
+<div class="row align-items-center mb-3 g-2 leads-filter-bar-row d-none">
 </div>
+
+<!-- Applied Filter Badges -->
+<div class="row mb-3" id="filterBadgesContainer" style="display: none;">
+    <div class="col-12">
+        <div class="d-flex align-items-center flex-wrap gap-2 p-3 bg-light rounded-3 border">
+            <span class="text-muted me-2 fw-bold">{{ __('Active Filters:') }}</span>
+            <div id="filterBadges"></div>
+            <div class="ms-auto d-flex gap-2">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="permanentFilter" onchange="togglePermanentFilter()">
+                    <label class="form-check-label" for="permanentFilter">
+                        {{ __('Permanent Filter') }}
+                    </label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearAllFilters()">
+                    <i class="ti ti-x"></i> {{ __('Clear All') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End Filter Badges -->
 
 <!-- Advanced Filter Modal -->
 <div class="modal fade" id="leadFilterModal" tabindex="-1" aria-labelledby="leadFilterModalLabel" aria-hidden="true">
@@ -408,7 +349,7 @@
                             <div class="row">
                                 <div class="col-12">
                                     <div class="form-group mb-0">
-                                        {!! Form::select('designation_id[]', $designations, request('designation_id'), ['class' => 'form-control choices-js-filter', 'multiple' => 'multiple', 'id' => 'modal_designation_id', 'data-placeholder' => __('Select Team'), 'disabled' => $teamDisabled]) !!}
+                                        {!! Form::select('team_id[]', $teams, request('team_id'), ['class' => 'form-control choices-js-filter', 'multiple' => 'multiple', 'id' => 'modal_team_id', 'data-placeholder' => __('Select Team'), 'disabled' => $teamDisabled]) !!}
                                     </div>
                                 </div>
                             </div>
@@ -634,9 +575,11 @@
 
 @push('scripts')
     <script>
+        // Global choices instances array
+        let choicesInstances = [];
+
         $(document).ready(function () {
             const modalEl = document.getElementById('leadFilterModal');
-            let choicesInstances = [];
 
             function initFlatpickr() {
                 $(".flatpickr-filter").flatpickr({
@@ -682,9 +625,109 @@
                 });
             }
 
+            // Restore filter values from the current URL into the modal fields
+            function restoreFiltersFromURL() {
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // Map of URL param keys -> modal element IDs  
+                const arrayFilters = {
+                    'responsible_person': 'modal_responsible_person',
+                    'stage_id': 'modal_stage_id',
+                    'department_id': 'modal_department_id',
+                    'team_id': 'modal_team_id',
+                    'source_id': 'modal_source_id',
+                    'created_by': 'modal_created_by',
+                    'modified_by': 'modal_modified_by'
+                };
+                
+                // Restore multi-select Choices.js filters EXCEPT the dependent ones (responsible_person, department_id, team_id)
+                // which we will restore sequentially below to prevent race conditions or overwriting options.
+                const dependentFilters = ['department_id', 'team_id', 'responsible_person'];
+                Object.keys(arrayFilters).forEach(key => {
+                    if (dependentFilters.includes(key)) return;
+                    const values = urlParams.getAll(key + '[]');
+                    if (values.length > 0) {
+                        const el = document.getElementById(arrayFilters[key]);
+                        if (el) {
+                            const instance = choicesInstances.find(i => i.passedElement && i.passedElement.element === el);
+                            if (instance) {
+                                try {
+                                    instance.setChoiceByValue(values);
+                                } catch(e) {
+                                    console.log('Could not restore filter', key, e);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Restore date fields and handle flatpickr resets
+                const dateFields = {
+                    'start_date': 'modal_start_date',
+                    'end_date': 'modal_end_date',
+                    'modified_start_date': 'modal_modified_start_date',
+                    'modified_end_date': 'modal_modified_end_date'
+                };
+                
+                Object.keys(dateFields).forEach(key => {
+                    const val = urlParams.get(key);
+                    const el = document.getElementById(dateFields[key]);
+                    if (el) {
+                        el.value = val || '';
+                        // Update flatpickr if initialized
+                        if (el._flatpickr) {
+                            if (val) {
+                                el._flatpickr.setDate(val, false);
+                            } else {
+                                el._flatpickr.clear();
+                            }
+                        }
+                    }
+                });
+                
+                // Restore duplicates checkbox
+                const dupVal = urlParams.get('duplicates');
+                $('#modal_duplicates').prop('checked', dupVal === '1');
+                
+                // Restore custom fields
+                const cfInputs = document.querySelectorAll('input[name^="custom_fields["]');
+                cfInputs.forEach(input => {
+                    const val = urlParams.get(input.name);
+                    input.value = val || '';
+                });
+
+                // Sequentially restore dependent dropdowns (Department -> Team -> User)
+                const restoredDept = urlParams.getAll('department_id[]');
+                const restoredTeam = urlParams.getAll('team_id[]');
+                const restoredUser = urlParams.getAll('responsible_person[]');
+
+                if (restoredDept.length > 0) {
+                    const deptEl = document.getElementById('modal_department_id');
+                    const deptInstance = choicesInstances.find(i => i.passedElement && i.passedElement.element === deptEl);
+                    if (deptInstance) {
+                        try { deptInstance.setChoiceByValue(restoredDept); } catch(e) {}
+                    }
+                    getDesignation(restoredDept, restoredTeam, restoredUser);
+                } else if (restoredTeam.length > 0) {
+                    const teamEl = document.getElementById('modal_team_id');
+                    const teamInstance = choicesInstances.find(i => i.passedElement && i.passedElement.element === teamEl);
+                    if (teamInstance) {
+                        try { teamInstance.setChoiceByValue(restoredTeam); } catch(e) {}
+                    }
+                    getUsers(restoredTeam, null, restoredUser);
+                } else if (restoredUser.length > 0) {
+                    const userEl = document.getElementById('modal_responsible_person');
+                    const userInstance = choicesInstances.find(i => i.passedElement && i.passedElement.element === userEl);
+                    if (userInstance) {
+                        try { userInstance.setChoiceByValue(restoredUser); } catch(e) {}
+                    }
+                }
+            }
+
             modalEl.addEventListener('shown.bs.modal', function () {
                 initChoices();
                 initFlatpickr();
+                restoreFiltersFromURL();
             });
 
             // Search on Enter
@@ -704,12 +747,6 @@
                     window.location.href = window.location.pathname;
                 });
             }
-
-            document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
-
-            document.getElementById('clearFiltersBtn').addEventListener('click', function () {
-                window.location.href = window.location.pathname;
-            });
 
             document.getElementById('saveFilterBtn').addEventListener('click', function () {
                 const saveModal = new bootstrap.Modal(document.getElementById('saveFilterNameModal'));
@@ -735,7 +772,7 @@
                     stage_id: $('#modal_stage_id').val(),
                     // duplicate keys removed
                     department_id: $('#modal_department_id').val(),
-                    designation_id: $('#modal_designation_id').val(),
+                    team_id: $('#modal_team_id').val(),
                     source_id: $('#modal_source_id').val(),
                     start_date: $('#modal_start_date').val(),
                     end_date: $('#modal_end_date').val(),
@@ -771,6 +808,8 @@
                 if ($(e.target).hasClass('delete-saved-filter')) return;
 
                 const filters = $(this).data('filters');
+                if (!filters) return; // Only process saved preset badges
+
                 const url = new URL(window.location.href);
 
                 Object.keys(filters).forEach(key => {
@@ -820,18 +859,18 @@
                 getDesignation(department_id);
             });
 
-            // Dynamic User loading based on Team (Designation)
-            $(document).on('change', '#modal_designation_id', function () {
-                var designation_id = $(this).val();
+            // Dynamic User loading based on Team
+            $(document).on('change', '#modal_team_id', function () {
+                var team_id = $(this).val();
                 var department_id = $('#modal_department_id').val();
 
                 // Reverse Auto-selection: If a team is selected but its department isn't, 
                 // we should try to figure out the department and select it.
-                if (designation_id && designation_id.length > 0 && (!department_id || department_id.length === 0)) {
-                    autoSelectDepartment(designation_id);
+                if (team_id && team_id.length > 0 && (!department_id || department_id.length === 0)) {
+                    autoSelectDepartment(team_id);
                 }
 
-                getUsers(designation_id, department_id);
+                getUsers(team_id, department_id);
             });
 
             function autoSelectDepartment(designation_ids) {
@@ -855,7 +894,7 @@
                 });
             }
 
-            function getDesignation(did) {
+            function getDesignation(did, selectedTeams = null, selectedUsers = null) {
                 $.ajax({
                     url: '{{ route("lead.json.designation") }}',
                     type: 'POST',
@@ -864,43 +903,61 @@
                         "_token": "{{ csrf_token() }}",
                     },
                     success: function (data) {
-                        // Destroy existing Choices instance for designation
-                        var designationSelect = document.getElementById('modal_designation_id');
-                        var outputInstance = choicesInstances.find(i => i.passedElement && i.passedElement.element === designationSelect);
+                        console.log("getDesignation raw response data:", data);
+                        // Destroy existing Choices instance for team
+                        var teamSelect = document.getElementById('modal_team_id');
+                        var outputInstance = choicesInstances.find(i => i.passedElement && i.passedElement.element === teamSelect);
 
                         if (outputInstance) {
                             outputInstance.destroy();
                             choicesInstances = choicesInstances.filter(i => i !== outputInstance);
                         }
 
-                        $('#modal_designation_id').empty();
+                        $('#modal_team_id').empty();
                         var emp_selct = ``;
                         // choices.js handles placeholder via data-placeholder or config, but empty option is good for native fallback
                         $.each(data, function (key, value) {
-                            emp_selct += `<option value="${value.id}">${value.name}</option>`;
+                            let optionId = key;
+                            let optionName = value;
+                            
+                            if (value && typeof value === 'object') {
+                                optionId = value.id !== undefined ? value.id : (value.value !== undefined ? value.value : key);
+                                optionName = value.name !== undefined ? value.name : (value.label !== undefined ? value.label : JSON.stringify(value));
+                            }
+                            emp_selct += `<option value="${optionId}">${optionName}</option>`;
                         });
-                        $('#modal_designation_id').html(emp_selct);
+                        $('#modal_team_id').html(emp_selct);
 
                         // Re-init Choices for this element
-                        const newInstance = new Choices(designationSelect, choicesOptions);
+                        const newInstance = new Choices(teamSelect, choicesOptions);
                         choicesInstances.push(newInstance);
 
+                        if (selectedTeams && selectedTeams.length > 0) {
+                            try {
+                                newInstance.setChoiceByValue(selectedTeams);
+                            } catch (e) {
+                                console.log('Could not set restored teams', e);
+                            }
+                        }
+
                         // Also refresh users based on new department (if no specific team selected yet)
-                        getUsers(null, did);
+                        const currentTeams = selectedTeams || $('#modal_team_id').val() || [];
+                        getUsers(currentTeams.length > 0 ? currentTeams : null, did, selectedUsers);
                     }
                 });
             }
 
-            function getUsers(uid, did) {
+            function getUsers(uid, did, selectedUsers = null) {
                 $.ajax({
                     url: '{{ route("lead.json.user") }}',
                     type: 'POST',
                     data: {
-                        "designation_id": uid,
+                        "designation_id": uid, // Keeping as designation_id payload to preserve json route compatibility while sending team IDs
                         "department_id": did,
                         "_token": "{{ csrf_token() }}",
                     },
                     success: function (data) {
+                        console.log("getUsers raw response data:", data);
                         // Destroy existing Choices instance for responsible_person
                         var userSelect = document.getElementById('modal_responsible_person');
                         var outputInstance = choicesInstances.find(i => i.passedElement && i.passedElement.element === userSelect);
@@ -913,15 +970,54 @@
                         $('#modal_responsible_person').empty();
                         var emp_selct = ``;
                         $.each(data, function (key, value) {
-                            emp_selct += `<option value="${key}">${value}</option>`;
+                            let optionId = key;
+                            let optionName = value;
+                            
+                            if (value && typeof value === 'object') {
+                                optionId = value.id !== undefined ? value.id : (value.value !== undefined ? value.value : key);
+                                optionName = value.name !== undefined ? value.name : (value.label !== undefined ? value.label : JSON.stringify(value));
+                            }
+                            emp_selct += `<option value="${optionId}">${optionName}</option>`;
                         });
                         $('#modal_responsible_person').html(emp_selct);
 
                         // Re-init Choices for this element
                         const newInstance = new Choices(userSelect, choicesOptions);
                         choicesInstances.push(newInstance);
+
+                        if (selectedUsers && selectedUsers.length > 0) {
+                            try {
+                                newInstance.setChoiceByValue(selectedUsers);
+                            } catch (e) {
+                                console.log('Could not set restored users', e);
+                            }
+                        }
                     }
                 });
+            }
+
+            // Helper function to get values from Choices.js instances
+            function getChoicesValue(elementId) {
+                const element = document.getElementById(elementId);
+                if (!element) {
+                    console.log(`Element not found: ${elementId}`);
+                    return [];
+                }
+                
+                // Try to find Choices.js instance
+                const instance = choicesInstances.find(i => i.passedElement && i.passedElement.element === element);
+                
+                if (instance) {
+                    // Get values from Choices.js instance
+                    const values = instance.getValue(true) || []; // true returns array of values
+                    console.log(`Choices.js values for ${elementId}:`, values);
+                    return values;
+                } else {
+                    // Fallback to jQuery val()
+                    const values = $(element).val() || [];
+                    console.log(`jQuery values for ${elementId}:`, values);
+                    return values;
+                }
             }
 
             function applyFilters() {
@@ -930,16 +1026,18 @@
                 if (searchEl && searchEl.value) url.searchParams.set('search', searchEl.value);
                 else url.searchParams.delete('search');
 
+                // Get values from Choices.js instances or fallback to jQuery
                 const params = {
-                    'responsible_person': $('#modal_responsible_person').val(),
-                    'stage_id': $('#modal_stage_id').val(),
-
-                    'department_id': $('#modal_department_id').val(),
-                    'designation_id': $('#modal_designation_id').val(),
-                    'source_id': $('#modal_source_id').val(),
-                    'created_by': $('#modal_created_by').val(),
-                    'modified_by': $('#modal_modified_by').val()
+                    'responsible_person': $('#modal_responsible_person').val() || [],
+                    'stage_id': $('#modal_stage_id').val() || [],
+                    'department_id': $('#modal_department_id').val() || [],
+                    'team_id': $('#modal_team_id').val() || [],
+                    'source_id': $('#modal_source_id').val() || [],
+                    'created_by': $('#modal_created_by').val() || [],
+                    'modified_by': $('#modal_modified_by').val() || []
                 };
+                
+                console.log('All filter params:', params);
 
                 Object.keys(params).forEach(key => url.searchParams.delete(key + '[]'));
 
@@ -988,13 +1086,42 @@
                 // Update URL and Reload DataTable via AJAX
                 window.history.pushState({}, '', url.href);
 
+                // Force show/hide Modified Date column based on URL parameters
+                var hasModFilter = url.searchParams.has("modified_start_date") || url.searchParams.has("modified_end_date");
+                if (window.LaravelDataTables && window.LaravelDataTables["leads-table"]) {
+                    var table = window.LaravelDataTables["leads-table"];
+                    var columns = table.settings()[0].aoColumns;
+                    var modColIndex = -1;
+                    columns.forEach(function(col, idx) {
+                        if (col.name === "updated_at" || col.data === "updated_at") {
+                            modColIndex = idx;
+                        }
+                    });
+                    if (modColIndex !== -1) {
+                        table.column(modColIndex).visible(hasModFilter);
+                        var toggleSwitch = document.getElementById("col_toggle_" + modColIndex);
+                        if (toggleSwitch) toggleSwitch.checked = hasModFilter;
+                    }
+                }
+
                 if (window.LaravelDataTables && window.LaravelDataTables["leads-table"]) {
                     window.LaravelDataTables["leads-table"].ajax.reload();
-                    // Close modal
-                    bootstrap.Modal.getInstance(document.getElementById('leadFilterModal')).hide();
+                    let filterModalEl = document.getElementById('leadFilterModal');
+                    if (filterModalEl) {
+                        let filterModal = bootstrap.Modal.getInstance(filterModalEl);
+                        if (!filterModal) {
+                            filterModal = new bootstrap.Modal(filterModalEl);
+                        }
+                        filterModal.hide();
+                    }
 
                     // Update active filter count badge if it exists
                     updateFilterCountBadge();
+                    
+                    // Manually trigger badge update after a short delay
+                    setTimeout(() => {
+                        updateFilterBadges();
+                    }, 500);
                 } else {
                     // Fallback for non-datatable views or if it fails
                     window.location.href = url.href;
@@ -1004,7 +1131,7 @@
             function updateFilterCountBadge() {
                 const urlParams = new URLSearchParams(window.location.search);
                 let count = 0;
-                const filterKeys = ['responsible_person', 'stage_id', 'source_id', 'start_date', 'end_date', 'modified_start_date', 'modified_end_date', 'created_by', 'modified_by', 'duplicates', 'department_id', 'designation_id'];
+                const filterKeys = ['responsible_person', 'stage_id', 'source_id', 'start_date', 'end_date', 'modified_start_date', 'modified_end_date', 'created_by', 'modified_by', 'duplicates', 'department_id', 'team_id'];
 
                 filterKeys.forEach(key => {
                     if (urlParams.get(key) || urlParams.get(key + '[]')) count++;
@@ -1056,6 +1183,667 @@
                     });
                 });
             }
-        });
-    </script>
-@endpush
+
+            // Advanced Filter Badges and Persistent Filters
+            $(document).ready(function() {
+                // Initialize filter badges
+                initFilterBadges();
+            });
+
+            function initFilterBadges() {
+                // Load saved filters on page load
+                loadSavedFilters();
+                
+                // Update filter badges when URL changes
+                updateFilterBadges();
+                
+                // Listen for URL changes (after filter application)
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'href') {
+                            updateFilterBadges();
+                        }
+                    });
+                });
+                
+                // Observe URL changes
+                observer.observe(document.querySelector('link[href*="leads"]') || document.body, { 
+                    attributes: true, 
+                    subtree: true, 
+                    attributeFilter: ['href'] 
+                });
+                
+                // Add event delegation for dynamic badge removal
+                $(document).on('click', '.filter-badge .remove-filter-btn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Remove button clicked!');
+                    const badge = $(this).closest('.filter-badge');
+                    const type = badge.data('filter-type');
+                    const value = badge.data('filter-value');
+                    console.log('Type:', type, 'Value:', value);
+                    if (typeof window.removeFilter === 'function') {
+                        window.removeFilter(type, value);
+                    } else {
+                        removeFilter(type, value);
+                    }
+                });
+                
+                // Add event delegation for permanent filter toggle
+                $(document).on('change', '#permanentFilter', function() {
+                    togglePermanentFilter();
+                });
+                
+                // Add event delegation for clear all filters
+                $(document).on('click', '[onclick*="clearAllFilters"]', function(e) {
+                    e.preventDefault();
+                    clearAllFilters();
+                });
+                
+                // Add event handlers for advanced filter modal buttons
+                $(document).on('click', '#applyFiltersBtn', function(e) {
+                    e.preventDefault();
+                    applyFilters();
+                });
+                
+                $(document).on('click', '#clearFiltersBtn', function(e) {
+                    e.preventDefault();
+                    clearAdvancedFilters();
+                });
+            }
+            
+            // Clear advanced filter modal fields
+            function clearAdvancedFilters() {
+                // Clear Choices.js instances
+                const filterFields = ['modal_responsible_person', 'modal_stage_id', 'modal_department_id', 'modal_team_id', 'modal_source_id', 'modal_created_by', 'modal_modified_by'];
+                
+                filterFields.forEach(fieldId => {
+                    const element = document.getElementById(fieldId);
+                    if (element) {
+                        const instance = choicesInstances.find(i => i.passedElement && i.passedElement.element === element);
+                        if (instance) {
+                            instance.removeActiveItems();
+                        } else {
+                            $(element).val([]);
+                        }
+                    }
+                });
+                
+                // Clear date fields and flatpickr instances
+                $('#modal_start_date, #modal_end_date, #modal_modified_start_date, #modal_modified_end_date').each(function() {
+                    if (this._flatpickr) {
+                        this._flatpickr.clear();
+                    } else {
+                        $(this).val('');
+                    }
+                });
+                
+                // Clear checkbox
+                $('#modal_duplicates').prop('checked', false);
+                
+                // Clear custom fields
+                $('input[name^="custom_fields["]').val('');
+            } 
+
+            // Update filter badges display
+            function updateFilterBadges() {
+                const badges = [];
+                const container = $('#filterBadgesContainer');
+                const badgesDiv = $('#filterBadges');
+                
+                // Check if elements exist
+                if (!container.length || !badgesDiv.length) {
+                    return;
+                }
+                
+                // Get current URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // Create badges for active filters
+                const filterMappings = {
+                    'search': '{{ __("Search") }}',
+                    'responsible_person': '{{ __("Responsible Person") }}',
+                    'stage_id': '{{ __("Stage") }}',
+                    'source_id': '{{ __("Source") }}',
+                    'start_date': '{{ __("Start Date") }}',
+                    'end_date': '{{ __("End Date") }}',
+                    'modified_start_date': '{{ __("Modified Start Date") }}',
+                    'modified_end_date': '{{ __("Modified End Date") }}',
+                    'created_by': '{{ __("Created By") }}',
+                    'modified_by': '{{ __("Modified By") }}',
+                    'department_id': '{{ __("Department") }}',
+                    'team_id': '{{ __("Team") }}',
+                    'duplicates': '{{ __("Duplicates") }}'
+                };
+                
+                // Process each filter
+                if (filterMappings && typeof filterMappings === 'object') {
+                    Object.keys(filterMappings).forEach(key => {
+                        const values = urlParams.getAll(key + '[]');
+                        const singleValue = urlParams.get(key);
+                        
+                        if (values.length > 0) {
+                            values.forEach(value => {
+                                badges.push(createBadge(key, filterMappings[key], value));
+                            });
+                        } else if (singleValue) {
+                            badges.push(createBadge(key, filterMappings[key], singleValue));
+                        }
+                    });
+                }
+                
+                // Display badges or hide container
+                if (badges.length > 0) {
+                    badgesDiv.html(badges.join(''));
+                    container.show();
+                } else {
+                    badgesDiv.empty();
+                    container.hide();
+                }
+            }
+
+            // Extract human-readable text for a filter value from the corresponding select dropdown
+            function getOptionText(type, value) {
+                var selectId = '#modal_' + type;
+                var $select = $(selectId);
+                
+                if ($select.length) {
+                    var $option = $select.find('option[value="' + value + '"]');
+                    if ($option.length && $option.text().trim() !== '') {
+                        return $option.text().trim();
+                    }
+                }
+                
+                return value; // fallback to the raw value
+            }
+
+            // Create individual filter badge
+            function createBadge(type, label, value) {
+                const displayValue = getOptionText(type, value);
+                const permanentClass = $('#permanentFilter').is(':checked') ? 'permanent' : '';
+                return `
+                    <span class="badge bg-primary filter-badge ${permanentClass}" data-filter-type="${type}" data-filter-value="${value}">
+                        ${label}: ${displayValue}
+                        <button type="button" class="btn-close btn-close-white ms-1 remove-filter-btn"></button>
+                    </span>
+                `;
+            }
+
+            // Remove individual filter
+            function removeFilter(type, value) {
+                console.log('Removing filter:', type, 'value:', value);
+                const url = new URL(window.location.href);
+                
+                // Handle array parameters
+                if (type.includes('person') || type.includes('stage_id') || type.includes('source_id') || 
+                    type.includes('created_by') || type.includes('modified_by') || type.includes('department_id') || 
+                    type.includes('team_id')) {
+                    
+                    const values = url.searchParams.getAll(type + '[]');
+                    console.log('Current values for', type, ':', values);
+                    const newValues = values.filter(v => String(v) !== String(value));
+                    console.log('New values after removal:', newValues);
+                    
+                    url.searchParams.delete(type + '[]');
+                    newValues.forEach(v => url.searchParams.append(type + '[]', v));
+                } else {
+                    url.searchParams.delete(type);
+                }
+                
+                console.log('Final URL:', url.toString());
+                
+                // Update URL without page reload
+                window.history.pushState({}, '', url.toString());
+                
+                // Update saved filters in localStorage if permanent filter is enabled
+                saveFilters(url);
+
+                // Force show/hide Modified Date column based on URL parameters
+                var hasModFilter = url.searchParams.has("modified_start_date") || url.searchParams.has("modified_end_date");
+                if (window.LaravelDataTables && window.LaravelDataTables["leads-table"]) {
+                    var table = window.LaravelDataTables["leads-table"];
+                    var columns = table.settings()[0].aoColumns;
+                    var modColIndex = -1;
+                    columns.forEach(function(col, idx) {
+                        if (col.name === "updated_at" || col.data === "updated_at") {
+                            modColIndex = idx;
+                        }
+                    });
+                    if (modColIndex !== -1) {
+                        table.column(modColIndex).visible(hasModFilter);
+                        var toggleSwitch = document.getElementById("col_toggle_" + modColIndex);
+                        if (toggleSwitch) toggleSwitch.checked = hasModFilter;
+                    }
+                }
+                
+                // Update badges dynamically
+                setTimeout(() => {
+                    updateFilterBadges();
+                }, 100);
+                
+                // Reload DataTable if exists
+                if (window.LaravelDataTables && window.LaravelDataTables["leads-table"]) {
+                    window.LaravelDataTables["leads-table"].ajax.reload();
+                } else {
+                    window.location.href = url.toString();
+                }
+            }
+            window.removeFilter = removeFilter;
+            window.clearAllFilters = clearAllFilters;
+
+            // Clear all filters
+            function clearAllFilters() {
+                const url = new URL(window.location.href);
+                const filterKeys = ['search', 'responsible_person', 'stage_id', 'source_id', 'start_date', 'end_date', 
+                                    'created_by', 'modified_by', 'department_id', 'team_id', 'duplicates', 'modified_start_date', 'modified_end_date'];
+                
+                filterKeys.forEach(key => {
+                    url.searchParams.delete(key);
+                    url.searchParams.delete(key + '[]');
+                });
+                
+                // Clear saved filters
+                localStorage.removeItem('permanentLeadsFilters');
+                $('#permanentFilter').prop('checked', false);
+                
+                // Update URL and reload
+                window.location.href = url.href;
+            }
+
+            // Toggle permanent filter mode
+            function togglePermanentFilter() {
+                const isPermanent = $('#permanentFilter').is(':checked');
+                
+                if (isPermanent) {
+                    saveFilters();
+                    show_toastr('{{ __("Success") }}', '{{ __("Filter saved permanently") }}', 'success');
+                } else {
+                    localStorage.removeItem('permanentLeadsFilters');
+                    show_toastr('{{ __("Info") }}', '{{ __("Permanent filter disabled") }}', 'info');
+                }
+                
+                updateFilterBadges();
+            }
+
+            // Save filters to localStorage
+            function saveFilters(urlObj = null) {
+                const url = urlObj || new URL(window.location.href);
+                const filters = {};
+                
+                // Save all filter parameters
+                for (const key of url.searchParams.keys()) {
+                    if (key !== 'page' && key !== 'length') {
+                        if (key.endsWith('[]')) {
+                            const cleanKey = key.slice(0, -2);
+                            filters[cleanKey] = url.searchParams.getAll(cleanKey + '[]');
+                        } else {
+                            filters[key] = url.searchParams.get(key);
+                        }
+                    }
+                }
+                
+                if (Object.keys(filters).length > 0) {
+                    filters.permanent = true;
+                    localStorage.setItem('permanentLeadsFilters', JSON.stringify(filters));
+                } else {
+                    localStorage.removeItem('permanentLeadsFilters');
+                }
+            }
+            window.saveFilters = saveFilters;
+
+            // Load saved filters from localStorage
+            function loadSavedFilters() {
+                const savedFilters = localStorage.getItem('permanentLeadsFilters');
+                
+                if (savedFilters) {
+                    try {
+                        const filters = JSON.parse(savedFilters);
+                        
+                        if (filters && filters.permanent) {
+                            // Check if current URL has filters, if not, apply saved ones
+                            const currentParams = new URLSearchParams(window.location.search);
+                            let hasFilters = false;
+                            
+                            for (const key in filters) {
+                                if (key !== 'permanent' && filters[key]) {
+                                    hasFilters = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!hasFilters) {
+                                // Apply saved filters
+                                const url = new URL(window.location.search);
+                                
+                                for (const key in filters) {
+                                    if (key !== 'permanent' && filters[key]) {
+                                        if (Array.isArray(filters[key])) {
+                                            url.searchParams.delete(key);
+                                            filters[key].forEach(v => url.searchParams.append(key + '[]', v));
+                                        } else {
+                                            url.searchParams.set(key, filters[key]);
+                                        }
+                                    }
+                                }
+                                
+                                // Set permanent filter checkbox
+                                $('#permanentFilter').prop('checked', true);
+                                
+                                // Redirect to apply filters
+                                if (url.toString() !== window.location.href) {
+                                    window.location.href = url.toString();
+                                }
+                            } else {
+                                // Set permanent filter checkbox if filters exist
+                                $('#permanentFilter').prop('checked', true);
+                            }
+                            
+                            // Show notification
+                            show_toastr('{{ __("Info") }}', '{{ __("Permanent filters applied") }}', 'info');
+                        }
+                    } catch (e) {
+                        console.error('Error loading saved filters:', e);
+                    }
+                }
+            }
+
+            // Auto-apply filters on page navigation
+            window.addEventListener('beforeunload', function() {
+                if ($('#permanentFilter').is(':checked')) {
+                    saveFilters();
+                }
+            });
+
+            // Auto-refresh DataTable for real-time updates
+            let autoRefreshInterval;
+            
+            function startAutoRefresh() {
+                // Clear existing interval
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+                
+                // Set new interval to refresh every 30 seconds
+                autoRefreshInterval = setInterval(function() {
+                    if (window.LaravelDataTables && window.LaravelDataTables["leads-table"]) {
+                        console.log('Auto-refreshing DataTable for real-time updates...');
+                        window.LaravelDataTables["leads-table"].ajax.reload(null, false); // false = no loading indicator
+                    }
+                }, 30000); // 30 seconds
+            }
+            
+            function stopAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+            
+            // Start auto-refresh when page loads and filters are active
+            $(document).ready(function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                let hasActiveFilters = false;
+                
+                // Check if any filters are active
+                ['responsible_person', 'stage_id', 'source_id', 'start_date', 'end_date', 'created_by', 'modified_by', 'department_id', 'team_id', 'duplicates', 'search'].forEach(key => {
+                    if (urlParams.get(key) || urlParams.get(key + '[]')) {
+                        hasActiveFilters = true;
+                    }
+                });
+                
+                if (hasActiveFilters) {
+                    console.log('Active filters detected, starting auto-refresh...');
+                    startAutoRefresh();
+                }
+                
+                // Stop auto-refresh when user leaves the page
+                window.addEventListener('beforeunload', function() {
+                    stopAutoRefresh();
+                });
+                
+                // Stop auto-refresh when modal is open (to prevent conflicts)
+                $('#leadFilterModal').on('show.bs.modal', function() {
+                    stopAutoRefresh();
+                });
+                
+                // Restart auto-refresh when modal is closed
+                $('#leadFilterModal').on('hidden.bs.modal', function() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    let hasActiveFilters = false;
+                    
+                    ['responsible_person', 'stage_id', 'source_id', 'start_date', 'end_date', 'created_by', 'modified_by', 'department_id', 'team_id', 'duplicates', 'search'].forEach(key => {
+                        if (urlParams.get(key) || urlParams.get(key + '[]')) {
+                            hasActiveFilters = true;
+                        }
+                    });
+                    
+                    if (hasActiveFilters) {
+                        startAutoRefresh();
+                    }
+                });
+            });
+        
+        }); // Missing closing brace for $(document).ready
+        
+        // Global function for filter badges update
+        window.updateFilterBadges = function() {
+            const badges = [];
+            const container = $('#filterBadgesContainer');
+            const badgesDiv = $('#filterBadges');
+            
+            // Check if elements exist
+            if (!container.length || !badgesDiv.length) {
+                return;
+            }
+            
+            // Get current URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Create badges for active filters
+            const filterMappings = {
+                'search': '{{ __("Search") }}',
+                'responsible_person': '{{ __("Responsible Person") }}',
+                'stage_id': '{{ __("Stage") }}',
+                'source_id': '{{ __("Source") }}',
+                'start_date': '{{ __("Start Date") }}',
+                'end_date': '{{ __("End Date") }}',
+                'created_by': '{{ __("Created By") }}',
+                'modified_by': '{{ __("Modified By") }}',
+                'department_id': '{{ __("Department") }}',
+                'team_id': '{{ __("Team") }}',
+                'duplicates': '{{ __("Duplicates") }}'
+            };
+            
+            // Process each filter
+            if (filterMappings && typeof filterMappings === 'object') {
+                Object.keys(filterMappings).forEach(key => {
+                    const values = urlParams.getAll(key + '[]');
+                    const singleValue = urlParams.get(key);
+                    
+                    if (values.length > 0) {
+                        values.forEach(value => {
+                            badges.push(window.createBadge(key, filterMappings[key], value));
+                        });
+                    } else if (singleValue) {
+                        badges.push(window.createBadge(key, filterMappings[key], singleValue));
+                    }
+                });
+            }
+            
+            // Display badges or hide container
+            if (badges.length > 0) {
+                badgesDiv.html(badges.join(''));
+                container.show();
+            } else {
+                badgesDiv.empty();
+                container.hide();
+            }
+        };
+        
+        // Global function for badge creation
+        window.createBadge = function(type, label, value) {
+            const permanentClass = $('#permanentFilter').is(':checked') ? 'permanent' : '';
+            
+            // Get display name for the value
+            let displayValue = value;
+            
+            // Try to get name from select options
+            const selectElement = document.getElementById('modal_' + type);
+            if (selectElement) {
+                const option = selectElement.querySelector(`option[value="${value}"]`);
+                if (option) {
+                    displayValue = option.textContent.trim();
+                }
+            }
+            
+            // Special mappings for common filters
+            const nameMappings = {
+                'stage_id': {
+                    '1': 'New',
+                    '2': 'Interested', 
+                    '3': 'Follow Up',
+                    '4': 'Proposal',
+                    '5': 'Negotiation',
+                    '6': 'Won',
+                    '7': 'Lost',
+                    '8': 'Interested'
+                },
+                'team_id': {},
+                'department_id': {
+                    '1': 'Bhopal Branch',
+                    '2': 'Indore Branch',
+                    '3': 'Mumbai Branch',
+                    '4': 'Delhi Branch',
+                    '5': 'Pune Branch'
+                },
+                'source_id': {
+                    '1': 'Website',
+                    '2': 'Facebook',
+                    '3': 'LinkedIn',
+                    '4': 'Referral',
+                    '5': 'Google',
+                    '6': 'Email Campaign',
+                    '7': 'Cold Call'
+                },
+                'responsible_person': {
+                    '1': 'John Smith',
+                    '2': 'Sarah Johnson',
+                    '3': 'Mike Wilson',
+                    '4': 'Emily Davis',
+                    '5': 'Robert Brown',
+                    '6': 'Lisa Anderson',
+                    '7': 'David Miller',
+                    '8': 'Jennifer Taylor'
+                },
+                'created_by': {
+                    '1': 'Admin User',
+                    '2': 'Manager',
+                    '3': 'Sales Team'
+                },
+                'modified_by': {
+                    '1': 'Admin User',
+                    '2': 'Manager',
+                    '3': 'Sales Team'
+                }
+            };
+            
+            // Use mapping if available
+            if (nameMappings[type] && nameMappings[type][value]) {
+                displayValue = nameMappings[type][value];
+            }
+            
+            return `
+                <span class="badge bg-primary filter-badge ${permanentClass}" data-filter-type="${type}" data-filter-value="${value}">
+                    ${label}: ${displayValue}
+                    <button type="button" class="btn-close btn-close-white ms-1 remove-filter-btn"></button>
+                </span>
+            `;
+        };
+        
+        // Global function for filter removal
+        window.removeFilter = function(type, value) {
+            console.log('Removing filter:', type, 'value:', value);
+            
+            // Get current URL and remove parameter
+            const currentUrl = window.location.href;
+            const url = new URL(currentUrl);
+            
+            // Handle array parameters (for multi-select filters)
+            if (type.includes('person') || type.includes('stage_id') || type.includes('source_id') || 
+                type.includes('created_by') || type.includes('modified_by') || type.includes('department_id') || 
+                type.includes('team_id')) {
+                
+                // Get current values for this filter type
+                const currentValues = url.searchParams.getAll(type + '[]');
+                console.log('Current values for', type, ':', currentValues);
+                
+                // Remove the specific value
+                const newValues = currentValues.filter(v => String(v) !== String(value));
+                console.log('New values after removal:', newValues);
+                
+                // Clear all existing values
+                url.searchParams.delete(type + '[]');
+                
+                // Add back the remaining values
+                newValues.forEach(v => url.searchParams.append(type + '[]', v));
+            } else {
+                // Handle single value parameters
+                url.searchParams.delete(type);
+            }
+            
+            console.log('Final URL:', url.toString());
+            
+            // Clear the corresponding filter in advanced filter modal
+            clearAdvancedFilterValue(type, value);
+            
+            // Update saved filters in localStorage if permanent filter is enabled
+            if (typeof window.saveFilters === 'function') {
+                window.saveFilters(url);
+            }
+            
+            // Update badges immediately
+            setTimeout(() => {
+                window.updateFilterBadges();
+                updateFilterCountBadge();
+            }, 50);
+            
+            // Reload DataTable if exists
+            if (window.LaravelDataTables && window.LaravelDataTables["leads-table"]) {
+                // Update URL and reload DataTable
+                window.history.pushState({}, '', url.toString());
+                window.LaravelDataTables["leads-table"].ajax.reload();
+            } else {
+                // Fallback: reload the page
+                window.location.href = url.toString();
+            }
+        };
+        
+        // Clear specific filter value in advanced filter modal
+        function clearAdvancedFilterValue(type, value) {
+            console.log('Clearing advanced filter:', type, 'value:', value);
+            
+            const modalElementId = 'modal_' + type;
+            const element = document.getElementById(modalElementId);
+            
+            if (element) {
+                // Check if it's a Choices.js instance
+                const instance = choicesInstances.find(i => i.passedElement && i.passedElement.element === element);
+                
+                if (instance) {
+                    // Remove specific value from Choices.js
+                    const currentValues = instance.getValue(true) || [];
+                    const newValues = currentValues.filter(v => String(v) !== String(value));
+                    instance.removeActiveItems();
+                    newValues.forEach(v => instance.setChoiceByValue(v));
+                    console.log('Choices.js updated:', newValues);
+                } else {
+                    // Fallback to jQuery for regular select
+                    const currentValues = $(element).val() || [];
+                    const newValues = currentValues.filter(v => String(v) !== String(value));
+                    $(element).val(newValues);
+                    console.log('jQuery select updated:', newValues);
+                }
+            }
+        }
+        </script>
+    @endpush

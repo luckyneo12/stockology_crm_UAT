@@ -403,5 +403,18 @@ class CompanyMenuListener
             'module' => $module,
             'permission' => 'payroll report manage'
         ]);
+        $menu->add([
+            'category' => 'General',
+            'title' => __('Target'),
+            'icon' => 'target',
+            'name' => 'targets',
+            'parent' => null,
+            'order' => 2,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'targets.index',
+            'module' => $module,
+            'permission' => ''
+        ]);
     }
 }

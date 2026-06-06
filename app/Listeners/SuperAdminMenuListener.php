@@ -41,6 +41,19 @@ class SuperAdminMenuListener
         ]);
         $menu->add([
             'category' => 'General',
+            'title' => __('User Activity'),
+            'icon' => 'activity',
+            'name' => 'user-activity',
+            'parent' => null,
+            'order' => 55,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'users.activity.history',
+            'module' => $module,
+            'permission' => 'user logs history'
+        ]);
+        $menu->add([
+            'category' => 'General',
             'title' => __('Subscription'),
             'icon' => 'trophy',
             'name' => 'subscription',

@@ -80,7 +80,7 @@
                     
                     <div class="col-sm-6 col-12 form-group">
                         {{ Form::label('user_id', '<i class="ti ti-crown"></i> ' . __('Responsible Person'), ['class'=>'form-label'], false) }}
-                        {{ Form::select('user_id', $users,$lead->user_id, array('class' => 'form-control choices-lead-edit', 'disabled' => !$isResponsiblePersonEditable)) }}
+                        {{ Form::select('user_id', $users,$lead->user_id, array('class' => 'form-control choices', 'searchEnabled' => 'true', 'disabled' => !$isResponsiblePersonEditable)) }}
                     </div>
                     
                     <div class="col-sm-6 col-12 form-group">
@@ -102,12 +102,12 @@
                     
                     <div class="col-sm-6 col-12 form-group">
                         {{ Form::label('pipeline_id', '<i class="ti ti-columns"></i> ' . __('Pipeline'), ['class'=>'form-label'], false) }}<x-required></x-required>
-                        {{ Form::select('pipeline_id', $pipelines,$lead->pipeline_id, array('class' => 'form-control choices-lead-edit', 'id' => 'pipeline_id')) }}
+                        {{ Form::select('pipeline_id', $pipelines,$lead->pipeline_id, array('class' => 'form-control choices', 'id' => 'pipeline_id')) }}
                     </div>
                     
                     <div class="col-sm-6 col-12 form-group">
                         {{ Form::label('stage_id', '<i class="ti ti-list-check"></i> ' . __('Stage'), ['class'=>'form-label'], false) }}<x-required></x-required>
-                        {{ Form::select('stage_id', $stages,$lead->stage_id, array('class' => 'form-control choices-lead-edit', 'id' => 'stage_id')) }}
+                        {{ Form::select('stage_id', $stages,$lead->stage_id, array('class' => 'form-control choices', 'id' => 'stage_id')) }}
                     </div>
                     
                     <div class="col-sm-6 col-12 form-group">
@@ -123,87 +123,56 @@
                     <!-- Section: Additional Details (Lead Layout Builder) -->
                     @if(isset($leadSections) && count($leadSections) > 0)
                         @foreach($leadSections as $section)
-                            @php
-                                $hasVisibleFields = false;
-                                foreach($section->fields as $field) {
-                                    $currentStageId = (string)$lead->stage_id;
-                                    if (empty($field->visible_stages) || (is_array($field->visible_stages) && in_array($currentStageId, $field->visible_stages))) {
-                                        $hasVisibleFields = true;
-                                        break;
-                                    }
-                                }
-                            @endphp
-
-                            @if($hasVisibleFields)
-                                <div class="col-12 mt-4">
+                            <div class="lead-section-group col-12" data-section-id="{{ $section->id }}" data-pipeline-id="{{ $section->pipeline_id }}" style="display:none;">
+                                <div class="mt-4">
                                     <h6 class="section-title"><i class="ti ti-settings"></i> {{ __($section->name) }}</h6>
                                 </div>
-                                <div class="col-12">
-                                    <div class="custom-field-section row">
-                                        @foreach($section->fields as $field)
-                                            @php
-                                                $value = $leadCustomFieldValues[$field->id] ?? null;
-                                                $currentStageId = (string)$lead->stage_id;
-                                                
-                                                $isVisible = true;
-                                                if (!empty($field->visible_stages) && is_array($field->visible_stages)) {
-                                                    $isVisible = in_array($currentStageId, $field->visible_stages);
-                                                }
-                                                
-                                                $isRequired = false;
-                                                if ($field->is_required == 1) {
-                                                    $isRequired = true;
-                                                } elseif (!empty($field->required_stages) && is_array($field->required_stages)) {
-                                                    $isRequired = in_array($currentStageId, $field->required_stages);
-                                                }
-
-                                                $colWidth = 12 / ($section->columns > 0 ? $section->columns : 3);
-                                            @endphp
-
-                                            @if($isVisible)
-                                                <div class="col-sm-{{ $colWidth }} col-12 form-group">
-                                                    {{ Form::label('leadCustomField['.$field->id.']', (!empty($field->icon) ? '<i class="ti ti-'.$field->icon.'"></i> ' : '<i class="ti ti-circle-dot"></i> ') . $field->name, ['class'=>'form-label'], false) }} 
-                                                    @if($isRequired)
-                                                        <span class="text-danger">*</span>
-                                                    @endif
-                                                    
-                                                    @if($field->type == 'text')
-                                                        {{ Form::text('leadCustomField['.$field->id.']', $value, ['class' => 'form-control', 'required' => $isRequired]) }}
-                                                    @elseif($field->type == 'email')
-                                                        {{ Form::email('leadCustomField['.$field->id.']', $value, ['class' => 'form-control', 'required' => $isRequired]) }}
-                                                    @elseif($field->type == 'number')
-                                                         {{ Form::number('leadCustomField['.$field->id.']', $value, ['class' => 'form-control', 'required' => $isRequired]) }}
-                                                    @elseif($field->type == 'date')
-                                                        {{ Form::date('leadCustomField['.$field->id.']', $value, ['class' => 'form-control', 'required' => $isRequired]) }}
-                                                    @elseif($field->type == 'textarea')
-                                                        {{ Form::textarea('leadCustomField['.$field->id.']', $value, ['class' => 'form-control', 'rows' => 3, 'required' => $isRequired]) }}
-                                                    @elseif($field->type == 'select')
-                                                        @php 
-                                                            $options = array_map('trim', explode(',', $field->options)); 
-                                                            $selectOptions = $isRequired ? array_combine($options, $options) : ['' => __('Please Select')] + array_combine($options, $options);
-                                                        @endphp
-                                                         {{ Form::select('leadCustomField['.$field->id.']', $selectOptions, $value, ['class' => 'form-control choices', 'required' => $isRequired]) }}
-                                                    @elseif($field->type == 'multi_select')
-                                                        @php 
-                                                            $options = array_map('trim', explode(',', $field->options)); 
-                                                            $selectOptions = array_combine($options, $options); 
-                                                            $selectedValues = !empty($value) ? array_map('trim', explode(',', $value)) : [];
-                                                        @endphp
-                                                         {{ Form::select('leadCustomField['.$field->id.'][]', $selectOptions, $selectedValues, ['class' => 'form-control choices', 'required' => $isRequired, 'multiple'=>'multiple']) }}
-                                                    @elseif($field->type == 'file')
-                                                        {{ Form::file('leadCustomField['.$field->id.']', ['class' => 'form-control', 'required' => ($isRequired && empty($value))]) }}
-                                                        @if(!empty($value))
-                                                            <p class="text-xs text-muted mt-1">{{ __('Current File:') }} <a href="{{ asset('storage/uploads/custom_fields/'.$value) }}" target="_blank" class="text-primary font-weight-bold">{{ $value }}</a></p>
-                                                        @endif
-                                                    @endif
-                                                </div>
+                                <div class="custom-field-section row">
+                                    @foreach($section->fields as $field)
+                                        @php
+                                            $value = $leadCustomFieldValues[$field->id] ?? null;
+                                            $colWidth = 12 / ($section->columns > 0 ? $section->columns : 3);
+                                        @endphp
+                                        <div class="col-sm-{{ $colWidth }} col-12 form-group lead-custom-field-group" data-id="{{ $field->id }}" data-pipeline-id="{{ $field->pipeline_id }}" style="display:none;">
+                                            {{ Form::label('leadCustomField['.$field->id.']', (!empty($field->icon) ? '<i class="ti ti-'.$field->icon.'"></i> ' : '<i class="ti ti-circle-dot"></i> ') . $field->name, ['class'=>'form-label'], false) }} 
+                                            <span class="text-danger required-indicator" style="display:none;">*</span>
+                                            
+                                            @if($field->type == 'text')
+                                                {{ Form::text('leadCustomField['.$field->id.']', $value, ['class' => 'form-control']) }}
+                                            @elseif($field->type == 'email')
+                                                {{ Form::email('leadCustomField['.$field->id.']', $value, ['class' => 'form-control']) }}
+                                            @elseif($field->type == 'number')
+                                                 {{ Form::number('leadCustomField['.$field->id.']', $value, ['class' => 'form-control']) }}
+                                            @elseif($field->type == 'date')
+                                                {{ Form::date('leadCustomField['.$field->id.']', $value, ['class' => 'form-control']) }}
+                                            @elseif($field->type == 'textarea')
+                                                {{ Form::textarea('leadCustomField['.$field->id.']', $value, ['class' => 'form-control', 'rows' => 3]) }}
+                                            @elseif($field->type == 'select')
+                                                @php 
+                                                    $options = array_map('trim', explode(',', $field->options)); 
+                                                    $selectOptions = ['' => __('Please Select')] + array_combine($options, $options);
+                                                @endphp
+                                                 {{ Form::select('leadCustomField['.$field->id.']', $selectOptions, $value, ['class' => 'form-control choices']) }}
+                                            @elseif($field->type == 'multi_select')
+                                                @php 
+                                                    $options = array_map('trim', explode(',', $field->options)); 
+                                                    $selectOptions = array_combine($options, $options); 
+                                                    $selectedValues = !empty($value) ? array_map('trim', explode(',', $value)) : [];
+                                                @endphp
+                                                 {{ Form::select('leadCustomField['.$field->id.'][]', $selectOptions, $selectedValues, ['class' => 'form-control choices', 'multiple'=>'multiple']) }}
+                                            @elseif($field->type == 'file')
+                                                {{ Form::file('leadCustomField['.$field->id.']', ['class' => 'form-control']) }}
+                                                @if(!empty($value))
+                                                    <p class="text-xs text-muted mt-1">{{ __('Current File:') }} <a href="{{ asset('storage/uploads/custom_fields/'.$value) }}" target="_blank" class="text-primary font-weight-bold">{{ $value }}</a></p>
+                                                @endif
                                             @endif
-                                        @endforeach
-                                    </div>
+                                        </div>
+                                    @endforeach
                                 </div>
-                            @endif
+                            </div>
                         @endforeach
                     @endif
+                    
 
                     @permission('lead kyc comment')
                         <div class="col-12 mt-4">
@@ -254,14 +223,21 @@
     <script>
         var stage_id = '{{$lead->stage_id}}';
 
-        $(document).ready(function () {
+        (function () {
             var pipeline_id = $('[name=pipeline_id]').val();
             
             // Ensure values are set correctly on underlying selects
             processInitialValues();
             
             // Load stages and set the selected stage
-            getStages(pipeline_id);
+            // getStages(pipeline_id); // Removed on initial load to avoid double-initialization of Choices.js
+
+            // Trigger stage change initially to set correct requirements and visibilities
+            setTimeout(function() {
+                if ($('#stage_id').val()) {
+                    $('#stage_id').trigger('change');
+                }
+            }, 500);
 
             // Init Choices.js with a small delay
             setTimeout(function() {
@@ -300,7 +276,7 @@
                 // If valid, allow default submission (AJAX handled by common.js or standard submit)
                 return true;
             });
-        });
+        })();
 
         function processInitialValues() {
             var currentUserId = '{{$lead->user_id}}';
@@ -318,7 +294,105 @@
 
         $(document).on("change", "#pipeline_id", function () {
             var currVal = $(this).val();
+            
+            // Immediately hide all custom fields/sections that do not belong to this pipeline
+            $('.lead-section-group').each(function() {
+                var secPipelineId = $(this).attr('data-pipeline-id');
+                if (secPipelineId && secPipelineId != currVal) {
+                    $(this).hide();
+                }
+            });
+            $('.lead-custom-field-group').each(function() {
+                var fieldPipelineId = $(this).attr('data-pipeline-id');
+                if (fieldPipelineId && fieldPipelineId != currVal) {
+                    $(this).hide();
+                    $(this).find('input, select, textarea').prop('required', false);
+                }
+            });
+            
             getStages(currVal);
+        });
+
+        // Stage-Based Requirements and Visibility
+        $(document).on('change', '#stage_id', function() {
+            var stageId = $(this).val();
+            var pipelineId = $('#pipeline_id').val();
+            
+            if(stageId) {
+                $.ajax({
+                    url: '{{ route("leads.get.stage.requirements") }}',
+                    type: 'GET',
+                    data: { stage_id: stageId },
+                    success: function(response) {
+                        // Handle Dedicated Lead Custom Fields
+                        $('.lead-custom-field-group').each(function() {
+                            const fieldId = $(this).data('id').toString();
+                            const $group = $(this);
+                            const fieldPipelineId = $group.attr('data-pipeline-id');
+                            
+                            // If it belongs to a different pipeline, keep it hidden
+                            if (fieldPipelineId && fieldPipelineId != pipelineId) {
+                                $group.hide();
+                                $group.find('input, select, textarea').prop('required', false);
+                                return;
+                            }
+
+                            const $input = $group.find('input, select, textarea');
+                            const $indicator = $group.find('.required-indicator');
+
+                            // Visibility
+                            if (response.hidden_lead.includes(fieldId)) {
+                                $group.hide();
+                                $input.prop('required', false);
+                            } else {
+                                $group.show();
+                                // Requirement
+                                if (response.required_lead.includes(fieldId)) {
+                                    $input.prop('required', true);
+                                    $indicator.show();
+                                } else {
+                                    $input.prop('required', false);
+                                    $indicator.hide();
+                                }
+                            }
+                        });
+                        
+                        // Show/hide sections based on visible fields
+                        $('.lead-section-group').each(function() {
+                            var secPipelineId = $(this).attr('data-pipeline-id');
+                            if (secPipelineId && secPipelineId != pipelineId) {
+                                $(this).hide();
+                                return;
+                            }
+                            var visibleFields = $(this).find('.lead-custom-field-group').filter(function() {
+                                return this.style.display !== 'none';
+                            }).length;
+                            if (visibleFields > 0) {
+                                $(this).show();
+                            } else {
+                                $(this).hide();
+                            }
+                        });
+                    }
+                });
+            } else {
+                // If no stage selected, show/hide sections based on visible fields
+                $('.lead-section-group').each(function() {
+                    var secPipelineId = $(this).attr('data-pipeline-id');
+                    if (secPipelineId && secPipelineId != pipelineId) {
+                        $(this).hide();
+                        return;
+                    }
+                    var visibleFields = $(this).find('.lead-custom-field-group').filter(function() {
+                        return this.style.display !== 'none';
+                    }).length;
+                    if (visibleFields > 0) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            }
         });
 
         function getStages(id) {
@@ -366,6 +440,9 @@
                                 placeholder: true
                             });
                         }
+                        
+                        // Trigger stage_id change to update custom fields visibility
+                        $('#stage_id').trigger('change');
                     }, 100);
                 }
             });

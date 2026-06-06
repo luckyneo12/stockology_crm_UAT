@@ -19,15 +19,21 @@ class LeadCustomFieldController extends Controller
         return redirect()->back()->with('error', __('Permission Denied.'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         if(Auth::user()->type == 'company' || Auth::user()->type == 'super admin')
         {
             $types = LeadCustomField::$fieldTypes;
-            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', getActiveWorkSpace())->with('leadStages')->get();
+            $pipelineId = $request->pipeline_id;
+            
+            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', getActiveWorkSpace());
+            if ($pipelineId) {
+                $pipelines = $pipelines->where('id', $pipelineId);
+            }
+            $pipelines = $pipelines->with('leadStages')->get();
             $roles = \App\Models\Role::pluck('name', 'id');
             
-            return view('lead::custom_fields.create', compact('types', 'pipelines', 'roles'));
+            return view('lead::custom_fields.create', compact('types', 'pipelines', 'roles', 'pipelineId'));
         }
     }
 
@@ -56,6 +62,7 @@ class LeadCustomFieldController extends Controller
             $customField->is_required = $request->has('is_required') ? 1 : 0;
             $customField->workspace_id = getActiveWorkSpace();
             $customField->created_by = Auth::user()->id;
+            $customField->pipeline_id = $request->pipeline_id;
             
             // Process stage configuration
             $stageConfig = $request->stage_config ?? [];
@@ -73,18 +80,36 @@ class LeadCustomFieldController extends Controller
             
             $customField->visible_stages = !empty($visibleStages) ? $visibleStages : null;
             $customField->required_stages = !empty($requiredStages) ? $requiredStages : null;
+
+            // Process stage-wise minimum values for number fields
+            $stageMinValues = [];
+            if ($request->type === 'number' && is_array($request->stage_min_values)) {
+                foreach ($request->stage_min_values as $stageId => $val) {
+                    if ($val !== null && $val !== '') {
+                        $stageMinValues[(string)$stageId] = (float)$val;
+                    }
+                }
+            }
+            $customField->stage_min_values = !empty($stageMinValues) ? $stageMinValues : null;
+
             $customField->visible_roles = $request->visible_roles;   // Array
             $customField->is_filterable = $request->has('is_filterable') ? 1 : 0;
             $customField->icon          = $request->icon;
+            
+            // API Integration fields
+            $customField->api_url = $request->api_url;
+            $customField->api_method = $request->api_method;
+            $customField->api_trigger_stage_id = $request->api_trigger_stage_id;
+            $customField->api_response_key = $request->api_response_key;
 
             $customField->save();
 
-            return redirect()->route('lead-custom-fields.index')->with('success', __('Custom Field successfully created.'));
+            return redirect()->route('lead-builder.index', ['pipeline_id' => $request->pipeline_id])->with('success', __('Custom Field successfully created.'));
         }
         return redirect()->back()->with('error', __('Permission Denied.'));
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         if(Auth::user()->type == 'company' || Auth::user()->type == 'super admin')
         {
@@ -95,10 +120,16 @@ class LeadCustomFieldController extends Controller
             }
             
             $types = LeadCustomField::$fieldTypes;
-            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', getActiveWorkSpace())->with('leadStages')->get();
+            $pipelineId = $customField->pipeline_id;
+            
+            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', getActiveWorkSpace());
+            if ($pipelineId) {
+                $pipelines = $pipelines->where('id', $pipelineId);
+            }
+            $pipelines = $pipelines->with('leadStages')->get();
             $roles = \App\Models\Role::pluck('name', 'id');
             
-            return view('lead::custom_fields.edit', compact('customField', 'types', 'pipelines', 'roles'));
+            return view('lead::custom_fields.edit', compact('customField', 'types', 'pipelines', 'roles', 'pipelineId'));
         }
         
         return redirect()->back()->with('error', __('Permission Denied.'));
@@ -135,12 +166,30 @@ class LeadCustomFieldController extends Controller
             
             $customField->visible_stages = !empty($visibleStages) ? $visibleStages : null;
             $customField->required_stages = !empty($requiredStages) ? $requiredStages : null;
+
+            // Process stage-wise minimum values for number fields
+            $stageMinValues = [];
+            if ($request->type === 'number' && is_array($request->stage_min_values)) {
+                foreach ($request->stage_min_values as $stageId => $val) {
+                    if ($val !== null && $val !== '') {
+                        $stageMinValues[(string)$stageId] = (float)$val;
+                    }
+                }
+            }
+            $customField->stage_min_values = !empty($stageMinValues) ? $stageMinValues : null;
+
             $customField->visible_roles = $request->visible_roles;
             $customField->is_filterable = $request->has('is_filterable') ? 1 : 0;
             $customField->icon          = $request->icon;
 
+            // API Integration fields
+            $customField->api_url = $request->api_url;
+            $customField->api_method = $request->api_method;
+            $customField->api_trigger_stage_id = $request->api_trigger_stage_id;
+            $customField->api_response_key = $request->api_response_key;
+
             $customField->save();
-            return redirect()->route('lead-custom-fields.index')->with('success', __('Custom Field successfully updated.'));
+            return redirect()->route('lead-builder.index', ['pipeline_id' => $customField->pipeline_id])->with('success', __('Custom Field successfully updated.'));
         }
         
         return redirect()->back()->with('error', __('Permission Denied.'));
@@ -153,11 +202,12 @@ class LeadCustomFieldController extends Controller
             $customField = LeadCustomField::find($id);
             
             if (!$customField) {
-                return redirect()->route('lead-custom-fields.index')->with('error', __('Custom Field not found.'));
+                return redirect()->route('lead-builder.index')->with('error', __('Custom Field not found.'));
             }
             
+            $pipelineId = $customField->pipeline_id;
             $customField->delete();
-            return redirect()->route('lead-custom-fields.index')->with('success', __('Custom Field successfully deleted.'));
+            return redirect()->route('lead-builder.index', ['pipeline_id' => $pipelineId])->with('success', __('Custom Field successfully deleted.'));
         }
         
         return redirect()->back()->with('error', __('Permission Denied.'));
@@ -191,18 +241,29 @@ class LeadCustomFieldController extends Controller
         return redirect()->back()->with('error', __('Permission Denied.'));
     }
 
-    public function builder()
+    public function builder(Request $request)
     {
         if(Auth::user()->type == 'company' || Auth::user()->type == 'super admin')
         {
-            $sections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', getActiveWorkSpace())
-                ->with(['fields' => function($q) {
-                    $q->orderBy('order');
-                }])
-                ->orderBy('order')
-                ->get();
+            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', getActiveWorkSpace())->with('leadStages')->get();
+            $pipelineId = $request->pipeline_id ?? ($pipelines->first()?->id);
+            $selectedPipeline = $pipelines->where('id', $pipelineId)->first() ?? $pipelines->first();
+
+            if ($selectedPipeline) {
+                \Workdo\Lead\Entities\LeadSection::ensurePipelineLayout($selectedPipeline->id, getActiveWorkSpace());
+                
+                $sections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', getActiveWorkSpace())
+                    ->where('pipeline_id', $selectedPipeline->id)
+                    ->with(['fields' => function($q) use ($selectedPipeline) {
+                        $q->where('pipeline_id', $selectedPipeline->id)->orderBy('order');
+                    }])
+                    ->orderBy('order')
+                    ->get();
+            } else {
+                $sections = collect();
+            }
             
-            return view('lead::custom_fields.builder', compact('sections'));
+            return view('lead::custom_fields.builder', compact('sections', 'pipelines', 'selectedPipeline'));
         }
         return redirect()->back()->with('error', __('Permission Denied.'));
     }
@@ -245,8 +306,17 @@ class LeadCustomFieldController extends Controller
             $section = new \Workdo\Lead\Entities\LeadSection();
             $section->name = $request->name;
             $section->columns = $request->columns ?? 3;
+            $section->layout_type = $request->layout_type ?? 'section';
             $section->order = 100; // Will be sorted by builder later
             $section->workspace_id = getActiveWorkSpace();
+            $section->pipeline_id = $request->pipeline_id;
+            
+            // API Integrations
+            $section->api_url = $request->api_url;
+            $section->api_method = $request->api_method ?? 'GET';
+            $section->api_trigger_stage_id = $request->api_trigger_stage_id;
+            $section->api_response_mapping = $request->api_response_mapping;
+
             $section->save();
 
             return redirect()->back()->with('success', __('Section created successfully.'));
@@ -261,6 +331,14 @@ class LeadCustomFieldController extends Controller
             $section = \Workdo\Lead\Entities\LeadSection::find($id);
             $section->name = $request->name;
             $section->columns = $request->columns;
+            $section->layout_type = $request->layout_type ?? 'section';
+            
+            // API Integrations
+            $section->api_url = $request->api_url;
+            $section->api_method = $request->api_method ?? 'GET';
+            $section->api_trigger_stage_id = $request->api_trigger_stage_id;
+            $section->api_response_mapping = $request->api_response_mapping;
+
             $section->save();
 
             return redirect()->back()->with('success', __('Section updated successfully.'));
@@ -283,6 +361,50 @@ class LeadCustomFieldController extends Controller
             $section->delete();
 
             return redirect()->back()->with('success', __('Section deleted successfully. Any fields were moved to Unassigned.'));
+        }
+        return redirect()->back()->with('error', __('Permission Denied.'));
+    }
+
+    public function sectionCopy(Request $request, $id)
+    {
+        if (Auth::user()->type == 'company' || Auth::user()->type == 'super admin') {
+            $section = \Workdo\Lead\Entities\LeadSection::find($id);
+            if (!$section) {
+                return redirect()->back()->with('error', __('Section not found.'));
+            }
+
+            $targetPipelineId = $request->target_pipeline_id;
+            if (!$targetPipelineId) {
+                return redirect()->back()->with('error', __('Please select a target pipeline.'));
+            }
+
+            // Create target section
+            $newSection = new \Workdo\Lead\Entities\LeadSection();
+            $newSection->name = $section->name;
+            $newSection->pipeline_id = $targetPipelineId;
+            $newSection->workspace_id = getActiveWorkSpace();
+            $newSection->columns = $section->columns;
+            $newSection->layout_type = $section->layout_type;
+            $newSection->api_url = $section->api_url;
+            $newSection->api_method = $section->api_method;
+            $newSection->api_trigger_stage_id = null; // trigger stage belongs to different pipeline, so set to null initially
+            $newSection->api_response_mapping = $section->api_response_mapping;
+            $newSection->order = $section->order;
+            $newSection->is_system = 0; // Copied sections are custom
+            $newSection->save();
+
+            // Copy all custom fields under this section using replicate()
+            $fields = \Workdo\Lead\Entities\LeadCustomField::where('section_id', $id)->get();
+            foreach ($fields as $field) {
+                $newField = $field->replicate();
+                $newField->section_id = $newSection->id;
+                $newField->pipeline_id = $targetPipelineId;
+                $newField->workspace_id = getActiveWorkSpace();
+                $newField->is_system = 0;
+                $newField->save();
+            }
+
+            return redirect()->back()->with('success', __('Section and fields copied successfully.'));
         }
         return redirect()->back()->with('error', __('Permission Denied.'));
     }

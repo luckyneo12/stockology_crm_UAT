@@ -110,9 +110,18 @@ class HomeController extends Controller
                 $menu = new \App\Classes\Menu($user);
                 event(new \App\Events\CompanyMenuEvent($menu));
                 $menu_items = $menu->menu;
+                
+                // Prioritize 'crm-dashboard' (CRM Dashboard) if available
                 $dashboardItem = collect($menu_items)->first(function ($item) {
-                    return $item['parent'] === 'dashboard';
+                    return $item['parent'] === 'dashboard' && $item['name'] === 'crm-dashboard';
                 });
+
+                // Fallback to first available dashboard item
+                if (!$dashboardItem) {
+                    $dashboardItem = collect($menu_items)->first(function ($item) {
+                        return $item['parent'] === 'dashboard';
+                    });
+                }
 
                 if ($dashboardItem) {
                     $route = isset($dashboardItem['route']) ? $dashboardItem['route'] : null;

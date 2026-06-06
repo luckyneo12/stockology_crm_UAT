@@ -10,9 +10,12 @@
             </a>
         @endpermission
 
-        <div class="dept-header-v2">
-            <h6 class="dept-name-v2">{{ $dept->name }}</h6>
-            <i class="ti ti-star fav-icon"></i>
+        <div class="dept-header-v2 d-flex align-items-center">
+            @if(!empty($dept->logo))
+                <img src="{{ get_file($dept->logo) }}" alt="" style="width: 24px; height: 24px; object-fit: cover; border-radius: 4px; margin-right: 8px;">
+            @endif
+            <h6 class="dept-name-v2 mb-0">{{ $dept->name }}</h6>
+            <i class="ti ti-star fav-icon ms-auto"></i>
         </div>
 
         @if($dept->manager && $dept->manager->user)

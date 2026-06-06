@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Role;
+use Illuminate\Support\Str;
 use Workdo\Hrm\Entities\Branch;
 use Workdo\Hrm\Entities\Department;
 use Illuminate\Support\Facades\Auth;
@@ -65,6 +66,25 @@ class UserManagementHubController extends Controller
                 $allDepts = Department::where('created_by', creatorId())->where('workspace', getActiveWorkSpace())->with('branch', 'parent')->get();
                 $departments = $allDepts->where('type', 'department');
                 $teams = $allDepts->where('type', 'team');
+
+                // Auto-heal missing Levers Accounts for existing teams
+                $healed = false;
+                foreach ($teams as $team) {
+                    if (!$team->levers_user_id) {
+                        $leversUser = $this->createTeamLeversUser($team);
+                        if ($leversUser) {
+                            $team->levers_user_id = $leversUser->id;
+                            $team->save();
+                            $healed = true;
+                        }
+                    }
+                }
+
+                if ($healed) {
+                    $allDepts = Department::where('created_by', creatorId())->where('workspace', getActiveWorkSpace())->with('branch', 'parent')->get();
+                    $departments = $allDepts->where('type', 'department');
+                    $teams = $allDepts->where('type', 'team');
+                }
             }
 
             // Data for Org Chart
@@ -93,11 +113,88 @@ class UserManagementHubController extends Controller
             if ($department && $department->created_by == creatorId()) {
                 $department->type = 'team';
                 $department->save();
+
+                // Auto-create the Team Levers Account if not already created
+                if (!$department->levers_user_id) {
+                    $leversUser = $this->createTeamLeversUser($department);
+                    if ($leversUser) {
+                        $department->levers_user_id = $leversUser->id;
+                        $department->save();
+                    }
+                }
+
                 return response()->json(['success' => true, 'message' => __('Department converted to Team successfully.')]);
             }
             return response()->json(['success' => false, 'message' => __('Department not found or access denied.')], 404);
         }
         return response()->json(['success' => false, 'message' => __('Permission denied.')], 403);
+    }
+
+    /**
+     * Creates a dedicated "Team Levers" user account for a team.
+     * This account receives all leads when any team member is inactivated or deleted.
+     */
+    public function createTeamLeversUser(Department $department)
+    {
+        $teamName = $department->name;
+        $leversName = $teamName . ' Leaver';  // e.g. "JAGUAR Leaver"
+        $leversEmail = strtolower(str_replace(' ', '.', $teamName)) . '.leaver@teamaccount.local';
+
+        // Check if levers user already exists for this team name
+        $existing = \App\Models\User::where('email', $leversEmail)
+            ->where('created_by', $department->created_by)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $creatorUser = \App\Models\User::find($department->created_by);
+        if (!$creatorUser) {
+            return null;
+        }
+
+        // Prefer "Sales Executive" role, fallback to first non-company role
+        $role = \App\Models\Role::where('created_by', $department->created_by)
+            ->where('name', 'Sales Executive')
+            ->first();
+
+        if (!$role) {
+            $role = \App\Models\Role::where('created_by', $department->created_by)
+                ->where('name', '!=', 'company')
+                ->first();
+        }
+
+        if (!$role) {
+            return null;
+        }
+
+        $user = \App\Models\User::create([
+            'name'             => $leversName,
+            'email'            => $leversEmail,
+            'password'         => \Hash::make(\Str::random(32)), // Random unguessable password
+            'type'             => $role->name,
+            'created_by'       => $department->created_by,
+            'workspace_id'     => $department->workspace,
+            'active_workspace'  => $department->workspace,
+            'is_disable'       => 0, // Active so leads can be assigned
+            'is_enable_login'  => 0, // Cannot login
+            'lang'             => 'en',
+        ]);
+
+        $user->addRole($role);
+
+        // Create an Employee record and assign to this team
+        $employee = new \Workdo\Hrm\Entities\Employee();
+        $employee->user_id      = $user->id;
+        $employee->name         = $leversName;
+        $employee->email        = $leversEmail;
+        $employee->workspace    = $department->workspace;
+        $employee->created_by   = $department->created_by;
+        $employee->department_id = $department->id;
+        $employee->save();
+
+        return $user;
     }
 
     public function updateVisibility(Request $request)

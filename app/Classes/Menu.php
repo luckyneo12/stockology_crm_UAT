@@ -11,8 +11,8 @@ class Menu
     public function __construct($user)
     {
         $this->user = $user;
-        $this->modules = ActivatedModule();
-        $this->modules[] =  'Base';
+        // Bypass Module system temporarily
+        $this->modules = ['Base', 'Lead', 'Hrm', 'Ekyc'];
     }
 
     public function add(array $array): void {

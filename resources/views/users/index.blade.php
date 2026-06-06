@@ -59,33 +59,63 @@
             <div class="" id="multiCollapseExample1">
                 <div class="card mb-0">
                     <div class="card-body">
+                        <!-- Applied Filter Badges -->
+                        <div class="row mb-3" id="filterBadgesContainer" style="display: none;">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center flex-wrap gap-2">
+                                    <span class="text-muted me-2">{{ __('Active Filters:') }}</span>
+                                    <div id="filterBadges"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearAllFilters()">
+                                        <i class="ti ti-x"></i> {{ __('Clear All') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End Filter Badges -->
+                        
                         {{ Form::open(['route' => ['users.index'], 'method' => 'GET', 'id' => 'user_submit']) }}
+                        <div class="row d-flex align-items-center justify-content-end mb-3">
+                            <div class="col-auto">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="permanentFilter" onchange="togglePermanentFilter()">
+                                    <label class="form-check-label" for="permanentFilter">
+                                        {{ __('Permanent Filter') }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row d-flex align-items-center justify-content-end">
                             <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mr-2">
                                 <div class="btn-box">
                                     {{ Form::label('name', __('Name'), ['class' => 'form-label']) }}
-                                    {{ Form::text('name', isset($_GET['name']) ? $_GET['name'] : null, ['class' => 'form-control', 'placeholder' => __('Enter Name')]) }}
+                                    {{ Form::text('name', isset($_GET['name']) ? $_GET['name'] : null, ['class' => 'form-control', 'placeholder' => __('Enter Name'), 'id' => 'filterName']) }}
                                 </div>
                             </div>
                             <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mr-2">
                                 <div class="btn-box">
                                     {{ Form::label('email', __('Email'), ['class' => 'form-label']) }}
-                                    {{ Form::text('email', isset($_GET['email']) ? $_GET['email'] : null, ['class' => 'form-control', 'placeholder' => __('Enter Email')]) }}
+                                    {{ Form::text('email', isset($_GET['email']) ? $_GET['email'] : null, ['class' => 'form-control', 'placeholder' => __('Enter Email'), 'id' => 'filterEmail']) }}
                                 </div>
                             </div>
                             <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mr-2">
                                 <div class="btn-box">
                                     {{ Form::label('role', __('Role'), ['class' => 'form-label']) }}
-                                    {{ Form::select('role', $roles, isset($_GET['role']) ? $_GET['role'] : '', ['class' => 'form-control select text-capitalize', 'placeholder' => __('All')]) }}
+                                    {{ Form::select('role', $roles, isset($_GET['role']) ? $_GET['role'] : '', ['class' => 'form-control select text-capitalize', 'placeholder' => __('All'), 'id' => 'filterRole']) }}
                                 </div>
                             </div>
                             <div class="col-xl-2 col-lg-3 col-md-6 col-sm-12 col-12 mr-2">
                                 <div class="btn-box">
                                     {{ Form::label('status', __('Status'), ['class' => 'form-label']) }}
-                                    {{ Form::select('status', ['' => __('All'), 'active' => __('Active'), 'inactive' => __('Inactive')], isset($_GET['status']) ? $_GET['status'] : '', ['class' => 'form-control select', 'placeholder' => __('Select Status')]) }}
+                                    {{ Form::select('status', ['' => __('All'), 'active' => __('Active'), 'inactive' => __('Inactive')], isset($_GET['status']) ? $_GET['status'] : '', ['class' => 'form-control select', 'placeholder' => __('Select Status'), 'id' => 'filterStatus']) }}
                                 </div>
                             </div>
                             <div class="col-auto float-end mt-4 d-flex">
+                                <a href="/users/activity/history" class="btn btn-sm btn-success me-2"
+                                    data-bs-toggle="tooltip" title="{{ __('User Activity') }}"
+                                    target="_blank">
+                                    <span class="btn-inner--icon"><i class="ti ti-activity"></i></span>
+                                    {{ __('Activity') }}
+                                </a>
                                 <a href="#" class="btn btn-sm btn-primary me-2"
                                     onclick="document.getElementById('user_submit').submit(); return false;"
                                     data-bs-toggle="tooltip" title="{{ __('Apply') }}"
@@ -499,6 +529,94 @@
     {!! $users->links('vendor.pagination.global-pagination') !!}
     <!-- [ Main Content ] end -->
 @endsection
+@push('css')
+<style>
+    /* Filter Badges Styles */
+    .filter-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        margin: 2px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: default;
+    }
+    
+    .filter-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .filter-badge .btn-close {
+        margin-left: 6px;
+        font-size: 0.75rem;
+        opacity: 0.8;
+        transition: opacity 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .filter-badge .btn-close:hover {
+        opacity: 1;
+    }
+    
+    .filter-badge.permanent {
+        background: linear-gradient(45deg, #28a745, #20c997) !important;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    .filter-badge.permanent::before {
+        content: 'pin';
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ffc107;
+        color: #000;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        z-index: 1;
+    }
+    
+    #filterBadgesContainer {
+        background: rgba(0, 123, 255, 0.05);
+        border: 1px solid rgba(0, 123, 255, 0.1);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 16px;
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .form-check-input:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+</style>
+@endpush
 @push('scripts')
     {{-- Password  --}}
     <script>
@@ -522,5 +640,198 @@
                 }));
             }, 2000);
         });
+    </script>
+    
+    {{-- Filter Badges --}}
+    <script>
+    // Advanced Filter Badges and Persistent Filters
+    $(document).ready(function() {
+        // Load saved filters on page load
+        loadSavedFilters();
+        
+        // Update filter badges when form values change
+        $('#filterName, #filterEmail, #filterRole, #filterStatus').on('input change', function() {
+            updateFilterBadges();
+        });
+        
+        // Initial badge update
+        updateFilterBadges();
+    });
+
+    // Update filter badges display
+    function updateFilterBadges() {
+        const badges = [];
+        const container = $('#filterBadgesContainer');
+        const badgesDiv = $('#filterBadges');
+        
+        // Get current filter values
+        const name = $('#filterName').val();
+        const email = $('#filterEmail').val();
+        const role = $('#filterRole').val();
+        const status = $('#filterStatus').val();
+        
+        // Create badges for active filters
+        if (name) {
+            badges.push(createBadge('name', name, name));
+        }
+        
+        if (email) {
+            badges.push(createBadge('email', email, email));
+        }
+        
+        if (role) {
+            const roleText = $('#filterRole option:selected').text();
+            badges.push(createBadge('role', roleText, role));
+        }
+        
+        if (status) {
+            const statusText = $('#filterStatus option:selected').text();
+            badges.push(createBadge('status', statusText, status));
+        }
+        
+        // Display badges or hide container
+        if (badges.length > 0) {
+            badgesDiv.html(badges.join(''));
+            container.show();
+        } else {
+            badgesDiv.empty();
+            container.hide();
+        }
+        
+        // Save filters if permanent mode is on
+        if ($('#permanentFilter').is(':checked')) {
+            saveFilters();
+        }
+    }
+
+    // Create individual filter badge
+    function createBadge(type, label, value) {
+        const permanentClass = $('#permanentFilter').is(':checked') ? 'permanent' : '';
+        return `
+            <span class="badge bg-primary filter-badge ${permanentClass}" data-filter-type="${type}" data-filter-value="${value}">
+                ${getFilterLabel(type)}: ${label}
+                <button type="button" class="btn-close btn-close-white ms-1" onclick="removeFilter('${type}')"></button>
+            </span>
+        `;
+    }
+
+    // Get filter display label
+    function getFilterLabel(type) {
+        const labels = {
+            'name': '{{ __("Name") }}',
+            'email': '{{ __("Email") }}',
+            'role': '{{ __("Role") }}',
+            'status': '{{ __("Status") }}'
+        };
+        return labels[type] || type;
+    }
+
+    // Remove individual filter
+    function removeFilter(type) {
+        // Clear the filter value from the form fields
+        switch(type) {
+            case 'name':
+                $('#filterName').val('').trigger('input');
+                break;
+            case 'email':
+                $('#filterEmail').val('').trigger('input');
+                break;
+            case 'role':
+                $('#filterRole').val('').trigger('change');
+                break;
+            case 'status':
+                $('#filterStatus').val('').trigger('change');
+                break;
+        }
+        
+        // Update badges
+        updateFilterBadges();
+        
+        // Submit form to apply changes
+        $('#user_submit').submit();
+    }
+
+    // Clear all filters
+    function clearAllFilters() {
+        $('#filterName, #filterEmail, #filterRole, #filterStatus').val('');
+        updateFilterBadges();
+        
+        // Clear saved filters
+        localStorage.removeItem('permanentUsersFilters');
+        $('#permanentFilter').prop('checked', false);
+        
+        // Submit form
+        $('#user_submit').submit();
+    }
+
+    // Toggle permanent filter mode
+    function togglePermanentFilter() {
+        const isPermanent = $('#permanentFilter').is(':checked');
+        
+        if (isPermanent) {
+            saveFilters();
+            showNotification('{{ __("Success") }}', '{{ __("Filter saved permanently") }}', 'success');
+        } else {
+            localStorage.removeItem('permanentUsersFilters');
+            showNotification('{{ __("Info") }}', '{{ __("Permanent filter disabled") }}', 'info');
+        }
+        
+        updateFilterBadges();
+    }
+
+    // Save filters to localStorage
+    function saveFilters() {
+        const filters = {
+            name: $('#filterName').val(),
+            email: $('#filterEmail').val(),
+            role: $('#filterRole').val(),
+            status: $('#filterStatus').val(),
+            permanent: true
+        };
+        localStorage.setItem('permanentUsersFilters', JSON.stringify(filters));
+    }
+
+    // Load saved filters from localStorage
+    function loadSavedFilters() {
+        const savedFilters = localStorage.getItem('permanentUsersFilters');
+        
+        if (savedFilters) {
+            try {
+                const filters = JSON.parse(savedFilters);
+                
+                if (filters.permanent) {
+                    // Restore filter values
+                    if (filters.name) $('#filterName').val(filters.name);
+                    if (filters.email) $('#filterEmail').val(filters.email);
+                    if (filters.role) $('#filterRole').val(filters.role);
+                    if (filters.status) $('#filterStatus').val(filters.status);
+                    
+                    // Set permanent filter checkbox
+                    $('#permanentFilter').prop('checked', true);
+                    
+                    // Update badges
+                    updateFilterBadges();
+                    
+                    // Show notification
+                    showNotification('{{ __("Info") }}', '{{ __("Permanent filters applied") }}', 'info');
+                }
+            } catch (e) {
+                console.error('Error loading saved filters:', e);
+            }
+        }
+    }
+
+    // Show notification function
+    function showNotification(title, message, type) {
+        // Simple notification using alert for now
+        console.log(title + ': ' + message);
+    }
+
+    // Auto-apply filters on page navigation
+    window.addEventListener('beforeunload', function() {
+        if ($('#permanentFilter').is(':checked')) {
+            saveFilters();
+        }
+    });
     </script>
 @endpush

@@ -1,9 +1,11 @@
 @permission('lead edit')
+@if($lead->stagePermissions()->can_edit)
 <div class="action-btn me-2">
     <a data-url="{{ URL::to('leads/' . $lead->id . '/labels') }}" data-ajax-popup="true" data-toggle="tooltip"
         data-title="{{__('Labels')}}" title="{{ __('Labels') }}"
         class="mx-3 btn btn-sm align-items-center bg-primary"><i class="ti ti-copy"></i></a>
 </div>
+@endif
 @endpermission
 @if($lead->phone)
     <div class="action-btn me-2">
@@ -24,11 +26,13 @@
 @endif
 @endpermission
 @permission('lead edit')
+@if($lead->stagePermissions()->can_edit)
 <div class="action-btn me-2">
     <a data-size="lg" data-url="{{ URL::to('leads/' . $lead->id . '/edit') }}" data-ajax-popup="true"
         data-title="{{__('Edit Lead')}}" class="mx-3 btn btn-sm align-items-center bg-info" data-bs-toggle="tooltip"
         data-bs-placement="top" title="{{__('Edit')}}"><i class="ti ti-pencil text-white"></i></a>
 </div>
+@endif
 @endpermission
 @permission('lead delete')
 <div class="action-btn me-2">

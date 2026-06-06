@@ -56,7 +56,7 @@
                 
                     @if(isset($leadCustomFields))
                         @foreach($leadCustomFields as $field)
-                            <div class="col-sm-6 col-12 form-group lead-custom-field-group" data-id="{{ $field->id }}" style="display:none;">
+                            <div class="col-sm-6 col-12 form-group lead-custom-field-group" data-id="{{ $field->id }}" data-pipeline-id="{{ $field->pipeline_id }}" style="display:none;">
                                 {{ Form::label('leadCustomField['.$field->id.']', $field->name, ['class'=>'form-label']) }} 
                                 <span class="text-danger required-indicator" style="{{ $field->is_required ? '' : 'display:none' }}">*</span>
                                 
@@ -161,6 +161,16 @@ $(document).ready(function() {
     // Load stages when pipeline changes
     $(document).on('change', '#pipeline_id', function() {
         var pipelineId = $(this).val();
+        
+        // Immediately hide all custom fields that are not for this pipeline
+        $('.lead-custom-field-group').each(function() {
+            var fieldPipelineId = $(this).attr('data-pipeline-id');
+            if (fieldPipelineId && fieldPipelineId != pipelineId) {
+                $(this).hide();
+                $(this).find('input, select, textarea').prop('required', false);
+            }
+        });
+        
         if(pipelineId) {
             $.ajax({
                 url: '{{ route("leads.get.stages") }}',
@@ -181,6 +191,7 @@ $(document).ready(function() {
 
                     // Re-init Choices
                     initChoices();
+                    $('#stage_id').trigger('change');
                 }
             });
         }

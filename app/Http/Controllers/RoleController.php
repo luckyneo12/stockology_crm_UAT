@@ -49,7 +49,11 @@ class RoleController extends Controller
                 $permissions = $permissions->pluck('name', 'id')->toArray();
             }
             $modules = array_merge(['General','ProductService'],getshowModuleList());
-            return view('role.create', compact('permissions','modules'));
+            $kyc_stages = [];
+            if (module_is_active('Ekyc')) {
+                $kyc_stages = \Workdo\Ekyc\Entities\EkycStage::where('workspace_id', getActiveWorkSpace())->pluck('name')->toArray();
+            }
+            return view('role.create', compact('permissions','modules', 'kyc_stages'));
         }
         else
         {
@@ -83,6 +87,7 @@ class RoleController extends Controller
             $role->name       = $name;
             $role->created_by = creatorId();
             $role->allowed_login_ips = $request->allowed_login_ips;
+            $role->kyc_portal_stages = !empty($request->kyc_portal_stages) ? json_encode($request->kyc_portal_stages) : null;
             $permissions      = $request['permissions'];
             $role->save();
 
@@ -122,7 +127,12 @@ class RoleController extends Controller
                 $stagePermissions = \Workdo\Lead\Entities\LeadStagePermission::where('role_id', $role->id)->get()->groupBy('stage_id');
             }
 
-            return view('role.edit', compact('role', 'permissions','modules', 'pipelines', 'stagePermissions'));
+            $kyc_stages = [];
+            if (module_is_active('Ekyc')) {
+                $kyc_stages = \Workdo\Ekyc\Entities\EkycStage::where('workspace_id', getActiveWorkSpace())->pluck('name')->toArray();
+            }
+
+            return view('role.edit', compact('role', 'permissions','modules', 'pipelines', 'stagePermissions', 'kyc_stages'));
         }
         else
         {
@@ -151,6 +161,7 @@ class RoleController extends Controller
             $role->fill([
                 'name' => $request->name,
                 'allowed_login_ips' => $request->allowed_login_ips,
+                'kyc_portal_stages' => !empty($request->kyc_portal_stages) ? json_encode($request->kyc_portal_stages) : null,
             ])->save();
 
             $p_all = Permission::all();
@@ -173,6 +184,7 @@ class RoleController extends Controller
                         [
                             'can_view' => isset($perms['can_view']) && $perms['can_view'] ? 1 : 0,
                             'can_move' => isset($perms['can_move']) && $perms['can_move'] ? 1 : 0,
+                            'can_edit' => isset($perms['can_edit']) && $perms['can_edit'] ? 1 : 0,
                             'workspace_id' => getActiveWorkSpace(),
                         ]
                     );

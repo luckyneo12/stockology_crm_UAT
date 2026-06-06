@@ -9,3 +9,91 @@
     max-width: 80%;
     width: 100%;
 }
+
+/* Premium Compact Page Header Override */
+.dash-content .page-header {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px 20px !important;
+    margin-bottom: 16px !important;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    min-height: auto;
+}
+
+.dash-content .page-header .page-block {
+    padding: 0;
+}
+
+.dash-content .page-header-title h4 {
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    margin-bottom: 2px !important;
+}
+
+.dash-content .page-header .breadcrumb {
+    font-size: 0.72rem !important;
+    font-weight: 500;
+}
+
+.dash-content .page-header .breadcrumb-item a {
+    color: #64748b !important;
+}
+
+.dash-content .page-header .breadcrumb-item.active {
+    color: #0f172a !important;
+}
+
+/* Choices dropdown dropdown styling adjustment */
+.dash-content .page-header .choices {
+    margin-bottom: 0 !important;
+}
+
+.dash-content .page-header .choices__inner {
+    min-height: 32px !important;
+    padding: 2.5px 12px !important;
+    border-radius: 8px !important;
+    background-color: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    font-size: 0.8rem !important;
+    font-weight: 500;
+    color: #334155;
+    transition: all 0.15s ease-in-out;
+}
+
+.dash-content .page-header .choices__inner:hover {
+    border-color: #cbd5e1 !important;
+}
+
+/* Compact layout button adjustments */
+.dash-content .page-header .btn {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 0 12px !important;
+    box-shadow: none !important;
+    transition: all 0.15s ease-in-out;
+}
+
+.dash-content .page-header .btn-icon {
+    width: 32px !important;
+    padding: 0 !important;
+}
+
+.dash-content .page-header .btn-primary {
+    background: #18BF6B !important;
+    border-color: #18BF6B !important;
+    color: #ffffff !important;
+}
+
+.dash-content .page-header .btn-primary:hover {
+    background: #15a85e !important;
+    border-color: #15a85e !important;
+}
+

@@ -12,6 +12,7 @@ class LeadStagePermission extends Model
         'user_id',
         'can_view',
         'can_move',
+        'can_edit',
         'workspace_id',
     ];
 

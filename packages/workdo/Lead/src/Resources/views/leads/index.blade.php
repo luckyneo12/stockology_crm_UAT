@@ -1,9 +1,7 @@
 @extends('layouts.main')
 
 @section('page-title')
-    {{ __('Manage Leads') }} @if ($pipeline)
-        - {{ $pipeline->name }}
-    @endif
+    {{ __('Leads') }}
 @endsection
 
 @php
@@ -23,9 +21,7 @@
     }
 @endphp
 
-@section('page-breadcrumb')
-    {{ __('Leads') }}
-@endsection
+
 
 @push('css')
     <link rel="stylesheet" href="{{ asset('assets/css/plugins/dragula.min.css') }}">
@@ -63,7 +59,23 @@
                     return;
                 }
 
-                var drake = dragula(dragulaContainers);
+                var drake = dragula(dragulaContainers, {
+                    moves: function (el, source, handle, sibling) {
+                        if ($(el).attr('data-locked') === '1') {
+                            return false;
+                        }
+                        if ($(source).parent().hasClass('locked-stage')) {
+                            return false;
+                        }
+                        return true;
+                    },
+                    accepts: function (el, target, source, sibling) {
+                        if ($(target).parent().hasClass('locked-stage')) {
+                            return false;
+                        }
+                        return true;
+                    }
+                });
 
                 // --- Horizontal Auto-scrolling Logic ---
                 var scrollInterval;
@@ -329,39 +341,6 @@
 @endpush
 
 @section('page-action')
-    <div class="d-flex flex-wrap">
-        @if ($pipeline)
-            <div class="col-auto me-3">
-                {{ Form::open(['route' => 'deals.change.pipeline', 'id' => 'change-pipeline']) }}
-                {{ Form::select('default_pipeline_id', $pipelines, $pipeline->id, ['class' => 'form-control custom-form-select', 'id' => 'default_pipeline_id']) }}
-                {{ Form::close() }}
-            </div>
-        @endif
-
-        <div class="col-auto pt-2" style="display: inline-table;">
-            @stack('addButtonHook')
-        </div>
-        @permission('lead import')
-        <div class="col-auto pt-2">
-            <a href="#" class="btn btn-sm btn-primary me-2" data-ajax-popup="true" data-title="{{ __('Lead Import') }}"
-                data-url="{{ route('lead.file.import') }}" data-toggle="tooltip" data-size="md"
-                title="{{ __('Import') }}"><i class="ti ti-file-import"></i>
-            </a>
-        </div>
-        @endpermission
-
-        <div class="col-auto pt-2">
-            <a href="{{ route('leads.list') }}" data-bs-toggle="tooltip" data-bs-placement="top"
-                title="{{ __('List View') }}" class="btn btn-sm btn-primary btn-icon me-2"><i class="ti ti-list"></i> </a>
-        </div>
-        @permission('lead create')
-        <div class="col-auto pt-2">
-            <a class="btn btn-sm btn-primary btn-icon " data-bs-toggle="tooltip" data-bs-placement="top"
-                title="{{ __('Create Lead') }}" data-ajax-popup="true" data-size="lg" data-title="{{ __('Create Lead') }}"
-                data-url="{{ route('leads.create') }}"><i class="ti ti-plus text-white"></i></a>
-        </div>
-        @endpermission
-    </div>
 @endsection
 
 @section('content')
@@ -376,7 +355,6 @@
             @if (!$permissions->can_view)
                 @continue
             @endif
-            @php($leads = $lead_stage->lead(request(), 10))
             <div class="col" id="progress">
                 <div class="card card-list {{ !$permissions->can_move ? 'locked-stage' : '' }}">
                     <div class="card-header">
@@ -393,10 +371,13 @@
                     </div>
                     <div id="task-list-{{ $lead_stage->id }}" data-id="{{ $lead_stage->id }}"
                         data-status="{{ $lead_stage->id }}" class="card-body kanban-box kanban-scroll-load"
-                        data-offset="10" data-hasmore="{{ $lead_stage->leadCount(request()) > 10 ? 'true' : 'false' }}">
-                        @foreach ($leads as $lead)
-                            @include('lead::leads.card', ['lead' => $lead, 'permissions' => $permissions])
-                        @endforeach
+                        data-offset="0" data-hasmore="false">
+                        
+                        <!-- Initial Loading Spinner -->
+                        <div class="initial-kanban-loader d-flex flex-column align-items-center justify-content-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                            <small style="font-size: 0.75rem;">{{ __('Loading...') }}</small>
+                        </div>
 
                         <div class="loading-sentinel d-flex justify-content-center p-2 d-none">
                             <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -413,31 +394,57 @@
 
 @push('css')
     <style>
+        .dash-header {
+            position: fixed !important;
+        }
+
+        .page-header {
+            display: none !important;
+        }
+
+        .leads-filter-bar-row {
+            position: sticky !important;
+            top: 124px !important;
+            z-index: 1010 !important;
+            background: #ffffff !important;
+            padding: 10px 20px !important;
+            margin-top: 0 !important;
+            margin-bottom: 15px !important;
+            border: 1px solid #e2e8f0 !important;
+            border-top: none !important;
+            border-bottom-left-radius: 12px !important;
+            border-bottom-right-radius: 12px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
+        }
+
         .kanban-wrapper {
-            flex-wrap: nowrap !important;
+            display: flex !important;
+            flex-flow: row nowrap !important;
             overflow-x: auto !important;
-            padding-bottom: 20px;
+            padding-bottom: 10px;
             align-items: stretch;
             /* Make all columns equal height */
             scrollbar-width: thin;
             scrollbar-color: #cbd5e0 #f1f5f9;
             gap: 0 !important;
-            min-height: calc(100vh - 250px);
+            height: calc(100vh - 190px) !important;
+            min-height: calc(100vh - 190px) !important;
         }
 
-        .kanban-wrapper .col {
-            flex: 0 0 280px !important;
-            min-width: 280px !important;
+        .kanban-wrapper > div {
+            flex: 0 0 310px !important;
+            min-width: 310px !important;
+            max-width: 310px !important;
             margin-right: 0 !important;
-            padding-left: 6px !important;
-            padding-right: 6px !important;
+            padding-left: 5px !important;
+            padding-right: 5px !important;
             display: flex;
             flex-direction: column;
         }
 
         .card-list {
             background: #f8f9fd !important;
-            border-radius: 12px !important;
+            border-radius: 10px !important;
             border: 1px solid rgba(0, 0, 0, 0.05) !important;
             box-shadow: none !important;
             display: flex;
@@ -448,13 +455,11 @@
         }
 
         .card-list .card-header {
-
-            padding: 0.75rem 1rem !important;
+            padding: 8px 12px !important;
             border-bottom: 1px solid rgba(0, 0, 0, 0.03) !important;
-
             z-index: 20;
             /* Higher than lead cards (10-15) */
-            border-radius: 12px 12px 0 0 !important;
+            border-radius: 10px 10px 0 0 !important;
         }
 
         .kanban-box {
@@ -462,12 +467,13 @@
             overflow-y: auto !important;
             overflow-x: visible !important;
             /* CRITICAL: Allow dropdowns to pop out */
-            max-height: calc(100vh - 320px);
+            height: calc(100vh - 250px) !important;
+            max-height: calc(100vh - 250px) !important;
             min-height: 200px;
-            padding: 12px !important;
+            padding: 6px !important;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 6px;
         }
 
         .grid-card {
@@ -508,12 +514,66 @@
         .kanban-wrapper::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
+
+        .locked-lead {
+            opacity: 0.65;
+            background-color: #f8fafc !important;
+            border: 1px dashed #cbd5e1 !important;
+            cursor: not-allowed !important;
+            user-select: none;
+            box-shadow: none !important;
+        }
+        .locked-lead:hover {
+            box-shadow: none !important;
+            transform: none !important;
+            outline: none !important;
+        }
     </style>
 @endpush
 
 @push('scripts')
     <script>
         $(document).ready(function () {
+            // Load initial kanban column data sequentially to avoid overloading the server
+            var columns = $('.kanban-box').toArray();
+            function loadNextColumn(index) {
+                if (index >= columns.length) return;
+                var container = $(columns[index]);
+                var stageId = container.attr('data-id');
+                var loader = container.find('.initial-kanban-loader');
+                var requestData = "stage_id=" + encodeURIComponent(stageId) + "&offset=0&limit=10";
+                if (window.location.search) {
+                    requestData += "&" + window.location.search.substring(1);
+                }
+
+                $.ajax({
+                    url: "{{ route('leads.kanban.batch') }}",
+                    type: 'GET',
+                    data: requestData,
+                    success: function (data) {
+                        loader.remove();
+                        if (data.success) {
+                            container.find('.loading-sentinel').before(data.html);
+                            container.attr('data-offset', data.count);
+                            container.attr('data-hasmore', data.has_more ? 'true' : 'false');
+
+                            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                                var tooltipTriggerList = [].slice.call(container[0].querySelectorAll('[data-bs-toggle="tooltip"]'));
+                                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                                });
+                            }
+                        }
+                        loadNextColumn(index + 1);
+                    },
+                    error: function () {
+                        loader.html('<small class="text-danger"><i class="ti ti-alert-circle"></i> Failed to load</small>');
+                        loadNextColumn(index + 1);
+                    }
+                });
+            }
+            loadNextColumn(0);
+
             var loadingStages = {};
 
             function loadMoreLeads(stage_id) {
@@ -529,50 +589,38 @@
                 var sentinel = container.find('.loading-sentinel');
                 sentinel.removeClass('d-none');
 
+                var requestData = "stage_id=" + encodeURIComponent(stage_id) + "&offset=" + encodeURIComponent(offset) + "&limit=50";
+                if (window.location.search) {
+                    requestData += "&" + window.location.search.substring(1);
+                }
+
                 $.ajax({
                     url: "{{ route('leads.kanban.batch') }}",
                     type: 'GET',
-                    data: {
-                        stage_id: stage_id,
-                        offset: offset,
-                        limit: 50,
-                        @if(request()->all())
-                            @foreach(request()->all() as $key => $value)
-                                @if($key != 'stage_id')
-                                                                                                                                                                                                    @if(is_array($value))
-                                                                                                                                                                                                        @foreach($value as $v)
-                                                                                                                                                                                                            "{{ $key }}[]": "{{ $v }}",
-                                                                                                                                                                                                        @endforeach
-                                                                                                                                                                                                    @else
-                                        "{{ $key }}": "{{ $value }}",
-                                    @endif
-                                @endif
-                            @endforeach
-                        @endif
-                                                        },
-            success: function(data) {
-                if (data.success) {
-                    sentinel.before(data.html);
-                    container.attr('data-offset', offset + data.count);
-                    container.attr('data-hasmore', data.has_more ? 'true' : 'false');
+                    data: requestData,
+                    success: function(data) {
+                        if (data.success) {
+                            sentinel.before(data.html);
+                            container.attr('data-offset', offset + data.count);
+                            container.attr('data-hasmore', data.has_more ? 'true' : 'false');
 
-                    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                        var tooltipTriggerList = [].slice.call(container[0].querySelectorAll('[data-bs-toggle="tooltip"]'));
-                        tooltipTriggerList.map(function (tooltipTriggerEl) {
-                            return new bootstrap.Tooltip(tooltipTriggerEl);
-                        });
+                            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                                var tooltipTriggerList = [].slice.call(container[0].querySelectorAll('[data-bs-toggle="tooltip"]'));
+                                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                                });
+                            }
+                        }
+                        loadingStages[stage_id] = false;
+                        sentinel.addClass('d-none');
+                        checkAndLoad(stage_id);
+                    },
+                    error: function() {
+                        loadingStages[stage_id] = false;
+                        sentinel.addClass('d-none');
                     }
-                }
-                loadingStages[stage_id] = false;
-                sentinel.addClass('d-none');
-                checkAndLoad(stage_id);
-            },
-            error: function() {
-                loadingStages[stage_id] = false;
-                sentinel.addClass('d-none');
+                });
             }
-        });
-                                                }
 
         function checkAndLoad(stage_id) {
             var container = $('#task-list-' + stage_id);

@@ -80,11 +80,7 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <a href="{{ route('messenger.index') }}" class="btn btn-outline-primary w-100">
-                            <i class="ti ti-message-circle me-2"></i>{{ __('Send Message') }}
-                        </a>
-                    </div>
+                    <!-- Messenger functionality removed - was causing high CPU load -->
                     <div class="col-md-6 mb-3">
                         <a href="mailto:{{ $user->email }}" class="btn btn-outline-success w-100">
                             <i class="ti ti-mail me-2"></i>{{ __('Send Email') }}

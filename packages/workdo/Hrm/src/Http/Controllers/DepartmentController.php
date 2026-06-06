@@ -66,6 +66,7 @@ class DepartmentController extends Controller
                 [
                     'branch_id' => 'required',
                     'name' => 'required',
+                    'logo' => 'nullable|image|max:2048|mimes:jpeg,png,jpg,gif,svg',
                 ]
             );
             if ($validator->fails()) {
@@ -79,6 +80,21 @@ class DepartmentController extends Controller
             $department->parent_id  = $request->parent_id ?: null;
             $department->manager_id = $request->manager_id ?: null;
             $department->name       = $request->name;
+            
+            if ($request->hasFile('logo')) {
+                $filenameWithExt = $request->file('logo')->getClientOriginalName();
+                $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+                $extension = $request->file('logo')->getClientOriginalExtension();
+                $fileNameToStore = 'dept_logo_' . time() . '_' . rand(10, 99) . '.' . $extension;
+
+                $path = upload_file($request, 'logo', $fileNameToStore, 'department-logo');
+
+                if ($path['flag'] == 0) {
+                    return redirect()->back()->with('error', $path['msg']);
+                }
+                $department->logo = $path['url'];
+            }
+            
             $department->workspace  = getActiveWorkSpace();
             $department->created_by = creatorId();
             $department->save();
@@ -156,6 +172,7 @@ class DepartmentController extends Controller
                     [
                         'branch_id' => 'required',
                         'name' => 'required|max:20',
+                        'logo' => 'nullable|image|max:2048|mimes:jpeg,png,jpg,gif,svg',
                     ]
                 );
                 if ($validator->fails()) {
@@ -171,6 +188,26 @@ class DepartmentController extends Controller
                 $department->parent_id = $request->parent_id ?: null;
                 $department->manager_id = $request->manager_id ?: null;
                 $department->name      = $request->name;
+                
+                if ($request->hasFile('logo')) {
+                    $filenameWithExt = $request->file('logo')->getClientOriginalName();
+                    $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+                    $extension = $request->file('logo')->getClientOriginalExtension();
+                    $fileNameToStore = 'dept_logo_' . time() . '_' . rand(10, 99) . '.' . $extension;
+
+                    $path = upload_file($request, 'logo', $fileNameToStore, 'department-logo');
+
+                    if ($path['flag'] == 0) {
+                        return redirect()->back()->with('error', $path['msg']);
+                    }
+
+                    // Delete old logo file if it exists
+                    if (!empty($department->logo) && check_file($department->logo)) {
+                        delete_file($department->logo);
+                    }
+                    $department->logo = $path['url'];
+                }
+                
                 $department->save();
 
                 event(new UpdateDepartment($request, $department));

@@ -136,6 +136,42 @@
                 <small class="text-muted">{{ __('Leave empty for no restriction.') }}</small>
             </div>
         </div>
+        
+        @php
+            $kyc_stages = [];
+            if (module_is_active('Ekyc')) {
+                $kyc_stages = \Workdo\Ekyc\Entities\EkycStage::where('workspace_id', getActiveWorkSpace())->pluck('name')->toArray();
+            }
+        @endphp
+        
+        <div class="col-md-12 mt-3 mb-3">
+            <h6 class="text-muted">{{ __('KYC Portal Permissions') }}</h6>
+        </div>
+        <div class="col-md-6">
+            <div class="form-check form-switch custom-switch-v1 d-flex align-items-center justify-content-between mb-3 mt-2">
+                <label class="form-check-label" for="kyc_portal_access">{{ __('Enable KYC Portal Access') }}</label>
+                <input type="checkbox" name="kyc_portal_access" class="form-check-input" id="kyc_portal_access">
+            </div>
+        </div>
+        @if(count($kyc_stages) > 0)
+        <div class="col-md-6">
+            <div class="form-group">
+                {{ Form::label('kyc_portal_stages', __('Allowed KYC Stages'), ['class' => 'form-label']) }}
+                <select name="kyc_portal_stages[]" class="form-control choices" multiple>
+                    @foreach($kyc_stages as $stage)
+                        <option value="{{ $stage }}">{{ $stage }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        @else
+        <div class="col-md-6">
+            <div class="alert alert-warning py-2 mb-0">
+                <small>{{ __('Please define Stages in the eKYC module to assign them.') }}</small>
+            </div>
+        </div>
+        @endif
+
     </div>
 </div>
 <div class="modal-footer">
@@ -143,3 +179,27 @@
     {{Form::submit(__('Create'), array('class' => 'btn  btn-primary'))}}
 </div>
 {{Form::close()}}
+<script>
+    $(document).ready(function() {
+        $(document).on('change', '#department_id', function() {
+            var department_id = $(this).val();
+            var team_select = $('#team_id');
+            team_select.empty();
+            team_select.append('<option value="">' + "{{ __('Select Team') }}" + '</option>');
+            
+            $.ajax({
+                url: "{{ route('lead.json.designation') }}",
+                type: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    department_id: department_id
+                },
+                success: function(data) {
+                    $.each(data, function(id, name) {
+                        team_select.append('<option value="' + id + '">' + name + '</option>');
+                    });
+                }
+            });
+        });
+    });
+</script>

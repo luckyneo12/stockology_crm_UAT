@@ -514,6 +514,7 @@ if (!function_exists('ActivatedModule')) {
             if ($user->type == 'super admin') {
                 $user_active_module = $available_modules;
             } else {
+                $active_module = [];
                 if ($user->type != 'company') {
                     $user_not_com = User::find($user->created_by);
                     if (!empty($user_not_com)) {
@@ -1798,5 +1799,26 @@ if (!function_exists('getAiModelName')) {
                 'gpt-3.5-turbo-instruct' => 'GPT-3.5-Turbo-Instruct',
             ],
         ];
+    }
+}
+
+if (!function_exists('getActivityTypeColor')) {
+    function getActivityTypeColor($activityType)
+    {
+        $colors = [
+            'login' => 'success',
+            'logout' => 'warning',
+            'create' => 'primary',
+            'update' => 'info',
+            'delete' => 'danger',
+            'view' => 'secondary',
+            'export' => 'dark',
+            'import' => 'dark',
+            'edit' => 'info',
+            'store' => 'primary',
+            'destroy' => 'danger',
+        ];
+        
+        return $colors[strtolower($activityType)] ?? 'secondary';
     }
 }

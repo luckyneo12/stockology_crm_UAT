@@ -134,49 +134,8 @@
                 let notificationPolling = null;
                 let lastNotificationMessageId = null; // Track last shown message ID
 
-                // Simple notification checker using toast
-                function startToastNotifications() {
-                    // Clear existing polling
-                    if (notificationPolling) {
-                        clearInterval(notificationPolling);
-                    }
-
-                    // Start checking for new messages every 3 seconds (real-time)
-                    notificationPolling = setInterval(function () {
-                        checkForToastNotifications();
-                    }, 3000);
-                }
-
-                // Check for new unread messages and show toast
-                function checkForToastNotifications() {
-                    $.get('{{ route("messenger.latest.unread") }}', function (data) {
-                        if (data.unread_messages && data.unread_messages.length > 0) {
-                            // Get the most recent unread message
-                            const latestMessage = data.unread_messages[0];
-
-                            // Only show notification if this is a different message than last shown
-                            if (lastNotificationMessageId !== latestMessage.id) {
-                                show_toastr(
-                                    'New Message from ' + latestMessage.from_name,
-                                    latestMessage.body.length > 30 ? latestMessage.body.substring(0, 30) + '...' : latestMessage.body,
-                                    'info'
-                                );
-
-                                // Track this message ID to prevent repeated notifications
-                                lastNotificationMessageId = latestMessage.id;
-
-                                // Minimal logging - only errors
-                            } else {
-                                // No logging for skipped notifications
-                            }
-                        }
-                    }).fail(function (xhr) {
-                        console.log('Global toast notification check error:', xhr.status);
-                    });
-                }
-
-                // Start toast notifications for all authenticated pages
-                startToastNotifications();
+                // Messenger polling removed - was causing high CPU load
+                // All messenger functionality has been disabled
                 // Silent initialization - no console output
             @endauth
         });

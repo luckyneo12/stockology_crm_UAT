@@ -20,7 +20,7 @@ use Workdo\Lead\Http\Controllers\Company\SettingsController; // Imported Setting
 // Public Webhook Test Form
 
 
-Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead']], function () {
+Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
     Route::post('lead/company/settings', [SettingsController::class, 'store'])->name('lead.setting.store');
 
     // Click to Call routes
@@ -39,6 +39,15 @@ Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead'
 
     Route::get('/leads/kanban-batch', [LeadController::class, 'kanbanBatch'])->name('leads.kanban.batch');
     Route::get('/leads/changes-since', [LeadController::class, 'changesSince'])->name('leads.changes.since');
+    Route::post('/leads/bulk-action', [LeadController::class, 'bulkAction'])->name('leads.bulk.action');
+    Route::get('/leads/bulk-export-download', [LeadController::class, 'bulkExportDownload'])->name('leads.bulk.export.download');
+
+    // Premium Bulk Lead Import Routes
+    Route::get('leads/bulk-import', [LeadController::class, 'bulkImportView'])->name('leads.bulk.import');
+    Route::get('leads/bulk-import/sample', [LeadController::class, 'bulkImportSample'])->name('leads.bulk.import.sample');
+    Route::post('leads/bulk-import/upload', [LeadController::class, 'bulkImportUpload'])->name('leads.bulk.import.upload');
+    Route::post('leads/bulk-import/process', [LeadController::class, 'bulkImportProcess'])->name('leads.bulk.import.process');
+
     Route::resource('leads', LeadController::class);
     Route::get('dashboard/crm', [LeadController::class, 'dashboard'])->name('lead.dashboard');
 
@@ -46,7 +55,7 @@ Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead'
 
     Route::post('/deals/change-pipeline', [DealController::class, 'changePipeline'])->name('deals.change.pipeline');
 
-    Route::get('/leads-list', [LeadController::class, 'lead_list'])->name('leads.list');
+    Route::match(['get', 'post'], '/leads-list', [LeadController::class, 'lead_list'])->name('leads.list');
 
     Route::resource('lead-stages', LeadStageController::class);
     Route::post('/lead_stages/order', [LeadStageController::class, 'order'])->name('lead_stages.order');
@@ -82,6 +91,8 @@ Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead'
     Route::delete('/leads/{id}/discussions/{did}', [LeadController::class, 'discussionDestroy'])->name('leads.discussion.destroy');
     Route::get('/leads/{id}/show_convert', [LeadController::class, 'showConvertToDeal'])->name('leads.convert.deal');
     Route::post('/leads/{id}/convert', [LeadController::class, 'convertToDeal'])->name('leads.convert.to.deal');
+    Route::post('/leads/{id}/inline-update', [LeadController::class, 'inlineUpdate'])->name('leads.inline-update');
+    Route::post('/leads/sync-section-api', [LeadController::class, 'syncSectionApi'])->name('leads.sync-section-api');
 
     Route::get('/leads/{id}/call', [LeadController::class, 'callCreate'])->name('leads.calls.create');
     Route::post('/leads/{id}/call', [LeadController::class, 'callStore'])->name('leads.calls.store');
@@ -101,6 +112,8 @@ Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead'
     Route::post('lead/data/import/', [LeadController::class, 'leadImportdata'])->name('lead.import.data');
     Route::get('lead/import/duplicates/download', [LeadController::class, 'downloadDuplicateLeads'])->name('lead.import.duplicates.download');
 
+
+
     // Lead Reminder
     Route::get('/leads/{id}/reminder', [LeadController::class, 'reminderCreate'])->name('leads.reminders.create');
     Route::post('/leads/{id}/reminder', [LeadController::class, 'reminderStore'])->name('leads.reminders.store');
@@ -116,9 +129,9 @@ Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead'
     Route::put('leads/{id}/task/{task_id}/update-status', [LeadController::class, 'taskUpdateStatus'])->name('leads.tasks.update.status');
     Route::post('leads/filter/save', [LeadController::class, 'saveFilter'])->name('leads.filter.save');
     Route::post('leads/search-settings/save', [LeadController::class, 'saveSearchSettings'])->name('leads.search.settings.save');
+    Route::post('leads/stats-config/save', [LeadController::class, 'saveStatsConfig'])->name('leads.stats.config.save');
     Route::delete('leads/filter/{id}/delete', [LeadController::class, 'deleteFilter'])->name('leads.filter.delete');
     Route::delete('/leads/{id}/task/{tid}', [LeadController::class, 'taskDestroy'])->name('leads.tasks.destroy');
-    Route::post('/leads/bulk-action', [LeadController::class, 'bulkAction'])->name('leads.bulk.action');
     Route::get('/leads/duplicates-list', [LeadController::class, 'duplicateList'])->name('leads.duplicates.list');
 
     // Bulk Task & Reminder
@@ -211,6 +224,7 @@ Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead'
     Route::post('lead-builder/section', [\Workdo\Lead\Http\Controllers\LeadCustomFieldController::class, 'sectionStore'])->name('lead-builder.section.store');
     Route::put('lead-builder/section/{id}', [\Workdo\Lead\Http\Controllers\LeadCustomFieldController::class, 'sectionUpdate'])->name('lead-builder.section.update');
     Route::delete('lead-builder/section/{id}', [\Workdo\Lead\Http\Controllers\LeadCustomFieldController::class, 'sectionDestroy'])->name('lead-builder.section.destroy');
+    Route::post('lead-builder/section/{id}/copy', [\Workdo\Lead\Http\Controllers\LeadCustomFieldController::class, 'sectionCopy'])->name('lead-builder.section.copy');
 
     Route::get('crm/my-tasks', [LeadController::class, 'myTasks'])->name('leads.my.tasks');
     Route::get('crm/my-reminders', [LeadController::class, 'myReminders'])->name('leads.my.reminders');
@@ -219,6 +233,8 @@ Route::group(['middleware' => ['web', 'auth', 'verified', 'PlanModuleCheck:Lead'
 
     Route::get('crm/settings', [LeadController::class, 'crmSettings'])->name('crm.settings');
     Route::post('crm/settings/save', [LeadController::class, 'saveCrmSettings'])->name('crm.settings.save');
+    Route::get('crm/automations', [LeadController::class, 'automationsIndex'])->name('crm.automations.index');
+    Route::post('crm/automations/save', [LeadController::class, 'saveAutomations'])->name('crm.automations.save');
     Route::post('leads/check-duplicate', [LeadController::class, 'checkDuplicate'])->name('leads.check.duplicate');
     Route::get('crm/leads/get-stage-requirements', [LeadController::class, 'getStageRequirements'])->name('leads.get.stage.requirements');
 

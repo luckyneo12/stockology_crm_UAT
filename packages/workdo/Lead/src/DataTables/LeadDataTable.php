@@ -18,6 +18,7 @@ use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 use Workdo\Hrm\Entities\Employee;
+use Illuminate\Support\Facades\DB;
 
 class LeadDataTable extends DataTable
 {
@@ -28,28 +29,32 @@ class LeadDataTable extends DataTable
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
-        $rowColumn = ['batch', 'name', 'subject', 'email', 'phone', 'stage_id', 'tasks', 'reminders', 'created_at', 'user_id', 'team'];
+        $user = \Auth::user();
+        $hasBulkPermission = $user->isAbleTo('lead edit') || $user->isAbleTo('lead delete');
+        
+        $rowColumn = ['batch', 'name', 'subject', 'email', 'phone', 'stage_id', 'tasks', 'reminders', 'created_at', 'updated_at', 'user_id', 'team'];
         $isExport = in_array(request('action'), ['excel', 'csv']);
 
         $dataTable = (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('batch', function (Lead $lead) {
+            ->addColumn('batch', function (Lead $lead) use ($hasBulkPermission) {
+                if (!$hasBulkPermission) return '';
                 return '<div class="form-check custom-checkbox">
                             <input type="checkbox" class="form-check-input lead-checkbox" id="lead_checkbox_' . $lead->id . '" value="' . $lead->id . '">
                             <label class="form-check-label" for="lead_checkbox_' . $lead->id . '"></label>
                         </div>';
             })
             ->editColumn('name', function (Lead $lead) use ($isExport) {
-                return LeadUtility::getFieldDisplay($lead->id, 'name', $lead->name, $isExport);
+                return LeadUtility::getFieldDisplay($lead, 'name', $lead->name, $isExport);
             })
             ->editColumn('subject', function (Lead $lead) use ($isExport) {
-                return LeadUtility::getFieldDisplay($lead->id, 'subject', $lead->subject, $isExport);
+                return LeadUtility::getFieldDisplay($lead, 'subject', $lead->subject, $isExport);
             })
             ->editColumn('email', function (Lead $lead) use ($isExport) {
-                return LeadUtility::getFieldDisplay($lead->id, 'email', $lead->email, $isExport);
+                return LeadUtility::getFieldDisplay($lead, 'email', $lead->email, $isExport);
             })
             ->editColumn('phone', function (Lead $lead) use ($isExport) {
-                $phone = LeadUtility::getFieldDisplay($lead->id, 'phone', $lead->phone, $isExport);
+                $phone = LeadUtility::getFieldDisplay($lead, 'phone', $lead->phone, $isExport);
                 if ($isExport) {
                     return $phone;
                 }
@@ -58,8 +63,38 @@ class LeadDataTable extends DataTable
                 }
                 return $phone;
             })
-            ->editColumn('stage_id', function (Lead $lead) {
-                return $lead->stage->name;
+            ->editColumn('stage_id', function (Lead $lead) use ($isExport) {
+                if ($isExport) {
+                    return $lead->stage ? $lead->stage->name : '-';
+                }
+                
+                static $stagesCache = null;
+                if ($stagesCache === null) {
+                    $stagesCache = \Workdo\Lead\Entities\LeadStage::where('pipeline_id', $lead->pipeline_id)->orderBy('order')->get();
+                }
+                
+                $totalStages = $stagesCache->count();
+                $currentIdx = 0;
+                foreach($stagesCache as $idx => $s) {
+                    if ($s->id == $lead->stage_id) {
+                        $currentIdx = $idx + 1;
+                        break;
+                    }
+                }
+                $pct = $totalStages > 0 ? round(($currentIdx / $totalStages) * 100) : 0;
+                
+                $stageColors = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+                $color = $stageColors[($currentIdx > 0 ? $currentIdx - 1 : 0) % count($stageColors)];
+                
+                $stageName = $lead->stage ? $lead->stage->name : '-';
+                return '<div class="d-flex align-items-center flex-column align-items-start" style="min-width: 120px;">
+                            <div class="mb-1 text-xs fw-bold text-dark text-truncate" style="max-width: 150px;" title="' . $stageName . '">
+                                <span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background-color: ' . $color . ';"></span>' . $stageName . '
+                            </div>
+                            <div class="progress w-100 bg-light" style="height: 5px; border-radius: 3px;">
+                                <div class="progress-bar" role="progressbar" style="width: ' . $pct . '%; background-color: ' . $color . ';"></div>
+                            </div>
+                        </div>';
             })
             ->filterColumn('stage_id', function ($query, $keyword) {
                 $query->whereHas(
@@ -70,11 +105,13 @@ class LeadDataTable extends DataTable
                 );
             })
             ->editColumn('tasks', function (Lead $lead) {
-                return count($lead->tasks) . '/' . count($lead->complete_tasks);
+                $totalTasksCount = $lead->tasks_count ?? 0;
+                $completeTasksCount = $lead->complete_tasks_count ?? 0;
+                return $totalTasksCount . '/' . $completeTasksCount;
             })
             ->addColumn('reminders', function (Lead $lead) use ($isExport) {
-                $todayRemindersCount = $lead->getTodayRemindersCount();
-                $totalRemindersCount = $lead->getFilteredReminders()->count();
+                $todayRemindersCount = $lead->today_reminders_count ?? 0;
+                $totalRemindersCount = $lead->reminders_count ?? 0;
 
                 if ($isExport) {
                     return $todayRemindersCount . '/' . $totalRemindersCount;
@@ -93,16 +130,22 @@ class LeadDataTable extends DataTable
                 }
                 return '<span class="fw-bold" title="' . __('Created Date') . '"><i class="ti ti-calendar-plus me-1 text-primary"></i>' . company_date_formate($lead->created_at) . '</span>';
             })
+            ->editColumn('updated_at', function (Lead $lead) use ($isExport) {
+                if ($isExport) {
+                    return company_date_formate($lead->updated_at);
+                }
+                return '<span class="fw-bold" title="' . __('Modified Date') . '"><i class="ti ti-calendar-event me-1 text-primary"></i>' . company_date_formate($lead->updated_at) . '</span>';
+            })
             ->editColumn('follow_up_date', function (Lead $lead) {
                 return $lead->follow_up_date ? company_date_formate($lead->follow_up_date) : '-';
             })
             ->editColumn('user_id', function (Lead $lead) use ($isExport) {
+                $user = $lead->owner ?? $lead->users->first();
                 if ($isExport) {
-                    return $lead->owner ? $lead->owner->name : '-';
+                    return $user ? $user->name : '-';
                 }
                 $html = '-';
-                if ($lead->owner) {
-                    $user = $lead->owner;
+                if ($user) {
                     $html = '<span class="badge bg-primary p-2 px-3 rounded text-white" style="font-size: 0.8rem; font-weight: 500;">
                             <i class="ti ti-user me-1"></i>' . $user->name . '
                          </span>';
@@ -116,23 +159,34 @@ class LeadDataTable extends DataTable
                 return $lead->updatedBy ? $lead->updatedBy->name : '-';
             })
             ->addColumn('team', function (Lead $lead) {
-                static $employeeDeptCache = [];
                 if (module_is_active('Hrm') && $lead->user_id) {
-                    if (isset($employeeDeptCache[$lead->user_id])) {
-                        return $employeeDeptCache[$lead->user_id];
+                    if ($lead->employee && $lead->employee->department) {
+                        return $lead->employee->department->name;
                     }
-                    $departmentName = '-';
-                    $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $lead->user_id)->first();
-                    if ($employee && $employee->department_id) {
-                        $department = \Workdo\Hrm\Entities\Department::find($employee->department_id);
-                        if ($department)
-                            $departmentName = $department->name;
-                    }
-                    $employeeDeptCache[$lead->user_id] = $departmentName;
-                    return $departmentName;
                 }
                 return '-';
             });
+        try {
+            $customFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', getActiveWorkSpace())->get();
+            foreach ($customFields as $field) {
+                $dataTable->addColumn('custom_' . $field->id, function (Lead $lead) use ($field, $isExport) {
+                    try {
+                        $valObj = $lead->customFieldValues->firstWhere('field_id', $field->id);
+                        $val = $valObj ? $valObj->value : '-';
+                        if ($isExport) {
+                            return $val;
+                        }
+                        return '<span>' . e($val) . '</span>';
+                    } catch (\Exception $ex) {
+                        return '-';
+                    }
+                });
+                $rowColumn[] = 'custom_' . $field->id;
+            }
+        } catch (\Exception $e) {
+            \Log::error('LeadDataTable dataTable customFields error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+        }
+
         if (
             !\Auth::user()->hasRole('client') &&
             (\Laratrust::hasPermission('lead show') ||
@@ -158,6 +212,12 @@ class LeadDataTable extends DataTable
     public function query(Lead $model)
     {
         $request = request();
+        
+        // Prevent DataTables from fetching infinite rows (which causes OOM on 173k records)
+        // The user's browser had permanently saved length=-1 (Show All) in DataTables state
+        if ($request->has('length') && $request->length == -1 && !in_array($request->action, ['excel', 'csv'])) {
+            $request->merge(['length' => 500]); // Hard cap to prevent timeout with withCount subqueries
+        }
         $user = \Auth::user();
         $pipeline_id = $request->default_pipeline_id ?? $user->default_pipeline;
         if (!$pipeline_id) {
@@ -165,9 +225,44 @@ class LeadDataTable extends DataTable
             $pipeline_id = $firstPipeline ? $firstPipeline->id : 0;
         }
 
-        $query = $model->where('leads.pipeline_id', '=', $pipeline_id)
-            ->where('leads.workspace_id', '=', getActiveWorkSpace())
-            ->with(['users', 'tasks', 'complete_tasks', 'stage', 'reminders']);
+        $isExport = in_array($request->action, ['excel', 'csv', 'print']);
+        
+        $accessibleUserIds = $user->getAccessibleUserIds();
+
+        if ($isExport) {
+            ini_set('memory_limit', '4096M');
+            set_time_limit(0);
+            $query = $model->where('leads.pipeline_id', '=', $pipeline_id)
+                ->where('leads.workspace_id', '=', getActiveWorkSpace())
+                ->with(['users', 'stage', 'employee.department', 'owner', 'createdBy', 'updatedBy', 'customFieldValues'])
+                ->withCount([
+                    'tasks',
+                    'complete_tasks',
+                    'reminders' => function ($q) use ($accessibleUserIds) {
+                        $q->whereIn('user_id', $accessibleUserIds);
+                    },
+                    'reminders as today_reminders_count' => function ($q) use ($accessibleUserIds) {
+                        $q->whereIn('user_id', $accessibleUserIds)
+                          ->whereDate('remind_at', date('Y-m-d'));
+                    }
+                ]);
+        } else {
+            ini_set('memory_limit', '1024M'); // Give enough headroom for large table renders
+            $query = $model->where('leads.pipeline_id', '=', $pipeline_id)
+                ->where('leads.workspace_id', '=', getActiveWorkSpace())
+                ->with(['users', 'stage', 'employee.department', 'owner', 'createdBy', 'updatedBy', 'customFieldValues'])
+                ->withCount([
+                    'tasks',
+                    'complete_tasks',
+                    'reminders' => function ($q) use ($accessibleUserIds) {
+                        $q->whereIn('user_id', $accessibleUserIds);
+                    },
+                    'reminders as today_reminders_count' => function ($q) use ($accessibleUserIds) {
+                        $q->whereIn('user_id', $accessibleUserIds)
+                          ->whereDate('remind_at', date('Y-m-d'));
+                    }
+                ]);
+        }
 
         if ($request->has('export_selected_ids') && !empty($request->export_selected_ids) && in_array($request->action, ['excel', 'csv', 'print'])) {
             $ids = explode(',', $request->export_selected_ids);
@@ -181,23 +276,40 @@ class LeadDataTable extends DataTable
             $accessibleUserIds = $user->getAccessibleUserIds();
             $query->where(function ($q) use ($accessibleUserIds) {
                 $q->whereIn('leads.user_id', $accessibleUserIds)
-                    ->orWhereHas(
-                        'users',
-                        function ($subQ) use ($accessibleUserIds) {
-                            $subQ->whereIn('users.id', $accessibleUserIds);
-                        }
-                    );
+                    ->orWhereExists(function ($subQ) use ($accessibleUserIds) {
+                        $subQ->select(\DB::raw(1))
+                            ->from('user_leads')
+                            ->whereColumn('user_leads.lead_id', 'leads.id')
+                            ->whereIn('user_leads.user_id', $accessibleUserIds);
+                    });
             });
         }
 
-        // Apply Stage-based visibility (Restrict leads from hidden stages)
+        // Apply Stage-based visibility (Restrict leads from hidden/restricted stages)
         // If user is not 'company', they only see leads from stages where they have 'can_view' permission
+        // Additionally, if they don't have 'can_edit' permission, hide those leads by default unless they filter by those stages
         if ($user->type != 'company') {
             $hiddenStageIds = [];
             $allStagesInPipeline = LeadStage::where('pipeline_id', $pipeline_id)->where('workspace_id', getActiveWorkSpace())->get();
+            
+            $filteredStages = [];
+            if ($request->has('stage_id') && !empty($request->stage_id)) {
+                $filteredStages = (array) $request->stage_id;
+            }
+
             foreach ($allStagesInPipeline as $s) {
+                // If can_view is false, always hide the stage (cannot see it at all)
                 if (!$s->permissions($user)->can_view) {
                     $hiddenStageIds[] = $s->id;
+                    continue;
+                }
+                
+                // If can_edit is false:
+                // Hide it by default, UNLESS the user has explicitly selected it in the filter dropdown.
+                if (!$s->permissions($user)->can_edit) {
+                    if (!in_array($s->id, $filteredStages)) {
+                        $hiddenStageIds[] = $s->id;
+                    }
                 }
             }
             if (!empty($hiddenStageIds)) {
@@ -210,12 +322,12 @@ class LeadDataTable extends DataTable
             $respIds = (array) $request->responsible_person;
             $query->where(function ($q) use ($respIds) {
                 $q->whereIn('leads.user_id', $respIds)
-                    ->orWhereHas(
-                        'users',
-                        function ($subQ) use ($respIds) {
-                            $subQ->whereIn('users.id', $respIds);
-                        }
-                    );
+                    ->orWhereExists(function ($subQ) use ($respIds) {
+                        $subQ->select(\DB::raw(1))
+                            ->from('user_leads')
+                            ->whereColumn('user_leads.lead_id', 'leads.id')
+                            ->whereIn('user_leads.user_id', $respIds);
+                    });
             });
         }
 
@@ -239,39 +351,12 @@ class LeadDataTable extends DataTable
             $query->where('leads.created_at', '<=', $request->end_date . ' 23:59:59');
         }
 
-        if (($request->has('modified_start_date') && !empty($request->modified_start_date)) || ($request->has('modified_end_date') && !empty($request->modified_end_date))) {
-            $query->where(function ($q) use ($request) {
-                $m_start = $request->modified_start_date;
-                $m_end = $request->modified_end_date;
+        if ($request->has('modified_start_date') && !empty($request->modified_start_date)) {
+            $query->where('leads.updated_at', '>=', $request->modified_start_date . ' 00:00:00');
+        }
 
-                // Check Lead Core Record
-                $q->where(
-                    function ($sub) use ($m_start, $m_end) {
-                        if (!empty($m_start)) {
-                            $sub->where('leads.updated_at', '>=', $m_start . ' 00:00:00');
-                        }
-                        if (!empty($m_end)) {
-                            $sub->where('leads.updated_at', '<=', $m_end . ' 23:59:59');
-                        }
-                    }
-                );
-
-                // Check Related Activities
-                $relations = ['tasks', 'discussions', 'calls', 'emails', 'files', 'activities'];
-                foreach ($relations as $rel) {
-                    $q->orWhereHas(
-                        $rel,
-                        function ($sub) use ($m_start, $m_end) {
-                            if (!empty($m_start)) {
-                                $sub->where('updated_at', '>=', $m_start . ' 00:00:00');
-                            }
-                            if (!empty($m_end)) {
-                                $sub->where('updated_at', '<=', $m_end . ' 23:59:59');
-                            }
-                        }
-                    );
-                }
-            });
+        if ($request->has('modified_end_date') && !empty($request->modified_end_date)) {
+            $query->where('leads.updated_at', '<=', $request->modified_end_date . ' 23:59:59');
         }
 
         if ($request->has('created_by') && !empty($request->created_by)) {
@@ -284,76 +369,61 @@ class LeadDataTable extends DataTable
 
         if ($request->has('department_id') && !empty($request->department_id)) {
             $departmentIds = (array) $request->department_id;
-            $deptUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIds)
+            
+            // Also fetch child teams of these departments
+            $childTeamIds = \Workdo\Hrm\Entities\Department::whereIn('parent_id', $departmentIds)
+                ->where('type', 'team')
+                ->where('workspace', getActiveWorkSpace())
+                ->pluck('id')
+                ->toArray();
+            
+            $allDeptAndTeamIds = array_merge($departmentIds, $childTeamIds);
+
+            $deptUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $allDeptAndTeamIds)
                 ->where('workspace', getActiveWorkSpace())
                 ->pluck('user_id')
                 ->toArray();
 
             $query->where(function ($q) use ($deptUserIds) {
                 $q->whereIn('leads.user_id', $deptUserIds)
-                    ->orWhereHas(
-                        'users',
-                        function ($subQ) use ($deptUserIds) {
-                            $subQ->whereIn('users.id', $deptUserIds);
-                        }
-                    );
+                    ->orWhereExists(function ($subQ) use ($deptUserIds) {
+                        $subQ->select(\DB::raw(1))
+                            ->from('user_leads')
+                            ->whereColumn('user_leads.lead_id', 'leads.id')
+                            ->whereIn('user_leads.user_id', $deptUserIds);
+                    });
             });
         }
 
-        if ($request->has('designation_id') && !empty($request->designation_id)) {
-            $designationIds = (array) $request->designation_id;
-            $desigUserIds = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $designationIds)
+        if (($request->has('designation_id') && !empty($request->designation_id)) || ($request->has('team_id') && !empty($request->team_id))) {
+            $designationIds = (array) ($request->designation_id ?? $request->team_id);
+            $desigUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $designationIds)
                 ->where('workspace', getActiveWorkSpace())
                 ->pluck('user_id')
                 ->toArray();
 
             $query->where(function ($q) use ($desigUserIds) {
                 $q->whereIn('leads.user_id', $desigUserIds)
-                    ->orWhereHas(
-                        'users',
-                        function ($subQ) use ($desigUserIds) {
-                            $subQ->whereIn('users.id', $desigUserIds);
-                        }
-                    );
+                    ->orWhereExists(function ($subQ) use ($desigUserIds) {
+                        $subQ->select(\DB::raw(1))
+                            ->from('user_leads')
+                            ->whereColumn('user_leads.lead_id', 'leads.id')
+                            ->whereIn('user_leads.user_id', $desigUserIds);
+                    });
             });
         }
 
-        // Duplicates Filter
+        // Duplicates Filter (Optimized)
         if ($request->has('duplicates') && $request->duplicates == 1) {
             $wsId = getActiveWorkSpace();
             $query->where(function ($q) use ($wsId) {
-                $q->where(
-                    function ($inner) use ($wsId) {
-                        $inner->whereNotNull('leads.email')->where('leads.email', '!=', '')->whereIn(
-                            'leads.email',
-                            function ($sub) use ($wsId) {
-                                $sub->select('email')->from('leads')->where('workspace_id', $wsId)->whereNotNull('email')->where('email', '!=', '')->groupBy('email')->havingRaw('COUNT(email) > 1');
-                            }
-                        );
-                    }
-                )
-                    ->orWhere(
-                        function ($inner) use ($wsId) {
-                            $inner->whereNotNull('leads.phone')->where('leads.phone', '!=', '')->whereIn(
-                                'leads.phone',
-                                function ($sub) use ($wsId) {
-                                    $sub->select('phone')->from('leads')->where('workspace_id', $wsId)->whereNotNull('phone')->where('phone', '!=', '')->groupBy('phone')->havingRaw('COUNT(phone) > 1');
-                                }
-                            );
-                        }
-                    )
-                    ->orWhere(
-                        function ($inner) use ($wsId) {
-                            $inner->whereNotNull('leads.name')->where('leads.name', '!=', '')->whereIn(
-                                'leads.name',
-                                function ($sub) use ($wsId) {
-                                    $sub->select('name')->from('leads')->where('workspace_id', $wsId)->whereNotNull('name')->where('name', '!=', '')->groupBy('name')->havingRaw('COUNT(name) > 1');
-                                }
-                            );
-                        }
-                    );
+                // Combine duplicate checks into more efficient subqueries
+                $q->whereRaw("leads.email IN (SELECT email FROM (SELECT email FROM leads WHERE workspace_id = ? AND email IS NOT NULL AND email != '' GROUP BY email HAVING COUNT(email) > 1) as temp_email)", [$wsId])
+                    ->orWhereRaw("leads.phone IN (SELECT phone FROM (SELECT phone FROM leads WHERE workspace_id = ? AND phone IS NOT NULL AND phone != '' GROUP BY phone HAVING COUNT(phone) > 1) as temp_phone)", [$wsId])
+                    ->orWhereRaw("leads.name IN (SELECT name FROM (SELECT name FROM leads WHERE workspace_id = ? AND name IS NOT NULL AND name != '' GROUP BY name HAVING COUNT(name) > 1) as temp_name)", [$wsId]);
             });
         }
+
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -380,6 +450,10 @@ class LeadDataTable extends DataTable
             ->setTableId('leads-table')
             ->columns($this->getColumns())
             ->ajax([
+                'type' => 'POST',
+                'headers' => [
+                    'X-CSRF-TOKEN' => csrf_token()
+                ],
                 'data' => 'function(d) {
                     try {
                         var pipeline = $("select[name=default_pipeline_id]").val();
@@ -394,15 +468,33 @@ class LeadDataTable extends DataTable
                             d.export_selected_ids = window.selectedLeads.join(",");
                         }
                         
-                        // Pass all custom filters from URL
+                        // Pass all custom filters from URL with proper array handling
                         var urlParams = new URL(window.location.href).searchParams;
+                        
+                        // Initialize arrays for multi-select filters
+                        var arrayKeys = ["responsible_person", "stage_id", "source_id", "created_by", "modified_by", "department_id", "designation_id", "team_id"];
+                        
+                        arrayKeys.forEach(function(key) {
+                            d[key] = [];
+                        });
+                        
                         urlParams.forEach(function(value, key) {
                             if (key.endsWith("[]")) {
                                 var cleanKey = key.replace("[]", "");
-                                if (!d[cleanKey]) d[cleanKey] = [];
-                                if (!d[cleanKey].includes(value)) d[cleanKey].push(value);
-                            } else {
+                                if (arrayKeys.includes(cleanKey)) {
+                                    if (!d[cleanKey].includes(value)) {
+                                        d[cleanKey].push(value);
+                                    }
+                                }
+                            } else if (!arrayKeys.includes(key)) {
                                 d[key] = value;
+                            }
+                        });
+                        
+                        // Ensure arrays are properly formatted for server
+                        arrayKeys.forEach(function(key) {
+                            if (d[key] && d[key].length === 0) {
+                                delete d[key];
                             }
                         });
                     } catch (error) {
@@ -429,8 +521,30 @@ class LeadDataTable extends DataTable
             ->initComplete('function() {
                 var table = this;
                 
+                // CRITICAL: Reset any saved length=-1 (Show All) to safe default
+                // This prevents the browser from permanently requesting all 173k records
+                var currentLen = table.api().page.len();
+                if (currentLen <= 0 || currentLen > 500) {
+                    table.api().page.len(10).draw();
+                }
+                
                 // Set initial value of our custom selector
                 $("#entries_per_page").val(table.api().page.len());
+
+                // Dynamically show/hide the Modified Date column based on URL parameters on page load
+                var urlParams = new URL(window.location.href).searchParams;
+                var hasModFilter = urlParams.has("modified_start_date") || urlParams.has("modified_end_date");
+                var api = table.api();
+                var columns = api.settings()[0].aoColumns;
+                var modColIndex = -1;
+                columns.forEach(function(col, idx) {
+                    if (col.name === "updated_at" || col.data === "updated_at") {
+                        modColIndex = idx;
+                    }
+                });
+                if (modColIndex !== -1) {
+                    api.column(modColIndex).visible(hasModFilter);
+                }
 
                 $("body").on("change", "#change-pipeline", function() {
                     $("#leads-table").DataTable().draw();
@@ -451,19 +565,19 @@ class LeadDataTable extends DataTable
                     'extend' => 'print',
                     'text' => '<i class="fas fa-print me-2"></i> ' . __('Print'),
                     'className' => 'btn btn-light text-primary dropdown-item',
-                    'exportOptions' => ['columns' => ':visible'],
+                    'action' => 'function(e, dt, node, config) { if (typeof window.exportLeadsDataTable === "function") { window.exportLeadsDataTable("print"); } else { $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, node, config); } }'
                 ],
                 [
                     'extend' => 'csv',
                     'text' => '<i class="fas fa-file-csv me-2"></i> ' . __('CSV'),
                     'className' => 'btn btn-light text-primary dropdown-item',
-                    'exportOptions' => ['columns' => ':visible'],
+                    'action' => 'function(e, dt, node, config) { if (typeof window.exportLeadsDataTable === "function") { window.exportLeadsDataTable("csv"); } else { $.fn.dataTable.ext.buttons.csv.action.call(this, e, dt, node, config); } }'
                 ],
                 [
                     'extend' => 'excel',
                     'text' => '<i class="fas fa-file-excel me-2"></i> ' . __('Excel'),
                     'className' => 'btn btn-light text-primary dropdown-item',
-                    'exportOptions' => ['columns' => ':visible'],
+                    'action' => 'function(e, dt, node, config) { if (typeof window.exportLeadsDataTable === "function") { window.exportLeadsDataTable("excel"); } else { $.fn.dataTable.ext.buttons.excel.action.call(this, e, dt, node, config); } }'
                 ],
             ],
         ];
@@ -482,6 +596,7 @@ class LeadDataTable extends DataTable
 
         $dataTable->parameters([
             "stateSave" => true,
+            "lengthMenu" => [[10, 25, 50, 100, 500, -1], [10, 25, 50, 100, 500, "All"]],
             "dom" => "
         <'dataTable-top'<'dataTable-dropdown page-dropdown'l><'dataTable-botton table-btn dataTable-search tb-search  d-flex justify-content-end gap-2'Bf>>
         <'dataTable-container'<'col-sm-12'tr>>
@@ -527,9 +642,15 @@ class LeadDataTable extends DataTable
      */
     public function getColumns(): array
     {
+        $user = \Auth::user();
+        $hasBulkPermission = $user->isAbleTo('lead edit') || $user->isAbleTo('lead delete');
+        
+        $visibleColumns = request('visible_columns');
+        $isExport = in_array(request('action'), ['excel', 'csv', 'print']);
+        
         $columns = [
             Column::make('batch')
-                ->title('<div class="form-check custom-checkbox"><input type="checkbox" class="form-check-input" id="checkAll"><label class="form-check-label" for="checkAll"></label></div>')
+                ->title($hasBulkPermission ? '<div class="form-check custom-checkbox"><input type="checkbox" class="form-check-input" id="checkAll"><label class="form-check-label" for="checkAll"></label></div>' : '')
                 ->data('batch')
                 ->name('batch')
                 ->searchable(false)
@@ -539,20 +660,40 @@ class LeadDataTable extends DataTable
                 ->width(20),
             Column::make('id')->searchable(false)->visible(false)->exportable(false)->printable(false),
             Column::make('No')->title(__('No'))->data('DT_RowIndex')->name('DT_RowIndex')->searchable(false)->orderable(false),
-            Column::make('name')->title(__('Name')),
-            Column::make('subject')->title(__('Subject')),
-            Column::make('stage_id')->title(__('Stages')),
-            Column::make('tasks')->title(__('Tasks'))->searchable(false)->orderable(false),
-            Column::make('reminders')->title(__('Reminders'))->searchable(false)->orderable(false),
-            Column::make('created_at')->title(__('Created Date')),
-            Column::make('follow_up_date')->title(__('Follow Up Date'))->visible(false),
-            Column::make('user_id')->title(__('Users'))->searchable(false)->exportable(true)->orderable(false),
-            Column::make('created_by')->title(__('Created By'))->visible(false),
-            Column::make('updated_by')->title(__('Modified By'))->visible(false),
-            Column::make('phone')->title(__('Phone No'))->visible(false),
-            Column::make('email')->title(__('Email'))->visible(false),
-            Column::make('team')->title(__('Team'))->exportable(true)->visible(false),
+            Column::make('name')->title(__('Name'))->visible($isExport && is_array($visibleColumns) ? in_array('name', $visibleColumns) : true),
+            Column::make('subject')->title(__('Subject'))->visible($isExport && is_array($visibleColumns) ? in_array('subject', $visibleColumns) : true),
+            Column::make('stage_id')->title(__('Stages'))->visible($isExport && is_array($visibleColumns) ? in_array('stage_id', $visibleColumns) : true),
+            Column::make('tasks')->title(__('Tasks'))->searchable(false)->orderable(false)->visible($isExport && is_array($visibleColumns) ? in_array('tasks', $visibleColumns) : true),
+            Column::make('reminders')->title(__('Reminders'))->searchable(false)->orderable(false)->visible($isExport && is_array($visibleColumns) ? in_array('reminders', $visibleColumns) : true),
+            Column::make('created_at')->title(__('Created Date'))->visible($isExport && is_array($visibleColumns) ? in_array('created_at', $visibleColumns) : true),
+            Column::make('updated_at')->title(__('Modified Date'))->visible($isExport && is_array($visibleColumns) ? in_array('updated_at', $visibleColumns) : (request()->has('modified_start_date') || request()->has('modified_end_date'))),
+            Column::make('follow_up_date')->title(__('Follow Up Date'))->visible($isExport && is_array($visibleColumns) ? in_array('follow_up_date', $visibleColumns) : false),
+            Column::make('user_id')->title(__('Users'))->searchable(false)->exportable(true)->orderable(false)->visible($isExport && is_array($visibleColumns) ? in_array('user_id', $visibleColumns) : true),
+            Column::make('created_by')->title(__('Created By'))->visible($isExport && is_array($visibleColumns) ? in_array('created_by', $visibleColumns) : false),
+            Column::make('updated_by')->title(__('Modified By'))->visible($isExport && is_array($visibleColumns) ? in_array('updated_by', $visibleColumns) : false),
+            Column::make('phone')->title(__('Phone No'))->visible($isExport && is_array($visibleColumns) ? in_array('phone', $visibleColumns) : false),
+            Column::make('email')->title(__('Email'))->visible($isExport && is_array($visibleColumns) ? in_array('email', $visibleColumns) : false),
+            Column::make('team')->title(__('Team'))->exportable(true)->visible($isExport && is_array($visibleColumns) ? in_array('team', $visibleColumns) : false),
         ];
+
+        // Fetch custom fields and append them dynamically
+        try {
+            $customFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', getActiveWorkSpace())->get();
+            foreach ($customFields as $field) {
+                $colName = 'custom_' . $field->id;
+                $isVisible = $isExport && is_array($visibleColumns) ? in_array($colName, $visibleColumns) : false;
+                $columns[] = Column::make($colName)
+                    ->title($field->name)
+                    ->data($colName)
+                    ->name($colName)
+                    ->searchable(false)
+                    ->orderable(false)
+                    ->exportable(true)
+                    ->visible($isVisible);
+            }
+        } catch (\Exception $e) {
+            \Log::error('LeadDataTable getColumns customFields error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+        }
 
         if (
             !\Auth::user()->hasRole('client') &&

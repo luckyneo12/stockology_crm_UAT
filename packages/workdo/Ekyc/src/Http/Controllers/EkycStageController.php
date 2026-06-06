@@ -54,7 +54,7 @@ class EkycStageController extends Controller
             $stage->workspace_id = getActiveWorkSpace();
             $stage->save();
 
-            return redirect()->route('ekyc.stages.index')->with('success', __('The stage has been created successfully.'));
+            return redirect()->back()->with('success', __('The stage has been created successfully.'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
@@ -99,7 +99,7 @@ class EkycStageController extends Controller
                 $stage->pipeline_id = $request->pipeline_id;
                 $stage->save();
 
-                return redirect()->route('ekyc.stages.index')->with('success', __('The stage is updated successfully.'));
+                return redirect()->back()->with('success', __('The stage is updated successfully.'));
             } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }
@@ -115,7 +115,7 @@ class EkycStageController extends Controller
             if ($stage->created_by == creatorId() && $stage->workspace_id == getActiveWorkSpace()) {
                 // Check if stage is being used (optional, if there are leads attached)
                 $stage->delete();
-                return redirect()->route('ekyc.stages.index')->with('success', __('The stage has been deleted.'));
+                return redirect()->back()->with('success', __('The stage has been deleted.'));
             } else {
                 return redirect()->back()->with('error', __('Permission Denied.'));
             }

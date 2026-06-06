@@ -125,6 +125,34 @@
                                         </div>
                                     </div>
                                 @endif
+
+                                @if ($module == 'Ekyc' && !empty($kyc_stages))
+                                    <div class="mt-4">
+                                        <hr>
+                                        <h5>{{ __('Allowed KYC Stages (eKYC Portal)') }}</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-roles mb-0 mt-3">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>
+                                                            <label class="form-check-label pointer" style="word-break: break-word;">{{ __('Assign Stages') }}</label>
+                                                        </td>
+                                                        <td class="ps-4">
+                                                            <div class="row">
+                                                                @foreach($kyc_stages as $stage)
+                                                                    <div class="col-xl-3 col-sm-6 form-check mb-2">
+                                                                        <input type="checkbox" name="kyc_portal_stages[]" value="{{ $stage }}" class="form-check-input pointer" id="kyc_stage_{{ $loop->index }}">
+                                                                        <label class="form-check-label pointer" for="kyc_stage_{{ $loop->index }}" style="white-space: normal; word-break: break-word;">{{ $stage }}</label>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                         <div class="card-footer p-3 d-flex justify-content-end gap-2">

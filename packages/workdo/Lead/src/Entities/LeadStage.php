@@ -108,11 +108,34 @@ class LeadStage extends Model
                 }
             }
 
-            // Department & Designation Filters (HRM Integration)
-            if (module_is_active('Hrm')) {
+            // Department & Team Filters (HRM Integration)
+            if (module_is_active('Hrm') && class_exists('\Workdo\Hrm\Entities\Department') && class_exists('\Workdo\Hrm\Entities\Employee')) {
+                $departmentIdsToFilter = [];
+
                 if ($request->has('department_id') && !empty($request->department_id)) {
                     $departmentIds = (array) $request->department_id;
-                    $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIds)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
+                    $departmentIdsToFilter = array_merge($departmentIdsToFilter, $departmentIds);
+                    
+                    // Also get child teams for these departments
+                    $childTeamIds = \Workdo\Hrm\Entities\Department::whereIn('parent_id', $departmentIds)
+                        ->where('type', 'team')
+                        ->where('workspace', getActiveWorkSpace())
+                        ->pluck('id')
+                        ->toArray();
+                    if (!empty($childTeamIds)) {
+                        $departmentIdsToFilter = array_merge($departmentIdsToFilter, $childTeamIds);
+                    }
+                }
+
+                if ($request->has('team_id') && !empty($request->team_id)) {
+                    $departmentIdsToFilter = array_merge($departmentIdsToFilter, (array) $request->team_id);
+                }
+
+                if (!empty($departmentIdsToFilter)) {
+                    $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIdsToFilter)
+                        ->where('workspace', getActiveWorkSpace())
+                        ->pluck('user_id')
+                        ->toArray();
 
                     $query->where(function ($q) use ($employeeUserIds) {
                         $q->whereIn('leads.user_id', $employeeUserIds)
@@ -231,23 +254,34 @@ class LeadStage extends Model
                 }
             }
 
-            // Department & Designation Filters (HRM Integration)
-            if (module_is_active('Hrm')) {
+            // Department & Team Filters (HRM Integration)
+            if (module_is_active('Hrm') && class_exists('\Workdo\Hrm\Entities\Department') && class_exists('\Workdo\Hrm\Entities\Employee')) {
+                $departmentIdsToFilter = [];
+
                 if ($request->has('department_id') && !empty($request->department_id)) {
                     $departmentIds = (array) $request->department_id;
-                    $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIds)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
-
-                    $query->where(function ($q) use ($employeeUserIds) {
-                        $q->whereIn('leads.user_id', $employeeUserIds)
-                            ->orWhereHas('users', function ($subQ) use ($employeeUserIds) {
-                                $subQ->whereIn('users.id', $employeeUserIds);
-                            });
-                    });
+                    $departmentIdsToFilter = array_merge($departmentIdsToFilter, $departmentIds);
+                    
+                    // Also get child teams for these departments
+                    $childTeamIds = \Workdo\Hrm\Entities\Department::whereIn('parent_id', $departmentIds)
+                        ->where('type', 'team')
+                        ->where('workspace', getActiveWorkSpace())
+                        ->pluck('id')
+                        ->toArray();
+                    if (!empty($childTeamIds)) {
+                        $departmentIdsToFilter = array_merge($departmentIdsToFilter, $childTeamIds);
+                    }
                 }
 
-                if ($request->has('designation_id') && !empty($request->designation_id)) {
-                    $designationIds = (array) $request->designation_id;
-                    $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $designationIds)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
+                if ($request->has('team_id') && !empty($request->team_id)) {
+                    $departmentIdsToFilter = array_merge($departmentIdsToFilter, (array) $request->team_id);
+                }
+
+                if (!empty($departmentIdsToFilter)) {
+                    $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIdsToFilter)
+                        ->where('workspace', getActiveWorkSpace())
+                        ->pluck('user_id')
+                        ->toArray();
 
                     $query->where(function ($q) use ($employeeUserIds) {
                         $q->whereIn('leads.user_id', $employeeUserIds)
@@ -266,11 +300,12 @@ class LeadStage extends Model
     {
         $user = $user ?? Auth::user();
         if ($user->type == 'company') {
-            return (object) ['can_view' => true, 'can_move' => true];
+            return (object) ['can_view' => true, 'can_move' => true, 'can_edit' => true];
         }
 
         $can_view = false;
         $can_move = false;
+        $can_edit = false;
         $hasAnyConfig = false;
 
         // Check role-level default first
@@ -281,6 +316,7 @@ class LeadStage extends Model
                 $hasAnyConfig = true;
                 $can_view = (bool) $rolePerm->can_view;
                 $can_move = (bool) $rolePerm->can_move;
+                $can_edit = (bool) $rolePerm->can_edit;
             }
         }
 
@@ -292,14 +328,16 @@ class LeadStage extends Model
                 $can_view = true;
             if ($userPerm->can_move)
                 $can_move = true;
+            if ($userPerm->can_edit)
+                $can_edit = true;
         }
 
         // Default permission if nothing defined at all
         if (!$hasAnyConfig) {
-            return (object) ['can_view' => true, 'can_move' => true];
+            return (object) ['can_view' => true, 'can_move' => true, 'can_edit' => true];
         }
 
-        return (object) ['can_view' => $can_view, 'can_move' => $can_move];
+        return (object) ['can_view' => $can_view, 'can_move' => $can_move, 'can_edit' => $can_edit];
     }
 
     public function pipeline()

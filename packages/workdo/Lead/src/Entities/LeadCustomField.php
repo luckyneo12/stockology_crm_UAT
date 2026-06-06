@@ -21,14 +21,21 @@ class LeadCustomField extends Model
         'visible_stages',
         'visible_roles',
         'required_stages',
+        'stage_min_values',
         'is_filterable',
         'icon',
+        'api_url',
+        'api_method',
+        'api_trigger_stage_id',
+        'api_response_key',
+        'pipeline_id',
     ];
 
     protected $casts = [
         'visible_stages' => 'array',
         'visible_roles' => 'array',
         'required_stages' => 'array',
+        'stage_min_values' => 'array',
         'is_filterable' => 'boolean',
     ];
 

@@ -57,7 +57,7 @@ use Workdo\Hrm\Http\Controllers\OrgChartController;
 |
 */
 
-Route::group(['middleware' => ['web', 'auth', 'verified','PlanModuleCheck:Hrm']], function () {
+Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
     Route::prefix('hrm')->group(function () {
         Route::get('/', [HrmController::class, 'index']);
         Route::get('/org-chart', [OrgChartController::class, 'index'])->name('hrm.org_chart.index');

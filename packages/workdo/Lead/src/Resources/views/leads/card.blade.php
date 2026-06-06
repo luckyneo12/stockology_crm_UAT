@@ -1,54 +1,62 @@
 @php($labels = $lead->labels())
-<div class="card image-matched-card shadow-sm mb-2" data-id="{{ $lead->id }}">
-    <div class="card-header border-0 pb-0 d-flex flex-column pt-2 px-2 background-transparent">
+@php($isLocked = !$lead->stagePermissions()->can_edit)
+<div class="card image-matched-card shadow-sm mb-2 {{ $isLocked ? 'locked-lead' : '' }}" data-id="{{ $lead->id }}" data-locked="{{ $isLocked ? '1' : '0' }}">
+    <div class="card-header border-0 pb-0 d-flex flex-column pt-2 px-2.5 background-transparent">
         <div class="d-flex align-items-center justify-content-between mb-1">
-            <h6 class="mb-0 flex-grow-1" style="min-width: 0;">
+            <h6 class="mb-0 flex-grow-1" style="min-width: 0; display: flex; align-items: center;">
                 <a href="@permission('lead show')@if ($lead->is_active){{ route('leads.show', $lead->id) }}@else#@endif @else#@endpermission" 
-                   class="text-dark-grey fw-bold text-decoration-none" 
-                   style="font-size: 0.95rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2;">
+                   class="text-dark-grey fw-bold text-decoration-none text-truncate" 
+                   style="font-size: 0.85rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; max-width: calc(100% - 20px);">
                     {{ $lead->name }}
                 </a>
+                @if($isLocked)
+                    <i class="ti ti-lock text-danger ms-1" style="font-size: 0.9rem;" data-bs-toggle="tooltip" title="{{ __('Stage Locked: You do not have permission to edit leads in this stage.') }}"></i>
+                @endif
             </h6>
-            <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-2">
+            <div class="d-flex align-items-center gap-1.5 flex-shrink-0 ms-2">
                 @if($lead->phone)
                     <a href="javascript:void(0)" 
                        class="call-btn-enhanced click-to-call" 
                        data-phone="{{ $lead->phone }}"
                        data-bs-toggle="tooltip" 
                        title="{{__('Click to Call')}}">
-                        <i class="ti ti-phone-call f-14"></i>
+                        <i class="ti ti-phone-call f-11"></i>
                     </a>
                 @endif
                 <div class="dropdown">
                     @if (!$lead->is_active)
-                        <i class="fas fa-lock text-muted f-16"></i>
+                        <i class="fas fa-lock text-muted f-12"></i>
                     @else
                         <button type="button" class="btn btn-sm dropdown-toggle p-0 shadow-none border-0 d-flex align-items-center no-caret" 
-                                data-bs-toggle="dropdown" data-bs-offset="0,12" aria-haspopup="true" aria-expanded="false">
-                            <i class="ti ti-dots-vertical f-20 text-muted"></i>
+                                data-bs-toggle="dropdown" data-bs-offset="0,6" aria-haspopup="true" aria-expanded="false">
+                            <i class="ti ti-dots-vertical f-15 text-muted"></i>
                         </button>
-                        <div class="dropdown-menu dropdown-menu-end shadow-lg border-1 border-light py-2 rounded-3" 
-                             style="z-index: 3500; min-width: 160px; position: absolute;">
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg border-1 border-light py-1.5 rounded-3" 
+                             style="z-index: 3500; min-width: 140px; position: absolute;">
                             @permission('lead edit')
-                                <a data-url="{{ URL::to('leads/' . $lead->id . '/labels') }}" data-ajax-popup="true" data-title="{{ __('Labels') }}" class="dropdown-item">
-                                    <i class="ti ti-bookmark text-success"></i>{{ __('Labels') }}
-                                </a>
+                                @if($lead->stagePermissions()->can_edit)
+                                    <a data-url="{{ URL::to('leads/' . $lead->id . '/labels') }}" data-ajax-popup="true" data-title="{{ __('Labels') }}" class="dropdown-item py-1.5 px-3">
+                                        <i class="ti ti-bookmark text-success"></i>{{ __('Labels') }}
+                                    </a>
+                                @endif
                             @endpermission
                             @permission('lead show')
                                 @if($lead->is_active)
-                                    <a href="{{route('leads.show',$lead->id)}}" class="dropdown-item">
+                                    <a href="{{route('leads.show',$lead->id)}}" class="dropdown-item py-1.5 px-3">
                                         <i class="ti ti-eye text-primary"></i>{{ __('View') }}
                                     </a>
                                 @endif
                             @endpermission
                             @permission('lead edit')
-                                <a data-url="{{ URL::to('leads/' . $lead->id . '/edit') }}" data-size="lg" data-ajax-popup="true" data-title="{{ __('Edit') }}" class="dropdown-item">
-                                    <i class="ti ti-pencil text-warning"></i>{{ __('Edit') }}
-                                </a>
+                                @if($lead->stagePermissions()->can_edit)
+                                    <a data-url="{{ URL::to('leads/' . $lead->id . '/edit') }}" data-size="lg" data-ajax-popup="true" data-title="{{ __('Edit') }}" class="dropdown-item py-1.5 px-3">
+                                        <i class="ti ti-pencil text-warning"></i>{{ __('Edit') }}
+                                    </a>
+                                @endif
                             @endpermission
                             @permission('lead delete')
                                 {!! Form::open(['method' => 'DELETE', 'route' => ['leads.destroy', $lead->id], 'id' => 'delete-form-' . $lead->id]) !!}
-                                <a class="dropdown-item show_confirm text-danger" data-confirm="{{ __('Are You Sure?') }}" data-text="{{ __('This action can not be undone.') }}">
+                                <a class="dropdown-item show_confirm text-danger py-1.5 px-3" data-confirm="{{ __('Are You Sure?') }}" data-text="{{ __('This action can not be undone.') }}">
                                     <i class="ti ti-trash"></i>{{ __('Delete') }}
                                 </a>
                                 {!! Form::close() !!}
@@ -62,7 +70,7 @@
         <div class="d-flex flex-wrap gap-1 mb-1">
             @if ($labels)
                 @foreach ($labels as $label)
-                    <span class="badge badge-pill bg-{{ $label->color }} p-1 px-2" style="font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; border-radius: 4px; opacity: 0.9;">
+                    <span class="badge badge-pill bg-{{ $label->color }} p-0.5 px-1.5" style="font-size: 7.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; border-radius: 3px; opacity: 0.9;">
                         {{ $label->name }}
                     </span>
                 @endforeach
@@ -70,47 +78,45 @@
         </div>
     </div>
     
-    <div class="card-body p-2 pt-1">
-
-        
-        <div class="d-flex align-items-center justify-content-between mb-2 image-matched-brand-color">
-            <div class="d-flex align-items-center p-1 px-2 rounded-2 bg-light-success-soft" data-bs-toggle="tooltip" title="{{__('Tasks')}}">
-                <i class="ti ti-list me-1 f-14"></i>
-                <span class="fw-bold" style="font-size: 11px;">{{ count($lead->complete_tasks) }}/{{ count($lead->tasks) }}</span>
+    <div class="card-body p-2 pt-1 pb-1.5">
+        <div class="d-flex align-items-center justify-content-between mb-1.5 image-matched-brand-color">
+            <div class="d-flex align-items-center py-0.5 px-1.5 rounded bg-light-success-soft" data-bs-toggle="tooltip" title="{{__('Tasks')}}">
+                <i class="ti ti-list me-1 f-12"></i>
+                <span class="fw-bold" style="font-size: 10px;">{{ count($lead->complete_tasks) }}/{{ count($lead->tasks) }}</span>
             </div>
 
-            <div class="d-flex align-items-center p-1 px-2 rounded-2 bg-light-danger-soft" data-bs-toggle="tooltip" title="{{__('Reminders (Today/Total)')}}">
-                <i class="ti ti-bell me-1 f-14 {{ $lead->getTodayRemindersCount() > 0 ? 'text-danger' : '' }}"></i>
-                <span class="fw-bold" style="font-size: 11px;">{{ $lead->getTodayRemindersCount() }}/{{ $lead->getFilteredReminders()->count() }}</span>
+            <div class="d-flex align-items-center py-0.5 px-1.5 rounded bg-light-danger-soft" data-bs-toggle="tooltip" title="{{__('Reminders (Today/Total)')}}">
+                <i class="ti ti-bell me-1 f-12 {{ $lead->getTodayRemindersCount() > 0 ? 'text-danger' : '' }}"></i>
+                <span class="fw-bold" style="font-size: 10px;">{{ $lead->getTodayRemindersCount() }}/{{ $lead->getFilteredReminders()->count() }}</span>
             </div>
             
             @if (isset($lead->date) && !empty($lead->date))
-                <div class="d-flex align-items-center p-1 px-2 rounded-2 bg-light-primary-soft" data-bs-toggle="tooltip" title="{{__('Created At')}}">
-                    <i class="ti ti-calendar-event me-1 f-14"></i>
-                    <span class="fw-bold" style="font-size: 11px;">{{ company_date_formate($lead->date) }}</span>
+                <div class="d-flex align-items-center py-0.5 px-1.5 rounded bg-light-primary-soft" data-bs-toggle="tooltip" title="{{__('Created At')}}">
+                    <i class="ti ti-calendar-event me-1 f-12"></i>
+                    <span class="fw-bold" style="font-size: 10px;">{{ company_date_formate($lead->date) }}</span>
                 </div>
             @endif
         </div>
 
-        <hr class="my-2" style="opacity: 0.05;">
+        <hr class="my-1.5" style="opacity: 0.05;">
 
-        <div class="d-flex align-items-center justify-content-between pt-1">
-            <div class="d-flex gap-3 image-matched-brand-color">
+        <div class="d-flex align-items-center justify-content-between pt-0.5">
+            <div class="d-flex gap-2.5 image-matched-brand-color">
                 @if($lead->isResponsible())
                     <div class="d-flex align-items-center" data-bs-toggle="tooltip" title="{{__('KYC Comments')}}">
                         @if(\Auth::user()->isAbleTo('lead kyc comment'))
                             <a href="#!" data-url="{{ route('leads.discussions.create', $lead->id) }}?is_kyc=1" data-ajax-popup="true" data-title="{{__('Add KYC Comment')}}" data-size="md" class="text-inherit action-icon-hover">
-                                <i class="ti ti-shield-check me-1 f-16"></i>
+                                <i class="ti ti-shield-check me-1 f-14"></i>
                             </a>
                         @else
-                            <i class="ti ti-shield-check me-1 f-16"></i>
+                            <i class="ti ti-shield-check me-1 f-14"></i>
                         @endif
-                        <span class="fw-bold" style="font-size: 12px;">{{ $lead->discussions->where('is_kyc', 1)->count() }}</span>
+                        <span class="fw-bold" style="font-size: 11px;">{{ $lead->discussions->where('is_kyc', 1)->count() }}</span>
                     </div>
                 @endif
                 <div class="d-flex align-items-center" data-bs-toggle="tooltip" title="{{__('Sources')}}">
-                    <i class="ti ti-circles me-1 f-16"></i>
-                    <span class="fw-bold" style="font-size: 12px;">{{ count($lead->sources()) }}</span>
+                    <i class="ti ti-circles me-1 f-14"></i>
+                    <span class="fw-bold" style="font-size: 11px;">{{ count($lead->sources()) }}</span>
                 </div>
             </div>
             
@@ -124,24 +130,27 @@
                         if (isset($employeeDeptCache[$user->id])) {
                             $tName = $employeeDeptCache[$user->id];
                         } else {
-                            $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
-                            $tName = $emp && $emp->department ? $emp->department->name : '';
+                            $tName = '';
+                            if (function_exists('module_is_active') && module_is_active('Hrm') && class_exists('\Workdo\Hrm\Entities\Employee')) {
+                                $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
+                                $tName = $emp && $emp->department ? $emp->department->name : '';
+                            }
                             $employeeDeptCache[$user->id] = $tName;
                         }
                     ?>
-                    <div class="d-flex flex-wrap align-items-center justify-content-end mb-1 gap-1" style="max-width: 100%;">
-                        <span class="badge rounded-pill bg-white border d-flex align-items-center shadow-sm px-2 mb-1" 
-                              style="border-color: #e2e8f0; height: 24px; max-width: 120px;"
+                    <div class="d-flex flex-wrap align-items-center justify-content-end gap-1" style="max-width: 100%;">
+                        <span class="badge rounded-pill bg-white border d-flex align-items-center shadow-sm px-1.5" 
+                              style="border-color: #e2e8f0; height: 20px; max-width: 110px;"
                               data-bs-toggle="tooltip" title="{{ __('Responsible: ') . $user->name }}">
-                            <i class="ti ti-user text-muted me-1" style="font-size: 10px;"></i>
-                            <span class="text-truncate" style="color: #475569; font-weight: 600; font-size: 11px;">{{ $user->name }}</span>
+                            <i class="ti ti-user text-muted me-1" style="font-size: 9px;"></i>
+                            <span class="text-truncate" style="color: #475569; font-weight: 600; font-size: 10px;">{{ $user->name }}</span>
                         </span>
                         @if(!empty($tName))
-                            <span class="badge rounded-pill d-flex align-items-center shadow-sm px-2 mb-1"
-                                  style="background: #f8fafc; border: 1px solid #e2e8f0; height: 24px; max-width: 100px;"
+                            <span class="badge rounded-pill d-flex align-items-center shadow-sm px-1.5"
+                                  style="background: #f8fafc; border: 1px solid #e2e8f0; height: 20px; max-width: 90px;"
                                   data-bs-toggle="tooltip" title="{{ __('Team: ') . $tName }}">
-                                <i class="ti ti-users text-muted me-1" style="font-size: 10px;"></i>
-                                <span class="text-truncate" style="color: #64748b; font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">{{ $tName }}</span>
+                                <i class="ti ti-users text-muted me-1" style="font-size: 9px;"></i>
+                                <span class="text-truncate" style="color: #64748b; font-weight: 500; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px;">{{ $tName }}</span>
                             </span>
                         @endif
                     </div>
@@ -162,20 +171,20 @@
         --dark-grey: #2d3748;
     }
     .image-matched-card {
-        border-radius: 12px !important;
+        border-radius: 10px !important;
         border: 1px solid rgba(0,0,0,0.06) !important;
-        transition: all 0.25s ease;
+        transition: all 0.2s ease;
         background: #fff !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02) !important;
         position: relative;
         z-index: 10;
         margin-bottom: 0 !important; /* Gap handled by container */
     }
     .image-matched-card:hover {
         z-index: 15; /* Above other leads but below sticky header (20) */
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.06) !important;
-        border-color: rgba(0, 179, 136, 0.4) !important;
+        transform: translateY(-1.5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.05) !important;
+        border-color: rgba(0, 179, 136, 0.35) !important;
     }
     .no-caret::after {
         display: none !important;
@@ -191,23 +200,23 @@
     .call-btn-enhanced {
         background: var(--soft-green);
         color: var(--image-matched-green);
-        width: 26px;
-        height: 26px;
+        width: 22px;
+        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 6px;
+        border-radius: 5px;
         transition: all 0.2s ease;
         text-decoration: none !important;
     }
     .call-btn-enhanced:hover {
         background: var(--image-matched-green);
         color: white;
-        transform: scale(1.1) rotate(5deg);
+        transform: scale(1.08) rotate(3deg);
     }
     .action-icon-hover:hover {
         color: var(--image-matched-green) !important;
-        transform: scale(1.1);
+        transform: scale(1.08);
     }
     .background-transparent {
         background: transparent !important;
@@ -217,29 +226,30 @@
         background: #fff;
     }
     .overlap-avatars .avatar-sm:hover {
-        transform: scale(1.1);
+        transform: scale(1.08);
         z-index: 10;
     }
     .dropdown-item {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
-        padding: 0.7rem 1.2rem;
+        padding: 0.5rem 1rem;
         color: #4a5568 !important;
         display: flex;
         align-items: center;
         transition: all 0.15s ease;
     }
     .dropdown-item i {
-        font-size: 16px;
-        margin-right: 12px;
+        font-size: 14px;
+        margin-right: 10px;
         opacity: 0.8;
     }
     .dropdown-item:hover {
         background-color: var(--soft-green);
         color: var(--image-matched-green) !important;
     }
+    .f-11 { font-size: 11px !important; }
+    .f-12 { font-size: 12px !important; }
     .f-14 { font-size: 14px !important; }
+    .f-15 { font-size: 15px !important; }
     .f-16 { font-size: 16px !important; }
-    .f-18 { font-size: 18px !important; }
-    .f-20 { font-size: 20px !important; }
 </style>

@@ -46,6 +46,19 @@ class CompanyMenuListener
         ]);
         $menu->add([
             'category' => 'Sales',
+            'title' => __('Bulk Actions'),
+            'icon' => 'layers-subtract',
+            'name' => 'bulk-actions',
+            'parent' => null,
+            'order' => 505,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'leads.list',
+            'module' => $module,
+            'permission' => 'lead manage'
+        ]);
+        $menu->add([
+            'category' => 'Sales',
             'title' => __('My Tasks'),
             'icon' => '',
             'name' => 'my-tasks',
@@ -142,9 +155,8 @@ class CompanyMenuListener
         $canSeeEndpoints = false;
         if ($isCompany) {
             $canSeeEndpoints = true;
-        }
-        else {
-            $canSeeEndpoints = WebhookEndpoint::whereJsonContains('edit_permissions', (string)$user->id)
+        } else {
+            $canSeeEndpoints = WebhookEndpoint::whereJsonContains('edit_permissions', (string) $user->id)
                 ->orWhere('created_by', $user->id)->exists();
         }
 
@@ -167,10 +179,9 @@ class CompanyMenuListener
         $canSeeData = false;
         if ($isCompany) {
             $canSeeData = true;
-        }
-        else {
-            $canSeeData = WebhookEndpoint::whereJsonContains('view_permissions', (string)$user->id)
-                ->orWhereJsonContains('edit_permissions', (string)$user->id)
+        } else {
+            $canSeeData = WebhookEndpoint::whereJsonContains('view_permissions', (string) $user->id)
+                ->orWhereJsonContains('edit_permissions', (string) $user->id)
                 ->orWhere('created_by', $user->id)->exists();
             if (!$canSeeData) {
                 $canSeeData = WebhookData::where('assigned_user_id', $user->id)->exists();
@@ -240,6 +251,20 @@ class CompanyMenuListener
         ]);
         $menu->add([
             'category' => 'Sales',
+            'title' => __('Automations'),
+            'icon' => '',
+            'name' => 'crm-automations',
+            'parent' => 'crm',
+            'order' => 27,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'crm.automations.index',
+            'module' => $module,
+            'permission' => 'crm manage',
+            'is_admin' => true // Restrict to Admin/Company only
+        ]);
+        $menu->add([
+            'category' => 'Sales',
             'title' => __('Duplicates'),
             'icon' => '',
             'name' => 'lead-duplicates',
@@ -248,6 +273,19 @@ class CompanyMenuListener
             'ignore_if' => [],
             'depend_on' => [],
             'route' => 'leads.duplicates',
+            'module' => $module,
+            'permission' => 'lead import'
+        ]);
+        $menu->add([
+            'category' => 'Sales',
+            'title' => __('Bulk Import'),
+            'icon' => '',
+            'name' => 'lead-bulk-import',
+            'parent' => 'crm',
+            'order' => 29,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'leads.bulk.import',
             'module' => $module,
             'permission' => 'lead import'
         ]);

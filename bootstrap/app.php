@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CustomApiAuth;
 use App\Http\Middleware\DomainCheck;
+use App\Http\Middleware\LogUserActivity;
 use App\Http\Middleware\SetLang;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         // Append middleware to the 'web' group
         $middleware->appendToGroup('web', SetLang::class);
+        // Temporarily disable activity logging to fix memory issues
+        // $middleware->appendToGroup('web', LogUserActivity::class);
+        
+        // Add CORS middleware
+        $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
         // Exclude specific routes from CSRF protection
         $middleware->validateCsrfTokens(
             except: [

@@ -37,7 +37,19 @@
 
             @if(!empty($departments) || !empty($teams))
                 @php 
-                    $deptId = $employee ? $employee->department_id : null; 
+                    $deptId = null;
+                    $teamId = null;
+                    if ($employee && $employee->department_id) {
+                        $currentDept = \Workdo\Hrm\Entities\Department::find($employee->department_id);
+                        if ($currentDept) {
+                            if ($currentDept->type === 'team') {
+                                $teamId = $currentDept->id;
+                                $deptId = $currentDept->parent_id;
+                            } else {
+                                $deptId = $currentDept->id;
+                            }
+                        }
+                    }
                 @endphp
                 <div class="col-md-6">
                     <div class="form-group">
@@ -48,7 +60,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         {{ Form::label('team_id', __('Team'), ['class' => 'form-label']) }}
-                        {{ Form::select('team_id', ['' => __('Select Team')] + $teams->toArray(), $deptId, ['class' => 'form-control select', 'id' => 'team_id']) }}
+                        {{ Form::select('team_id', ['' => __('Select Team')] + $teams->toArray(), $teamId, ['class' => 'form-control select', 'id' => 'team_id']) }}
                     </div>
                 </div>
             @endif
@@ -96,12 +108,7 @@
                                 </div>
                             </div>
                         @endif
-                        <div class="col-md-6">
-                            <div class="form-check form-switch custom-switch-v1 d-flex align-items-center justify-content-between mb-3">
-                                <label class="form-check-label" for="messenger_group_permission">{{ __('Create Messenger Groups') }}</label>
-                                <input type="checkbox" name="messenger_group_permission" class="form-check-input" id="messenger_group_permission" {{ $user->isAbleTo('messenger group create') ? 'checked' : '' }}>
-                            </div>
-                        </div>
+                        <!-- Messenger group permission removed - functionality disabled -->
                     </div>
                 </div>
             @endif
@@ -137,6 +144,43 @@
                     </div>
                 </div>
 
+                @php
+                    $kyc_stages = [];
+                    if (module_is_active('Ekyc')) {
+                        $kyc_stages = \Workdo\Ekyc\Entities\EkycStage::where('workspace_id', getActiveWorkSpace())->pluck('name')->toArray();
+                    }
+                    $user_kyc_stages = !empty($user->kyc_portal_stages) ? json_decode($user->kyc_portal_stages, true) : [];
+                    if(!is_array($user_kyc_stages)) $user_kyc_stages = [];
+                @endphp
+                
+                <div class="col-md-12 mt-3 mb-3">
+                    <h6 class="text-muted">{{ __('KYC Portal Permissions') }}</h6>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch custom-switch-v1 d-flex align-items-center justify-content-between mb-3 mt-2">
+                        <label class="form-check-label" for="kyc_portal_access">{{ __('Enable KYC Portal Access') }}</label>
+                        <input type="checkbox" name="kyc_portal_access" class="form-check-input" id="kyc_portal_access" {{ $user->kyc_portal_access == 1 ? 'checked' : '' }}>
+                    </div>
+                </div>
+                @if(count($kyc_stages) > 0)
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ Form::label('kyc_portal_stages', __('Allowed KYC Stages'), ['class' => 'form-label']) }}
+                        <select name="kyc_portal_stages[]" class="form-control choices" multiple>
+                            @foreach($kyc_stages as $stage)
+                                <option value="{{ $stage }}" {{ in_array($stage, $user_kyc_stages) ? 'selected' : '' }}>{{ $stage }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                @else
+                <div class="col-md-6">
+                    <div class="alert alert-warning py-2 mb-0">
+                        <small>{{ __('Please define Stages in the eKYC module to assign them.') }}</small>
+                    </div>
+                </div>
+                @endif
+
                 @if(!empty($pipelines))
                     <div class="col-md-12">
                         <div class="table-responsive">
@@ -147,26 +191,28 @@
                                         <th>{{__('Access Strategy')}}</th>
                                         <th>{{__('Can View')}}</th>
                                         <th>{{__('Can Move')}}</th>
+                                        <th>{{__('Can Edit')}}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($pipelines as $pipeline)
                                         <tr class="bg-light">
-                                            <td colspan="4"><strong>{{ $pipeline->name }}</strong></td>
+                                            <td colspan="5"><strong>{{ $pipeline->name }}</strong></td>
                                         </tr>
                                         @foreach($pipeline->leadStages as $stage)
                                             @php
                                                 $hasOverride = $stagePermissions->has($stage->id);
-                                                $perm = $hasOverride ? $stagePermissions->get($stage->id)->first() : clone ((object)['can_view' => 0, 'can_move' => 0]);
+                                                $perm = $hasOverride ? $stagePermissions->get($stage->id)->first() : clone ((object)['can_view' => 0, 'can_move' => 0, 'can_edit' => 0]);
                                                 
                                                 // Check role defaults to show when inheriting
                                                 $roleId = $user->roles->first()?->id;
-                                                $rolePerm = (object)['can_view' => 0, 'can_move' => 0];
+                                                $rolePerm = (object)['can_view' => 0, 'can_move' => 0, 'can_edit' => 0];
                                                 if ($roleId) {
                                                     $rPerm = \Workdo\Lead\Entities\LeadStagePermission::where('stage_id', $stage->id)->where('role_id', $roleId)->first();
                                                     if ($rPerm) {
                                                         $rolePerm->can_view = $rPerm->can_view;
                                                         $rolePerm->can_move = $rPerm->can_move;
+                                                        $rolePerm->can_edit = $rPerm->can_edit;
                                                     }
                                                 }
 
@@ -174,6 +220,7 @@
                                                 if (!$hasOverride) {
                                                     $perm->can_view = $rolePerm->can_view;
                                                     $perm->can_move = $rolePerm->can_move;
+                                                    $perm->can_edit = $rolePerm->can_edit;
                                                 }
                                             @endphp
                                             <tr>
@@ -182,6 +229,7 @@
                                                     <input type="hidden" name="stage_ids[]" value="{{$stage->id}}">
                                                     <input type="hidden" id="role_view_{{$stage->id}}" value="{{ $rolePerm->can_view ? 1 : 0 }}">
                                                     <input type="hidden" id="role_move_{{$stage->id}}" value="{{ $rolePerm->can_move ? 1 : 0 }}">
+                                                    <input type="hidden" id="role_edit_{{$stage->id}}" value="{{ (isset($rolePerm->can_edit) && $rolePerm->can_edit) ? 1 : 0 }}">
                                                 </td>
                                                 <td>
                                                     <input type="hidden" name="stage_permissions[{{$stage->id}}][access_type]" id="access_type_{{$stage->id}}" value="{{ $hasOverride ? 'override' : 'inherit' }}">
@@ -198,6 +246,11 @@
                                                 <td>
                                                     <div class="form-check form-switch custom-switch-v1">
                                                         <input type="checkbox" name="stage_permissions[{{$stage->id}}][can_move]" id="can_move_{{$stage->id}}" class="form-check-input" {{ $perm->can_move ? 'checked' : '' }} {{ !$hasOverride ? 'disabled' : '' }}>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-check form-switch custom-switch-v1">
+                                                        <input type="checkbox" name="stage_permissions[{{$stage->id}}][can_edit]" id="can_edit_{{$stage->id}}" class="form-check-input" {{ (isset($perm->can_edit) && $perm->can_edit) ? 'checked' : '' }} {{ !$hasOverride ? 'disabled' : '' }}>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -262,6 +315,7 @@
             
             var $viewCb = $('#can_view_' + stageId);
             var $moveCb = $('#can_move_' + stageId);
+            var $editCb = $('#can_edit_' + stageId);
             var $btn = $(this);
             var $icon = $('#access_icon_' + stageId);
             var $text = $('#access_text_' + stageId);
@@ -274,10 +328,12 @@
                 
                 $viewCb.prop('disabled', true);
                 $moveCb.prop('disabled', true);
+                $editCb.prop('disabled', true);
                 
                 // Show role's default value visually
                 $viewCb.prop('checked', $('#role_view_' + stageId).val() == '1');
                 $moveCb.prop('checked', $('#role_move_' + stageId).val() == '1');
+                $editCb.prop('checked', $('#role_edit_' + stageId).val() == '1');
             } else {
                 $btn.removeClass('btn-secondary').addClass('btn-warning');
                 $btn.attr('title', '{{__("Custom Override")}}');
@@ -286,7 +342,27 @@
                 
                 $viewCb.prop('disabled', false);
                 $moveCb.prop('disabled', false);
+                $editCb.prop('disabled', false);
             }
+        $(document).on('change', '#department_id', function() {
+            var department_id = $(this).val();
+            var team_select = $('#team_id');
+            team_select.empty();
+            team_select.append('<option value="">' + "{{ __('Select Team') }}" + '</option>');
+            
+            $.ajax({
+                url: "{{ route('lead.json.designation') }}",
+                type: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    department_id: department_id
+                },
+                success: function(data) {
+                    $.each(data, function(id, name) {
+                        team_select.append('<option value="' + id + '">' + name + '</option>');
+                    });
+                }
+            });
         });
     });
 </script>

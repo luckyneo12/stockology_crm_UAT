@@ -4,7 +4,6 @@ namespace Workdo\Lead\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Workdo\ProductService\Entities\ProductService;
 use Illuminate\Support\Facades\Auth;
 
 class Lead extends Model
@@ -31,6 +30,7 @@ class Lead extends Model
         'workspace_id',
         'pan_number',
         'aadhar_number',
+        'dp_id',
     ];
 
     public function stage()
@@ -59,11 +59,7 @@ class Lead extends Model
 
     public function products()
     {
-        if ($this->products) {
-            return \Workdo\ProductService\Entities\ProductService::whereIn('id', explode(',', $this->products))->get();
-        }
-
-        return [];
+        return collect();
     }
 
     public function sources()
@@ -129,7 +125,23 @@ class Lead extends Model
 
     public function complete_tasks()
     {
-        return $this->hasMany('Workdo\Lead\Entities\LeadTask', 'lead_id', 'id')->where('status', '=', 1);
+        return $this->hasMany('Workdo\Lead\Entities\LeadTask', 'lead_id', 'id')->whereIn('status', ['done', 1]);
+    }
+
+    public function employee()
+    {
+        if (module_is_active('Hrm')) {
+            return $this->hasOne('\Workdo\Hrm\Entities\Employee', 'user_id', 'user_id');
+        }
+        return $this->hasOne('\App\Models\User', 'id', 'user_id'); // Fallback
+    }
+
+    public function stagePermissions($user = null)
+    {
+        if ($this->stage) {
+            return $this->stage->permissions($user);
+        }
+        return (object) ['can_view' => true, 'can_move' => true, 'can_edit' => true];
     }
 
     public function isAccessible($user = null)
@@ -141,7 +153,7 @@ class Lead extends Model
         }
 
         // Enforce stage-based visibility permissions
-        if ($this->stage && !$this->stage->permissions($user)->can_view) {
+        if (!$this->stagePermissions($user)->can_view) {
             return false;
         }
 

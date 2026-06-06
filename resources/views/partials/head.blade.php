@@ -104,4 +104,5 @@
     <link rel="stylesheet" href="{{ asset('assets/css/nprogress.css') }}">
     <script src="{{ asset('assets/js/nprogress.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
+<link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>

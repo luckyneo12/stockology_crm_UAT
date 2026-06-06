@@ -21,7 +21,12 @@
                 <div class="card-header">
                     <div class="row">
                         <div class="col-6">
-                            <h5>{{ $department->name }}</h5>
+                            <div class="d-flex align-items-center">
+                                @if(!empty($department->logo))
+                                    <img src="{{ get_file($department->logo) }}" alt="" style="width: 32px; height: 32px; object-fit: cover; border-radius: 6px; margin-right: 10px;">
+                                @endif
+                                <h5 class="mb-0">{{ $department->name }}</h5>
+                            </div>
                         </div>
                         <div class="col-6 text-end">
                             <h5 class="text-muted">{{ __('Branch') }}: {{ $department->branch->name ?? '-' }}</h5>

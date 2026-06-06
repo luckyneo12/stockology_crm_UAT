@@ -103,10 +103,8 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
     ];
 
     public static $superadmin_activated_module = [
-        'ProductService',
         'LandingPage',
         'Ekyc',
-        'StockMarket',
     ];
 
 
@@ -421,7 +419,6 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
 
 
                 $user->active_module = implode(',', $user_module);
-                Warehouse::defaultdata($user->id);
                 event(new DefaultData($user->id, null, $modules));
 
                 $client_role = Role::where('name', 'client')->where('created_by', $user->id)->first();
@@ -575,7 +572,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
 
         $user_ids = [$this->id];
 
-        if (module_is_active('Hrm')) {
+        if (module_is_active('Hrm') && class_exists('\Workdo\Hrm\Entities\Employee')) {
             $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $this->id)->first();
             if ($employee) {
                 // 1. Team/Hierarchy Visibility (Direct & Indirect Subordinates)
@@ -597,12 +594,14 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
 
                 // 2. Departmental Visibility (Department Head / Org Chart)
                 if ($this->visibility_level == 'all' || $this->visibility_level == 'department') {
-                    $managedDepartments = \Workdo\Hrm\Entities\Department::where('manager_id', $employee->id)->get();
-                    if ($managedDepartments->count() > 0) {
-                        foreach ($managedDepartments as $dept) {
-                            $deptIds = $dept->allChildIds();
-                            $deptUsers = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $deptIds)->pluck('user_id')->toArray();
-                            $user_ids = array_merge($user_ids, $deptUsers);
+                    if (class_exists('\Workdo\Hrm\Entities\Department')) {
+                        $managedDepartments = \Workdo\Hrm\Entities\Department::where('manager_id', $employee->id)->get();
+                        if ($managedDepartments->count() > 0) {
+                            foreach ($managedDepartments as $dept) {
+                                $deptIds = $dept->allChildIds();
+                                $deptUsers = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $deptIds)->pluck('user_id')->toArray();
+                                $user_ids = array_merge($user_ids, $deptUsers);
+                            }
                         }
                     }
                 }
@@ -610,7 +609,7 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
         }
 
         // 3. Accessible Departments (Cross-Department Visibility)
-        if (!empty($this->accessible_departments)) {
+        if (!empty($this->accessible_departments) && class_exists('\Workdo\Hrm\Entities\Employee')) {
             $deptUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $this->accessible_departments)
                 ->where('workspace', $this->active_workspace)
                 ->pluck('user_id')
@@ -626,5 +625,13 @@ class User extends Authenticatable implements LaratrustUser, MustVerifyEmail, JW
         $result = array_unique($user_ids);
         self::$accessibleUserIdsCache[$cacheKey] = $result;
         return $result;
+    }
+
+    public function employee()
+    {
+        if (module_is_active('Hrm')) {
+            return $this->hasOne(\Workdo\Hrm\Entities\Employee::class, 'user_id', 'id');
+        }
+        return null;
     }
 }

@@ -363,7 +363,7 @@ class LeadApiController extends Controller
                 'pipeline_id' => $lead->pipeline_id,
                 'pipeline_name' => $lead->pipeline->name,
                 'stage_id' => $lead->stage_id,
-                'stage_name' => $lead->stage->name,
+                'stage_name' => $lead->stage?->name ?? '',
                 'order' => $lead->order,
                 'phone' => $lead->phone,
                 'created_at' => company_date_formate($lead->created_at),

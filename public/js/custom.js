@@ -191,27 +191,8 @@ function globalNotificationPoll() {
         }
     });
 
-    // Also poll for messenger if not on messenger page
-    if (!window.location.pathname.includes('/messenger')) {
-        $.get(baseUrl + '/messenger/latest-unread', function (message) {
-            if (message && message.id) {
-                let lastNotifiedMsgId = localStorage.getItem('last_notified_message_id');
-                if (lastNotifiedMsgId != message.id) {
-                    localStorage.setItem('last_notified_message_id', message.id);
-
-                    let senderName = message.sender ? message.sender.name : 'System';
-                    let body = message.body ? message.body : 'New attachment received';
-                    if (body.length > 50) body = body.substring(0, 47) + '...';
-
-                    toastrs('New Message', senderName + ': ' + body, 'info');
-                }
-            }
-        }).fail(function (xhr) {
-            if (xhr.status === 401 || xhr.status === 419) {
-                console.error("Messenger Polling: Session expired.");
-            }
-        });
-    }
+    // Messenger functionality removed - was causing high CPU load
+    // All messenger polling has been disabled
 }
 
 $(document).ready(function () {

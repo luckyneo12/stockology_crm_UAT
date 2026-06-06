@@ -1,7 +1,7 @@
 <header
     class="dash-header {{ empty($company_settings['site_transparent']) || $company_settings['site_transparent'] == 'on' ? 'transprent-bg' : '' }} ">
     <div class="header-wrapper">
-        <div class="me-auto dash-mob-drp">
+        <div class="dash-mob-drp">
             <ul class="list-unstyled">
                 <li class="dash-h-item mob-hamburger">
                     <a href="#!" class="dash-head-link" id="mobile-collapse">
@@ -50,6 +50,234 @@
 
             </ul>
         </div>
+
+        @if(Request::routeIs('leads.index') || Request::routeIs('leads.list'))
+            <div class="d-none d-md-flex align-items-center me-auto leads-header-filters-container ms-2">
+                <!-- Search bar -->
+                <div class="input-group input-group shadow-sm rounded position-relative" style="width: 180px; font-weight: normal; margin-left: 5px;">
+                    <span class="input-group-text bg-white border-end-0" style="border-radius: 12px 0 0 12px; border-color: rgba(206, 206, 206, 0.3);"><i class="ti ti-search text-muted"></i></span>
+                    <input type="text" id="lead_search" class="form-control border-start-0 border-end-0 ps-0"
+                        placeholder="{{ __('Quick search...') }}" value="{{ request('search') }}" style="border-color: rgba(206, 206, 206, 0.3); font-size: 0.85rem; height: 38px;">
+                    <button class="input-group-text bg-white border-start-0" type="button" data-bs-toggle="modal"
+                        data-bs-target="#searchSettingsModal" title="{{ __('Search Settings') }}" style="border-radius: 0 12px 12px 0; border-color: rgba(206, 206, 206, 0.3); height: 38px;">
+                        <i class="ti ti-settings text-muted"></i>
+                    </button>
+                </div>
+
+                <!-- Hidden Entries Input to maintain original compatibility -->
+                <div style="display: none !important;">
+                    <select id="entries_per_page">
+                        <option value="10" {{ (request('length') ?: 10) == 10 ? 'selected' : '' }}>10</option>
+                        <option value="25" {{ (request('length') ?: 10) == 25 ? 'selected' : '' }}>25</option>
+                        <option value="50" {{ (request('length') ?: 10) == 50 ? 'selected' : '' }}>50</option>
+                        <option value="100" {{ (request('length') ?: 10) == 100 ? 'selected' : '' }}>100</option>
+                        <option value="500" {{ (request('length') ?: 10) == 500 ? 'selected' : '' }}>500</option>
+                    </select>
+                </div>
+
+
+
+                <!-- Advanced Filter Button Styled as dash-head-link -->
+                @php
+                    $activeFilterCount = 0;
+                    $filterKeys = ['responsible_person', 'stage_id', 'source_id', 'start_date', 'end_date', 'created_by', 'modified_by', 'duplicates', 'department_id', 'team_id', 'modified_start_date', 'modified_end_date'];
+                    foreach ($filterKeys as $key) {
+                        if (request()->has($key) && !empty(request($key)))
+                            $activeFilterCount++;
+                        elseif (request()->has($key . '[]') && !empty(request($key . '[]')))
+                            $activeFilterCount++;
+                    }
+                @endphp
+                <a href="#!" class="dash-head-link dropdown-toggle arrow-none position-relative" data-bs-toggle="modal"
+                    data-bs-target="#leadFilterModal" id="advancedFilterBtn" style="padding: 0.6rem 0.8rem; margin: 0 5px;">
+                    <i class="ti ti-adjustments-horizontal text-success me-1"></i>
+                    <span style="font-size: 0.85rem; font-weight: 600;">{{ __('Advanced Filter') }}</span>
+                    @if($activeFilterCount > 0)
+                        <span class="badge rounded-pill bg-danger filter-count-badge shadow-sm" style="position: absolute; top: -5px; right: -5px; font-size: 9px; padding: 2px 5px; border: 1.5px solid #fff;">{{ $activeFilterCount }}</span>
+                    @endif
+                </a>
+
+                <!-- Clear All Filters Button Styled as dash-head-link -->
+                @if($activeFilterCount > 0 || request()->has('search'))
+                    <a href="javascript:void(0)" class="dash-head-link text-danger" id="clearAllFiltersHome" data-bs-toggle="tooltip" title="{{ __('Clear All Filters') }}" style="padding: 0.6rem; margin: 0 5px; width: 36px; height: 36px; justify-content: center;">
+                        <i class="ti ti-trash-x" style="font-size: 1.1rem;"></i>
+                    </a>
+                @endif
+
+                <!-- Extension Dropdown Styled as dash-head-link -->
+                @php
+                    $headerUser = Auth::user();
+                @endphp
+                @if(!empty($headerUser->extension_1) || !empty($headerUser->extension_2))
+                    <div class="dropdown shadow-sm rounded">
+                        <a href="#" class="dash-head-link dropdown-toggle arrow-none" data-bs-toggle="dropdown" id="activeExtensionDropdown" aria-expanded="false" style="padding: 0.6rem 0.8rem; margin: 0 5px;">
+                            <i class="ti ti-phone-call text-success me-1"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">Ext {{ $headerUser->active_extension == 1 ? '1' : '2' }}: {{ $headerUser->active_extension == 1 ? $headerUser->extension_1 : $headerUser->extension_2 }}</span>
+                            <i class="ti ti-chevron-down drp-arrow nocolor ms-1" style="font-size: 0.75rem;"></i>
+                        </a>
+                        <div class="dropdown-menu dash-h-dropdown dropdown-menu-end shadow border-0" aria-labelledby="activeExtensionDropdown"
+                            style="border-radius: 12px; z-index: 1050; min-width: 200px; padding: 8px 0;">
+                            @if(!empty($headerUser->extension_1))
+                                <a class="dropdown-item switch-extension-btn d-flex align-items-center justify-content-between py-2 px-3 {{ $headerUser->active_extension == 1 ? 'active bg-success text-white' : '' }}"
+                                    href="javascript:void(0)" data-index="1">
+                                    <span>Ext 1: <strong>{{ $headerUser->extension_1 }}</strong></span>
+                                    @if($headerUser->active_extension == 1) <i class="ti ti-check ms-2"></i> @endif
+                                </a>
+                            @endif
+                            @if(!empty($headerUser->extension_2))
+                                <a class="dropdown-item switch-extension-btn d-flex align-items-center justify-content-between py-2 px-3 {{ $headerUser->active_extension == 2 ? 'active bg-success text-white' : '' }}"
+                                    href="javascript:void(0)" data-index="2">
+                                    <span>Ext 2: <strong>{{ $headerUser->extension_2 }}</strong></span>
+                                    @if($headerUser->active_extension == 2) <i class="ti ti-check ms-2"></i> @endif
+                                </a>
+                            @endif
+                            <hr class="dropdown-divider my-2">
+                            <a class="dropdown-item d-flex align-items-center text-primary py-2 px-3" href="javascript:void(0)"
+                                id="manualExtensionPrompt">
+                                <i class="ti ti-pencil me-2"></i>{{ __('Manage Call Settings') }}
+                            </a>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- API Dropdown Switcher Styled as dash-head-link -->
+                @php
+                    $settings = getCompanyAllSetting($headerUser->id, $headerUser->workspace_id);
+                    $availableApis = [];
+                    // 1. User
+                    for($i=1; $i<=2; $i++) {
+                        if(!empty($settings['user_api_'.$i.'_url_'.$headerUser->id])) {
+                            $availableApis[] = ['id' => 'user_'.$i, 'name' => $settings['user_api_'.$i.'_name_'.$headerUser->id] ?: 'User API '.$i];
+                        }
+                    }
+                    // 2. Dept
+                    if(empty($availableApis) && module_is_active('Hrm', $headerUser->workspace_id)) {
+                        $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $headerUser->id)->first();
+                        if($employee && $employee->department_id) {
+                            for($i=1; $i<=2; $i++) {
+                                if(!empty($settings['dept_api_'.$i.'_url_'.$employee->department_id])) {
+                                    $availableApis[] = ['id' => 'dept_'.$i, 'name' => $settings['dept_api_'.$i.'_name_'.$employee->department_id] ?: 'Dept API '.$i];
+                                }
+                            }
+                        }
+                    }
+                    // 3. Global
+                    if(empty($availableApis)) {
+                        for($i=1; $i<=3; $i++) {
+                            if(!empty($settings['global_calling_api_'.$i.'_url'])) {
+                                    $availableApis[] = ['id' => 'global_'.$i, 'name' => $settings['global_calling_api_'.$i.'_name'] ?: 'Global API '.$i];
+                            }
+                        }
+                    }
+                    $activeExtIdx = $headerUser->active_extension == 2 ? 2 : 1;
+                    $mappedApiId = $settings['user_ext_'.$activeExtIdx.'_api_id_'.$headerUser->id] ?? '';
+                    $activeApiName = '';
+                    foreach($availableApis as $api) {
+                        if((string)$api['id'] === (string)$mappedApiId) {
+                            $activeApiName = $api['name'];
+                            break;
+                        }
+                    }
+                @endphp
+                @if(!empty($availableApis))
+                    <div class="dropdown">
+                        <a href="#" class="dash-head-link dropdown-toggle arrow-none" data-bs-toggle="dropdown" id="activeApiDropdown" aria-expanded="false" style="padding: 0.6rem 0.8rem; margin: 0 5px;">
+                            <i class="ti ti-server text-success me-1"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">API: {{ $activeApiName ?: __('Default') }}</span>
+                            <i class="ti ti-chevron-down drp-arrow nocolor ms-1" style="font-size: 0.75rem;"></i>
+                        </a>
+                        <div class="dropdown-menu dash-h-dropdown dropdown-menu-end shadow border-0" aria-labelledby="activeApiDropdown"
+                            style="border-radius: 12px; z-index: 1050; min-width: 220px; padding: 8px 0;">
+                            @foreach($availableApis as $api)
+                                <a class="dropdown-item switch-api-btn d-flex align-items-center justify-content-between py-2 px-3 {{ (string)$mappedApiId === (string)$api['id'] ? 'active bg-success text-white' : '' }}"
+                                    href="javascript:void(0)" data-id="{{ $api['id'] }}">
+                                    <span><strong>{{ $api['name'] }}</strong></span>
+                                    @if((string)$mappedApiId === (string)$api['id']) <i class="ti ti-check ms-2"></i> @endif
+                                </a>
+                            @endforeach
+                            <hr class="dropdown-divider my-2">
+                            <a class="dropdown-item d-flex align-items-center text-success py-2 px-3" href="javascript:void(0)"
+                                id="manualExtensionPrompt2">
+                                <i class="ti ti-pencil me-2"></i>{{ __('Manage Call Settings') }}
+                            </a>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- A thin vertical separator line -->
+                <div class="vr mx-2" style="height: 24px; background-color: #dee2e6; width: 1px; opacity: 0.7;"></div>
+
+                <!-- Pipeline Selector Styled as dropdown Menu with dash-head-link -->
+                @if (isset($pipeline))
+                    <div class="dropdown d-inline-block">
+                        <a href="#" class="dash-head-link dropdown-toggle arrow-none" data-bs-toggle="dropdown" id="pipelineDropdown" aria-expanded="false" style="padding: 0.6rem 0.8rem; margin: 0 5px;">
+                            <i class="ti ti-git-fork text-success me-1"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">{{ $pipeline->name }}</span>
+                            <i class="ti ti-chevron-down drp-arrow nocolor ms-1" style="font-size: 0.75rem;"></i>
+                        </a>
+                        <div class="dropdown-menu dash-h-dropdown dropdown-menu-end shadow border-0" aria-labelledby="pipelineDropdown" style="border-radius: 12px; z-index: 1050; min-width: 140px; padding: 8px 0;">
+                            @foreach($pipelines as $id => $name)
+                                <a class="dropdown-item switch-pipeline-btn d-flex align-items-center justify-content-between py-2 px-3 {{ $pipeline->id == $id ? 'active bg-success text-white' : '' }}"
+                                    href="javascript:void(0)" onclick="event.preventDefault(); document.getElementById('pipeline_form_{{ $id }}').submit();">
+                                    <span><strong>{{ $name }}</strong></span>
+                                    @if($pipeline->id == $id) <i class="ti ti-check ms-2"></i> @endif
+                                </a>
+                                <form id="pipeline_form_{{ $id }}" action="{{ route('deals.change.pipeline') }}" method="POST" style="display: none;">
+                                    @csrf
+                                    <input type="hidden" name="default_pipeline_id" value="{{ $id }}">
+                                </form>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @stack('addButtonHook')
+
+                <!-- Import Button Styled as dash-head-link -->
+                @permission('lead import')
+                    <a href="{{ route('leads.bulk.import') }}" class="dash-head-link me-0" data-bs-toggle="tooltip" title="{{ __('Import') }}" style="padding: 0.6rem; margin: 0 5px; width: 36px; height: 36px; justify-content: center;">
+                        <i class="ti ti-file-import text-success" style="font-size: 1.1rem;"></i>
+                    </a>
+                @endpermission
+
+                <!-- View Toggle Button (List/Kanban) Styled as dash-head-link -->
+                @if(Request::routeIs('leads.index'))
+                    <a href="{{ route('leads.list') }}" class="dash-head-link me-0" data-bs-toggle="tooltip" title="{{ __('List View') }}" style="padding: 0.6rem; margin: 0 5px; width: 36px; height: 36px; justify-content: center;">
+                        <i class="ti ti-list text-success" style="font-size: 1.1rem;"></i>
+                    </a>
+                @else
+                    <a href="{{ route('leads.index') }}" class="dash-head-link me-0" data-bs-toggle="tooltip" title="{{ __('Kanban View') }}" style="padding: 0.6rem; margin: 0 5px; width: 36px; height: 36px; justify-content: center;">
+                        <i class="ti ti-table text-success" style="font-size: 1.1rem;"></i>
+                    </a>
+                @endif
+
+                <!-- Create Lead Button Styled as dash-head-link -->
+                @permission('lead create')
+                    <a class="dash-head-link me-0" data-bs-toggle="tooltip" title="{{ __('Create Lead') }}" data-ajax-popup="true" data-size="lg" data-title="{{ __('Create Lead') }}"
+                        data-url="{{ route('leads.create') }}" style="cursor: pointer; padding: 0.6rem; margin: 0 5px; width: 36px; height: 36px; justify-content: center;">
+                        <i class="ti ti-plus text-success" style="font-size: 1.1rem;"></i>
+                    </a>
+                @endpermission
+
+                <!-- Column Selection Dropdown Styled as dash-head-link -->
+                @if(Request::routeIs('leads.list'))
+                    <div class="dropdown d-inline-block">
+                        <a href="#" class="dash-head-link dropdown-toggle arrow-none" data-bs-toggle="dropdown" id="columnSelectorDropdown" aria-expanded="false" style="padding: 0.6rem; margin: 0 5px; width: 36px; height: 36px; justify-content: center;">
+                            <i class="ti ti-layout-grid text-success" style="font-size: 1.1rem;"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 250px; z-index: 1050;">
+                            <h6 class="dropdown-header px-0 mb-2">{{ __('Showing / Hiding Columns') }}</h6>
+                            <div id="column-selector-list">
+                                <!-- Will be populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @else
+            <div class="me-auto"></div>
+        @endif
+
         <div class="ms-auto">
             <ul class="list-unstyled">
                 @impersonating($guard = null)
@@ -59,20 +287,7 @@
                     </a>
                 </li>
                 @endImpersonating
-                @permission('user chat manage')
-                @php
-                    $unseenCounter = App\Models\Message::where('to_id', Auth::user()->id)
-                        ->where('is_seen', 0)
-                        ->count();
-                @endphp
-                <li class="dash-h-item">
-                    <a class="dash-head-link me-0" href="{{ route('messenger.index') }}">
-                        <i class="ti ti-message-circle"></i>
-                        <span
-                            class="bg-danger dash-h-badge message-counter custom_messanger_counter">{{ $unseenCounter }}</span>
-                    </a>
-                </li>
-                @endpermission
+                <!-- Messenger functionality removed - was causing high CPU load -->
                 <li class="dropdown dash-h-item drp-notification">
                     <a class="dash-head-link dropdown-toggle arrow-none me-0" data-bs-toggle="dropdown" href="#"
                         role="button" aria-haspopup="false" aria-expanded="false" id="notification-bell">
@@ -95,8 +310,7 @@
                     </div>
                 </li>
 
-                {{-- Stock Market Notification Bell --}}
-                @include('stockmarket::partials._stock_bell')
+
 
                 @permission('workspace create')
                 @if (PlanCheck('Workspace', Auth::user()->id) == true)
@@ -231,6 +445,27 @@
         </div>
     </div>
     <style>
+        /* Responsive Header Filters */
+        @media (max-width: 1750px) {
+            .leads-header-filters-container span {
+                display: none !important;
+            }
+            .leads-header-filters-container i {
+                margin-right: 0 !important;
+            }
+        }
+        @media (max-width: 1200px) {
+            .leads-header-filters-container {
+                display: none !important;
+            }
+        }
+        .header-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: nowrap;
+        }
+
         /* ===== NOTIFICATION BELL — PREMIUM UI ===== */
         .noti-header {
             padding: 14px 18px;
@@ -475,9 +710,7 @@
             }
 
             function updateCounts() {
-                $.get('{{ route("messenger.unread.count") }}', function (data) {
-                    $('.message-counter').text(data.count);
-                });
+                // Messenger count removed - functionality disabled
                 $.get('{{ route("notifications.count") }}', function (data) {
                     var cnt = data.count;
                     $('.notification-counter').text(cnt > 0 ? cnt : '');

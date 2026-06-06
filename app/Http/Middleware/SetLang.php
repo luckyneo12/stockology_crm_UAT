@@ -15,6 +15,16 @@ class SetLang
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Populate PHP native session with Laravel session for standalone scripts
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (auth()->check()) {
+            $_SESSION['login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d'] = auth()->id();
+        } else {
+            unset($_SESSION['login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d']);
+        }
+
         if(file_exists(storage_path() . "/installed"))
         {
             \App::setLocale(getActiveLanguage());

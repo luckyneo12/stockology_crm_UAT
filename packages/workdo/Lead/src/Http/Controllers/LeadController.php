@@ -33,7 +33,6 @@ use Workdo\Lead\Entities\UserDeal;
 use Workdo\Lead\Entities\UserLead;
 use Workdo\Lead\Entities\LeadUtility;
 use Workdo\Lead\Entities\Reminder;
-use Workdo\ProductService\Entities\ProductService;
 use App\Models\Role;
 use Illuminate\Support\Facades\Mail;
 use Workdo\Lead\DataTables\LeadDataTable;
@@ -69,6 +68,8 @@ use Workdo\Lead\Entities\LeadSection;
 
 class LeadController extends Controller
 {
+    public static $isCopying = false;
+    public static $cachedWorkflowData = null;
     /**
      * Display a listing of the resource.
      * @return Renderable
@@ -95,27 +96,37 @@ class LeadController extends Controller
         $user = Auth::user();
         $workspace = getActiveWorkSpace();
 
-        // 1. My Tasks (Pending & Overdue)
-        $tasks = \Workdo\Lead\Entities\LeadTask::where('user_id', $user->id)
+        // 1. My Tasks (Pending & Overdue) - Optimized to reduce memory usage and query time
+        $tasks_query = \Workdo\Lead\Entities\LeadTask::where('user_id', $user->id)
             ->where('workspace', $workspace)
             ->whereIn('status', ['pending', 'in_progress', 'overdue'])
-            ->orderBy('date', 'asc')
-            ->get()
-            ->filter(function ($task) use ($user) {
-                return $task->lead && $task->lead->isAccessible($user);
-            });
+            ->orderBy('date', 'asc');
 
-        // 2. My Reminders (Today & Upcoming)
-        $reminders = \Workdo\Lead\Entities\Reminder::where('user_id', $user->id)
+        // Only apply heavy accessibility filter if not a company/admin (for whom it's always true)
+        if ($user->type != 'company' && $user->type != 'super admin' && $user->visibility_level != 'all') {
+            $tasks_query->whereHas('lead', function ($q) use ($user, $workspace) {
+                $q->where('workspace_id', $workspace);
+                // The relationship and accessibility is already partially handled by LeadTask::user_id
+                // Adding a basic check to ensure the lead is still in the correct workspace
+            });
+        }
+        $tasks = $tasks_query->get();
+
+        // 2. My Reminders (Today & Upcoming) - Optimized
+        $reminders_query = \Workdo\Lead\Entities\Reminder::where('user_id', $user->id)
             ->where('workspace_id', $workspace)
             ->where('is_sent', 0)
-            ->orderBy('remind_at', 'asc')
-            ->get()
-            ->filter(function ($reminder) use ($user) {
-                return $reminder->remindable_type === 'Workdo\Lead\Entities\Lead'
-                    ? ($reminder->remindable && $reminder->remindable->isAccessible($user))
-                    : true;
+            ->orderBy('remind_at', 'asc');
+
+        if ($user->type != 'company' && $user->type != 'super admin' && $user->visibility_level != 'all') {
+            $reminders_query->where(function ($q) use ($workspace) {
+                $q->where('remindable_type', '!=', 'Workdo\Lead\Entities\Lead')
+                    ->orWhereHasMorph('remindable', '*', function ($inner) use ($workspace) {
+                        $inner->where('workspace_id', $workspace);
+                    });
             });
+        }
+        $reminders = $reminders_query->get();
 
         // 3. Performance Metrics
         $totalTasks = \Workdo\Lead\Entities\LeadTask::where('user_id', $user->id)->where('workspace', $workspace)->count();
@@ -354,7 +365,7 @@ class LeadController extends Controller
 
             // Filter Options
             $accessibleUserIds = Auth::user()->getAccessibleUserIds();
-            $stages = LeadStage::where('pipeline_id', $pipeline->id)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
+            $stages = $pipeline ? LeadStage::where('pipeline_id', $pipeline->id)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id') : collect();
             $sources = Source::where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
             // Scoping User Filters based on user type & assistance permissions (New Request)
             if (Auth::user()->type == 'super admin') {
@@ -377,13 +388,40 @@ class LeadController extends Controller
                 ->get();
 
             $departments = [];
-            $designations = [];
+            $teams = [];
             if (module_is_active('Hrm')) {
-                $departments = \Workdo\Hrm\Entities\Department::where('workspace', $getActiveWorkSpace)->pluck('name', 'id');
-                $designations = \Workdo\Hrm\Entities\Designation::where('workspace', $getActiveWorkSpace)->pluck('name', 'id');
+                if (Auth::user()->type != 'company' && Auth::user()->type != 'super admin' && Auth::user()->visibility_level != 'all') {
+                    $accessibleUserIds = Auth::user()->getAccessibleUserIds();
+                    $employeeDeptsAndTeams = \Workdo\Hrm\Entities\Employee::whereIn('user_id', $accessibleUserIds)
+                        ->where('workspace', $getActiveWorkSpace)
+                        ->pluck('department_id')
+                        ->filter()
+                        ->unique()
+                        ->toArray();
+
+                    $allDeptAndTeamIds = $employeeDeptsAndTeams;
+                    if (!empty($employeeDeptsAndTeams)) {
+                        $deptsAndTeams = \Workdo\Hrm\Entities\Department::whereIn('id', $employeeDeptsAndTeams)->get();
+                        foreach ($deptsAndTeams as $item) {
+                            if ($item->type == 'team' && $item->parent_id) {
+                                $allDeptAndTeamIds[] = $item->parent_id;
+                            } elseif ($item->type == 'department') {
+                                $childTeamIds = \Workdo\Hrm\Entities\Department::where('parent_id', $item->id)->where('type', 'team')->pluck('id')->toArray();
+                                $allDeptAndTeamIds = array_merge($allDeptAndTeamIds, $childTeamIds);
+                            }
+                        }
+                    }
+                    $allDeptAndTeamIds = array_unique($allDeptAndTeamIds);
+
+                    $departments = \Workdo\Hrm\Entities\Department::whereIn('id', $allDeptAndTeamIds)->where('workspace', $getActiveWorkSpace)->where('type', 'department')->pluck('name', 'id');
+                    $teams = \Workdo\Hrm\Entities\Department::whereIn('id', $allDeptAndTeamIds)->where('workspace', $getActiveWorkSpace)->where('type', 'team')->pluck('name', 'id');
+                } else {
+                    $departments = \Workdo\Hrm\Entities\Department::where('workspace', $getActiveWorkSpace)->where('type', 'department')->pluck('name', 'id');
+                    $teams = \Workdo\Hrm\Entities\Department::where('workspace', $getActiveWorkSpace)->where('type', 'team')->pluck('name', 'id');
+                }
             }
 
-            return view('lead::leads.index', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'designations'));
+            return view('lead::leads.index', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'teams'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
@@ -394,38 +432,77 @@ class LeadController extends Controller
         if ($request->has('get_parent') && $request->has('designation_id')) {
             $ids = is_array($request->designation_id) ? $request->designation_id : explode(',', $request->designation_id);
             if (module_is_active('Hrm')) {
-                $deptIds = \Workdo\Hrm\Entities\Designation::whereIn('id', $ids)->pluck('department_id')->unique()->toArray();
-                return response()->json(['department_ids' => $deptIds]);
+                // designation_id from payload is actually a Team ID (department id where type is team)
+                $deptIds = \Workdo\Hrm\Entities\Department::whereIn('id', $ids)->pluck('parent_id')->unique()->filter()->toArray();
+                return response()->json(['department_ids' => array_values($deptIds)]);
             }
         }
 
-        $designations = [];
+        $teams = [];
         if (module_is_active('Hrm')) {
-            if ($request->department_id) {
-                $department_ids = is_array($request->department_id) ? $request->department_id : explode(',', $request->department_id);
-                $designations = \Workdo\Hrm\Entities\Designation::whereIn('department_id', $department_ids)->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
-            } else {
-                $designations = \Workdo\Hrm\Entities\Designation::where('workspace', getActiveWorkSpace())->pluck('name', 'id');
+            $department_ids = $request->department_id;
+            if (!empty($department_ids)) {
+                if (!is_array($department_ids)) {
+                    $department_ids = explode(',', $department_ids);
+                }
+                $department_ids = array_filter($department_ids);
             }
+
+            $query = \Workdo\Hrm\Entities\Department::where('type', 'team')->where('workspace', getActiveWorkSpace());
+            if (!empty($department_ids)) {
+                $query->whereIn('parent_id', $department_ids);
+            }
+
+            $user = Auth::user();
+            if ($user->type != 'company' && $user->type != 'super admin' && $user->visibility_level != 'all') {
+                $accessibleUserIds = $user->getAccessibleUserIds();
+                $employeeDeptsAndTeams = \Workdo\Hrm\Entities\Employee::whereIn('user_id', $accessibleUserIds)
+                    ->where('workspace', getActiveWorkSpace())
+                    ->pluck('department_id')
+                    ->filter()
+                    ->unique()
+                    ->toArray();
+                $query->whereIn('id', $employeeDeptsAndTeams);
+            }
+
+            $teams = $query->pluck('name', 'id');
         }
-        return response()->json($designations);
+        return response()->json($teams);
     }
 
     public function jsonUser(Request $request)
     {
         $users = [];
         if (module_is_active('Hrm')) {
-            if ($request->designation_id) {
-                $designation_ids = is_array($request->designation_id) ? $request->designation_id : explode(',', $request->designation_id);
-                $employee_ids = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $designation_ids)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
+            $team_ids = $request->designation_id;
+            if (!empty($team_ids)) {
+                if (!is_array($team_ids)) {
+                    $team_ids = explode(',', $team_ids);
+                }
+                $team_ids = array_filter($team_ids);
+            }
+
+            $department_ids = $request->department_id;
+            if (!empty($department_ids)) {
+                if (!is_array($department_ids)) {
+                    $department_ids = explode(',', $department_ids);
+                }
+                $department_ids = array_filter($department_ids);
+            }
+
+            $accessibleUserIds = Auth::user()->getAccessibleUserIds();
+
+            if (!empty($team_ids)) {
+                // designation_id payload is a Team ID, filter by department_id since teams store their IDs in employee.department_id
+                $employee_ids = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $team_ids)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
+                $employee_ids = array_intersect($employee_ids, $accessibleUserIds);
                 $users = User::whereIn('id', $employee_ids)->where('type', '!=', 'client')->pluck('name', 'id');
-            } elseif ($request->department_id) {
-                $department_ids = is_array($request->department_id) ? $request->department_id : explode(',', $request->department_id);
+            } elseif (!empty($department_ids)) {
                 $employee_ids = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $department_ids)->where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
+                $employee_ids = array_intersect($employee_ids, $accessibleUserIds);
                 $users = User::whereIn('id', $employee_ids)->where('type', '!=', 'client')->pluck('name', 'id');
             } else {
-                $employee_ids = \Workdo\Hrm\Entities\Employee::where('workspace', getActiveWorkSpace())->pluck('user_id')->toArray();
-                $users = User::whereIn('id', $employee_ids)->where('type', '!=', 'client')->pluck('name', 'id');
+                $users = User::whereIn('id', $accessibleUserIds)->where('type', '!=', 'client')->pluck('name', 'id');
             }
         } else {
             // Fallback if HRM is not active, just return all non-client users as usual
@@ -477,6 +554,10 @@ class LeadController extends Controller
             }
 
             // Dedicated Lead Custom Fields
+            $pipelinesInWorkspace = \Workdo\Lead\Entities\Pipeline::where('workspace_id', $getActiveWorkSpace)->pluck('id');
+            foreach ($pipelinesInWorkspace as $pId) {
+                \Workdo\Lead\Entities\LeadSection::ensurePipelineLayout($pId, $getActiveWorkSpace);
+            }
             $leadCustomFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)->orderBy('order')->get();
 
             $user = Auth::user();
@@ -490,7 +571,7 @@ class LeadController extends Controller
             if (!empty($pipeline)) {
                 $all_stages = LeadStage::where('pipeline_id', '=', $pipeline->id)->where('workspace_id', $getActiveWorkSpace)->orderBy('order')->get();
                 foreach ($all_stages as $s) {
-                    if ($s->permissions()->can_move) {
+                    if ($s->permissions()->can_edit) {
                         $stages[$s->id] = $s->name;
                     }
                 }
@@ -594,8 +675,10 @@ class LeadController extends Controller
             }
 
             // Validation for Dedicated Lead Custom Fields
-            if ($request->has('leadCustomField')) {
-                $leadRequiredFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)->get();
+            if ($request->has('leadCustomField') && isset($pipeline)) {
+                $leadRequiredFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)
+                    ->where('pipeline_id', $pipeline->id)
+                    ->get();
                 foreach ($leadRequiredFields as $field) {
                     $isVisible = false;
                     $isRequired = false;
@@ -620,6 +703,23 @@ class LeadController extends Controller
                         if ($value === null || $value === '' || (is_array($value) && empty($value))) {
                             $validator->after(function ($validator) use ($field) {
                                 $validator->errors()->add('leadCustomField.' . $field->id, __($field->name . ' is required.'));
+                            });
+                        }
+                    }
+
+                    // Enforce Minimum Value if Number Field
+                    if ($field->type === 'number' && !empty($field->stage_min_values) && is_array($field->stage_min_values) && isset($field->stage_min_values[$stageId])) {
+                        $minVal = (float)$field->stage_min_values[$stageId];
+                        $value = $request->leadCustomField[$field->id] ?? null;
+                        if ($value !== null && $value !== '') {
+                            if ((float)$value < $minVal) {
+                                $validator->after(function ($validator) use ($field, $minVal) {
+                                    $validator->errors()->add('leadCustomField.' . $field->id, __($field->name . ' must be at least ' . $minVal . ' for this stage.'));
+                                });
+                            }
+                        } else {
+                            $validator->after(function ($validator) use ($field, $minVal) {
+                                $validator->errors()->add('leadCustomField.' . $field->id, __($field->name . ' must be at least ' . $minVal . ' for this stage.'));
                             });
                         }
                     }
@@ -666,6 +766,11 @@ class LeadController extends Controller
             if (empty($stage)) {
                 return redirect()->back()->with('error', __('Please create stage for this pipeline.'));
             } else {
+                // Check stage permissions
+                if (!$stage->permissions()->can_edit) {
+                    return redirect()->back()->with('error', __('Aapko is stage me lead create karne ka permission nahi hai.'));
+                }
+
                 if (empty($request->name)) {
                     $request->merge(['name' => $request->phone]);
                 }
@@ -690,6 +795,8 @@ class LeadController extends Controller
                 $lead->updated_by = $usr->id;
                 $lead->save();
 
+                self::triggerWorkflow($lead, $lead->stage_id);
+
                 if (module_is_active('CustomField')) {
                     \Workdo\CustomField\Entities\CustomField::saveData($lead, $request->customField);
                 }
@@ -699,8 +806,9 @@ class LeadController extends Controller
                 if (!empty($requestCustomFields)) {
                     foreach ($requestCustomFields as $fieldId => $value) {
                         if ($request->hasFile("leadCustomField.$fieldId")) {
-                            $fileName = time() . "_" . str_replace(' ', '_', $value->getClientOriginalName());
-                            $value->move(storage_path('app/public/uploads/custom_fields'), $fileName);
+                            $file = $request->file("leadCustomField.$fieldId");
+                            $fileName = time() . "_" . str_replace(' ', '_', $file->getClientOriginalName());
+                            $file->move(storage_path('app/public/uploads/custom_fields'), $fileName);
                             $value = $fileName;
                         }
                         \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
@@ -721,6 +829,7 @@ class LeadController extends Controller
                         $request->user_id,
                     ];
                 }
+                $usrLeads = array_filter(array_unique($usrLeads));
 
                 // UserLead creation for single ownership enforcement
                 if ($lead->user_id) {
@@ -808,7 +917,7 @@ class LeadController extends Controller
 
                 // Fetch Lead Documents
                 $leadDocuments = \Workdo\Lead\Entities\LeadDocument::where('workspace_id', getActiveWorkSpace())->get();
-                $currentStageOrder = $lead->stage->order;
+                $currentStageOrder = $lead->stage?->order ?? 0;
                 $filteredDocuments = $leadDocuments->filter(function ($doc) use ($currentStageOrder) {
                     if (!$doc->stage_id)
                         return true;
@@ -819,10 +928,13 @@ class LeadController extends Controller
                 $uploadedFiles = \Workdo\Lead\Entities\LeadDocumentFile::where('lead_id', $lead->id)->get()->keyBy('document_id');
 
                 // Fetch Dedicated Lead Custom Fields and Values
+                \Workdo\Lead\Entities\LeadSection::ensurePipelineLayout($lead->pipeline_id, getActiveWorkSpace());
+
                 $leadSections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', getActiveWorkSpace())
+                    ->where('pipeline_id', $lead->pipeline_id)
                     ->with([
-                        'fields' => function ($q) {
-                            $q->orderBy('order');
+                        'fields' => function ($q) use ($lead) {
+                            $q->where('pipeline_id', $lead->pipeline_id)->orderBy('order');
                         }
                     ])
                     ->orderBy('order')
@@ -854,85 +966,99 @@ class LeadController extends Controller
      */
     public function edit(Lead $lead)
     {
-        if (Auth::user()->isAbleTo('lead edit') && $lead->isAccessible()) {
-
-            $creatorId = creatorId();
-            $getActiveWorkSpace = getActiveWorkSpace();
-
-            $pipelines = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id')->toArray();
-            $pipelines = ['' => __('Select Pipeline')] + $pipelines;
-            $sources = Source::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
-            if (module_is_active('ProductService')) {
-                $products = ProductService::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
-            }
-            $accessibleUsers = Auth::user()->getAccessibleUserIds();
-            $filtered_users = User::whereIn('id', $accessibleUsers)->where('type', '!=', 'client')->where('workspace_id', $getActiveWorkSpace)->get();
-
-            // Ensure current lead owner is in the list
-            if ($lead->user_id && !$filtered_users->contains('id', $lead->user_id)) {
-                $lead_owner = User::find($lead->user_id);
-                if ($lead_owner) {
-                    $filtered_users->push($lead_owner);
+        try {
+            if (Auth::user()->isAbleTo('lead edit') && $lead->isAccessible()) {
+                if (!$lead->stagePermissions()->can_edit) {
+                    return redirect()->back()->with('error', __('You do not have permission to edit leads in this stage.'));
                 }
-            }
-            $users = $filtered_users->pluck('name', 'id')->toArray();
 
-            if (count($users) != 0) {
-                $users = ['' => __('Select Responsible Person')] + $users;
-            }
+                $creatorId = creatorId();
+                $getActiveWorkSpace = getActiveWorkSpace();
 
-            $lead->sources = explode(',', $lead->sources);
-            $lead->products = explode(',', $lead->products);
-
-            if (module_is_active('CustomField')) {
-                $lead->customField = \Workdo\CustomField\Entities\CustomField::getData($lead, 'lead', 'lead');
-                $customFields = \Workdo\CustomField\Entities\CustomField::where('workspace_id', '=', $getActiveWorkSpace)->where('module', '=', 'lead')->where('sub_module', 'lead')->get();
-
-                // Filter by Stage Visibility
-                $stageCustomFields = StageCustomField::where('stage_id', $lead->stage_id)->pluck('custom_field_id')->toArray();
-                if (!empty($stageCustomFields)) {
-                    $customFields = $customFields->filter(function ($field) use ($stageCustomFields) {
-                        return in_array($field->id, $stageCustomFields);
-                    });
+                $pipelines = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id')->toArray();
+                $pipelines = ['' => __('Select Pipeline')] + $pipelines;
+                $sources = Source::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
+                $products = [];
+                if (module_is_active('ProductService')) {
+                    $products = ProductService::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
                 }
-            } else {
-                $customFields = null;
-            }
+                $accessibleUsers = Auth::user()->getAccessibleUserIds();
+                $filtered_users = User::whereIn('id', $accessibleUsers)->where('type', '!=', 'client')->where('workspace_id', $getActiveWorkSpace)->get();
 
-            // Dedicated Lead Custom Fields
-            $leadSections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', $getActiveWorkSpace)
-                ->with([
-                    'fields' => function ($q) {
-                        $q->orderBy('order');
+                // Ensure current lead owner is in the list
+                if ($lead->user_id && !$filtered_users->contains('id', $lead->user_id)) {
+                    $lead_owner = User::find($lead->user_id);
+                    if ($lead_owner) {
+                        $filtered_users->push($lead_owner);
                     }
-                ])
-                ->orderBy('order')
-                ->get();
-            $leadCustomFieldValues = \Workdo\Lead\Entities\LeadCustomFieldValue::where('lead_id', $lead->id)->pluck('value', 'field_id')->toArray();
-
-            // Ensure current pipeline is in the list
-            if ($lead->pipeline_id && !isset($pipelines[$lead->pipeline_id])) {
-                $curr_pipeline = Pipeline::find($lead->pipeline_id);
-                if ($curr_pipeline) {
-                    $pipelines[$curr_pipeline->id] = $curr_pipeline->name;
                 }
-            }
+                $users = $filtered_users->pluck('name', 'id')->toArray();
 
-            $stages = LeadStage::where('pipeline_id', '=', $lead->pipeline_id)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id')->toArray();
-            // Ensure current stage is in the list
-            if ($lead->stage_id && !isset($stages[$lead->stage_id])) {
-                $curr_stage = LeadStage::find($lead->stage_id);
-                if ($curr_stage) {
-                    $stages[$curr_stage->id] = $curr_stage->name;
+                if (count($users) != 0) {
+                    $users = ['' => __('Select Responsible Person')] + $users;
                 }
+
+                $lead->sources = explode(',', $lead->sources);
+                $lead->products = explode(',', $lead->products);
+
+                if (module_is_active('CustomField')) {
+                    $lead->customField = \Workdo\CustomField\Entities\CustomField::getData($lead, 'lead', 'lead');
+                    $customFields = \Workdo\CustomField\Entities\CustomField::where('workspace_id', '=', $getActiveWorkSpace)->where('module', '=', 'lead')->where('sub_module', 'lead')->get();
+
+                    // Filter by Stage Visibility
+                    $stageCustomFields = StageCustomField::where('stage_id', $lead->stage_id)->pluck('custom_field_id')->toArray();
+                    if (!empty($stageCustomFields)) {
+                        $customFields = $customFields->filter(function ($field) use ($stageCustomFields) {
+                            return in_array($field->id, $stageCustomFields);
+                        });
+                    }
+                } else {
+                    $customFields = null;
+                }
+
+                // Dedicated Lead Custom Fields
+                $pipelinesInWorkspace = \Workdo\Lead\Entities\Pipeline::where('workspace_id', $getActiveWorkSpace)->pluck('id');
+                foreach ($pipelinesInWorkspace as $pId) {
+                    \Workdo\Lead\Entities\LeadSection::ensurePipelineLayout($pId, $getActiveWorkSpace);
+                }
+
+                $leadSections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', $getActiveWorkSpace)
+                    ->with([
+                        'fields' => function ($q) {
+                            $q->orderBy('order');
+                        }
+                    ])
+                    ->orderBy('order')
+                    ->get();
+                $leadCustomFieldValues = \Workdo\Lead\Entities\LeadCustomFieldValue::where('lead_id', $lead->id)->pluck('value', 'field_id')->toArray();
+
+                // Ensure current pipeline is in the list
+                if ($lead->pipeline_id && !isset($pipelines[$lead->pipeline_id])) {
+                    $curr_pipeline = Pipeline::find($lead->pipeline_id);
+                    if ($curr_pipeline) {
+                        $pipelines[$curr_pipeline->id] = $curr_pipeline->name;
+                    }
+                }
+
+                $stages = LeadStage::where('pipeline_id', '=', $lead->pipeline_id)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id')->toArray();
+                // Ensure current stage is in the list
+                if ($lead->stage_id && !isset($stages[$lead->stage_id])) {
+                    $curr_stage = LeadStage::find($lead->stage_id);
+                    if ($curr_stage) {
+                        $stages[$curr_stage->id] = $curr_stage->name;
+                    }
+                }
+
+                $user = Auth::user();
+                $isResponsiblePersonEditable = $user->type == 'company' || in_array($user->visibility_level, ['team', 'department', 'all']);
+
+                return view('lead::leads.edit', compact('lead', 'pipelines', 'sources', 'products', 'users', 'customFields', 'isResponsiblePersonEditable', 'leadSections', 'leadCustomFieldValues', 'stages'));
+            } else {
+                return redirect()->back()->with('error', __('Permission Denied.'));
             }
-
-            $user = Auth::user();
-            $isResponsiblePersonEditable = $user->type == 'company' || in_array($user->visibility_level, ['team', 'department', 'all']);
-
-            return view('lead::leads.edit', compact('lead', 'pipelines', 'sources', 'products', 'users', 'customFields', 'isResponsiblePersonEditable', 'leadSections', 'leadCustomFieldValues', 'stages'));
-        } else {
-            return redirect()->back()->with('error', __('Permission Denied.'));
+        } catch (\Exception $e) {
+            \Log::error('Lead Edit Modal Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return '<div class="alert alert-danger m-3">' . __('Error: ') . e($e->getMessage()) . '<br><small>' . e($e->getFile()) . ':' . $e->getLine() . '</small></div>';
         }
     }
 
@@ -950,6 +1076,9 @@ class LeadController extends Controller
 
         \Log::debug('Lead Update Request Data: ' . json_encode($request->all()));
         if (Auth::user()->isAbleTo('lead edit') && $lead->isAccessible()) {
+            if (!$lead->stagePermissions()->can_edit) {
+                return redirect()->back()->with('error', __('You do not have permission to edit leads in this stage.'));
+            }
             $creatorId = creatorId();
             $getActiveWorkSpace = getActiveWorkSpace();
 
@@ -1006,7 +1135,7 @@ class LeadController extends Controller
                     $newUserNameComp = User::find($request->user_id)->name;
 
                     // Message for transfer
-                    $transferMsg = __('Lead responsibility transferred from ') . $oldUserNameComp . __(' to ') . $newUserNameComp . ' (' . __('at stage') . ': ' . ($lead->stage->name ?? '-') . ')';
+                    $transferMsg = __('Lead responsibility transferred from ') . $oldUserNameComp . __(' to ') . $newUserNameComp . ' (' . __('at stage') . ': ' . ($lead->stage?->name ?? '-') . ')';
 
                     // Update UserLead: Add new user
                     UserLead::where('lead_id', $lead->id)->delete();
@@ -1040,6 +1169,11 @@ class LeadController extends Controller
                 $oldStageForLog = LeadStage::find($lead->stage_id);
                 $newStageForLog = LeadStage::find($request->stage_id);
 
+                // Check CAN MOVE permission for the target stage
+                if (!$newStageForLog->permissions()->can_move) {
+                    return redirect()->back()->with('error', __('Aapko is stage me lead move karne ka permission nahi hai.'));
+                }
+
                 PipelineStageAutomation::run($lead, $request->stage_id);
 
                 // Move to top logic
@@ -1063,6 +1197,11 @@ class LeadController extends Controller
             $lead->aadhar_number = $request->aadhar_number;
             $lead->updated_by = Auth::user()->id;
             $lead->save();
+
+            if ($stageChanged) {
+                $this->triggerCustomFieldApis($lead, $request->stage_id);
+                self::triggerWorkflow($lead, $request->stage_id);
+            }
 
             // Consolidated Activity Log
             $logRemark = [
@@ -1097,7 +1236,9 @@ class LeadController extends Controller
             }
 
             // Save Dedicated Lead Custom Fields
-            $leadCustomFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)->get();
+            $leadCustomFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)
+                ->where('pipeline_id', $lead->pipeline_id)
+                ->get();
             $requestCustomFields = $request->all()['leadCustomField'] ?? [];
 
             foreach ($leadCustomFields as $field) {
@@ -1105,8 +1246,9 @@ class LeadController extends Controller
                     $value = $requestCustomFields[$field->id];
 
                     if ($request->hasFile("leadCustomField.$field->id")) {
-                        $fileName = time() . "_" . str_replace(' ', '_', $value->getClientOriginalName());
-                        $value->move(storage_path('app/public/uploads/custom_fields'), $fileName);
+                        $file = $request->file("leadCustomField.$field->id");
+                        $fileName = time() . "_" . str_replace(' ', '_', $file->getClientOriginalName());
+                        $file->move(storage_path('app/public/uploads/custom_fields'), $fileName);
                         $value = $fileName;
                     }
 
@@ -1175,6 +1317,80 @@ class LeadController extends Controller
         }
     }
 
+    public function inlineUpdate(Request $request, $id)
+    {
+        $lead = Lead::find($id);
+        if (!$lead || !Auth::user()->isAbleTo('lead edit') || !$lead->isAccessible()) {
+            return response()->json(['is_success' => false, 'error' => __('Permission Denied.')], 403);
+        }
+
+        if (!$lead->stagePermissions()->can_edit) {
+            return response()->json(['is_success' => false, 'error' => __('You do not have permission to edit leads in this stage.')], 403);
+        }
+
+        $fieldName = $request->input('field_name');
+        $fieldValue = $request->input('field_value');
+        $isSystem = $request->input('is_system', 0);
+
+        if ($isSystem) {
+            if (in_array($fieldName, ['email', 'phone', 'pan_number', 'aadhar_number'])) {
+                if ($fieldName == 'phone') {
+                    $fieldValue = str_replace(' ', '', $fieldValue);
+                }
+                $lead->$fieldName = $fieldValue;
+                $lead->save();
+
+                LeadActivityLog::create([
+                    'user_id' => Auth::user()->id,
+                    'lead_id' => $lead->id,
+                    'log_type' => 'Lead Updated',
+                    'remark' => json_encode([
+                        'title' => $lead->name,
+                        'message' => Auth::user()->name . ' ' . __('updated system field ') . $fieldName
+                    ]),
+                ]);
+
+                return response()->json(['is_success' => true, 'message' => __('Field updated successfully.')]);
+            }
+            return response()->json(['is_success' => false, 'error' => __('Invalid field.')], 400);
+        } else {
+            $fieldId = (int)$fieldName;
+            $customField = \Workdo\Lead\Entities\LeadCustomField::find($fieldId);
+            if (!$customField) {
+                return response()->json(['is_success' => false, 'error' => __('Custom field not found.')], 404);
+            }
+
+            if ($customField->type == 'file' && $request->hasFile('field_value')) {
+                $file = $request->file('field_value');
+                $fileName = time() . "_" . str_replace(' ', '_', $file->getClientOriginalName());
+                $file->move(storage_path('app/public/uploads/custom_fields'), $fileName);
+                $fieldValue = $fileName;
+            }
+
+            \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
+                ['lead_id' => $lead->id, 'field_id' => $fieldId],
+                ['value' => is_array($fieldValue) ? implode(',', array_map('trim', $fieldValue)) : trim($fieldValue)]
+            );
+
+            LeadActivityLog::create([
+                'user_id' => Auth::user()->id,
+                'lead_id' => $lead->id,
+                'log_type' => 'Lead Updated',
+                'remark' => json_encode([
+                    'title' => $lead->name,
+                    'message' => Auth::user()->name . ' ' . __('updated custom field ') . $customField->name
+                ]),
+            ]);
+
+            return response()->json([
+                'is_success' => true, 
+                'message' => __('Field updated successfully.'),
+                'value' => $fieldValue,
+                'type' => $customField->type
+            ]);
+        }
+    }
+
     /**
      * Remove the specified resource from storage.
      * @param int $id
@@ -1239,16 +1455,42 @@ class LeadController extends Controller
             $modifiers = User::where('workspace_id', $getActiveWorkSpace)->where('type', '!=', 'client')->get()->pluck('name', 'id');
 
             $departments = [];
-            $designations = [];
+            $teams = [];
             if (module_is_active('Hrm')) {
-                $departments = \Workdo\Hrm\Entities\Department::where('workspace', $getActiveWorkSpace)->pluck('name', 'id');
-                $designations = \Workdo\Hrm\Entities\Designation::where('workspace', $getActiveWorkSpace)->pluck('name', 'id');
+                if ($usr->type != 'company' && $usr->type != 'super admin' && $usr->visibility_level != 'all') {
+                    $employeeDeptsAndTeams = \Workdo\Hrm\Entities\Employee::whereIn('user_id', $accessibleUserIds)
+                        ->where('workspace', $getActiveWorkSpace)
+                        ->pluck('department_id')
+                        ->filter()
+                        ->unique()
+                        ->toArray();
+
+                    $allDeptAndTeamIds = $employeeDeptsAndTeams;
+                    if (!empty($employeeDeptsAndTeams)) {
+                        $deptsAndTeams = \Workdo\Hrm\Entities\Department::whereIn('id', $employeeDeptsAndTeams)->get();
+                        foreach ($deptsAndTeams as $item) {
+                            if ($item->type == 'team' && $item->parent_id) {
+                                $allDeptAndTeamIds[] = $item->parent_id;
+                            } elseif ($item->type == 'department') {
+                                $childTeamIds = \Workdo\Hrm\Entities\Department::where('parent_id', $item->id)->where('type', 'team')->pluck('id')->toArray();
+                                $allDeptAndTeamIds = array_merge($allDeptAndTeamIds, $childTeamIds);
+                            }
+                        }
+                    }
+                    $allDeptAndTeamIds = array_unique($allDeptAndTeamIds);
+
+                    $departments = \Workdo\Hrm\Entities\Department::whereIn('id', $allDeptAndTeamIds)->where('workspace', $getActiveWorkSpace)->where('type', 'department')->pluck('name', 'id');
+                    $teams = \Workdo\Hrm\Entities\Department::whereIn('id', $allDeptAndTeamIds)->where('workspace', $getActiveWorkSpace)->where('type', 'team')->pluck('name', 'id');
+                } else {
+                    $departments = \Workdo\Hrm\Entities\Department::where('workspace', $getActiveWorkSpace)->where('type', 'department')->pluck('name', 'id');
+                    $teams = \Workdo\Hrm\Entities\Department::where('workspace', $getActiveWorkSpace)->where('type', 'team')->pluck('name', 'id');
+                }
             }
 
             // Initialize saved_filters (can be extended later for filter persistence)
             $saved_filters = [];
 
-            return $dataTable->render('lead::leads.list', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'designations'));
+            return $dataTable->render('lead::leads.list', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'teams'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
@@ -1453,6 +1695,9 @@ class LeadController extends Controller
     {
         if (Auth::user()->isAbleTo('lead edit')) {
             $lead = Lead::find($id);
+            if (!$lead->stagePermissions()->can_edit) {
+                return response()->json(['error' => __('You do not have permission to edit leads in this stage.')]);
+            }
             if ($lead && $lead->isAccessible()) {
                 $labels = Label::where('pipeline_id', '=', $lead->pipeline_id)->get();
                 $selected = $lead->labels();
@@ -1475,6 +1720,9 @@ class LeadController extends Controller
     {
         if (Auth::user()->isAbleTo('lead edit')) {
             $leads = Lead::find($id);
+            if (!$leads->stagePermissions()->can_edit) {
+                return response()->json(['error' => __('You do not have permission to edit leads in this stage.')]);
+            }
             if ($leads && $leads->isAccessible()) {
                 if ($request->labels) {
                     $leads->labels = implode(',', $request->labels);
@@ -1497,6 +1745,9 @@ class LeadController extends Controller
     {
         if (Auth::user()->isAbleTo('lead edit')) {
             $lead = Lead::find($id);
+            if (!$lead->stagePermissions()->can_edit) {
+                return response()->json(['error' => __('You do not have permission to edit leads in this stage.')]);
+            }
             if ($lead && $lead->isAccessible()) {
                 $creatorId = creatorId();
                 $getActiveWorkSpace = getActiveWorkSpace();
@@ -1517,6 +1768,9 @@ class LeadController extends Controller
         if (Auth::user()->isAbleTo('lead edit')) {
             $usr = Auth::user();
             $lead = Lead::find($id);
+            if (!$lead->stagePermissions()->can_edit) {
+                return response()->json(['error' => __('You do not have permission to edit leads in this stage.')]);
+            }
             if ($lead && $lead->isAccessible()) {
                 if (!empty($request->users)) {
                     $userId = $request->users;
@@ -1600,7 +1854,10 @@ class LeadController extends Controller
                     $lead->save();
                     $lead->touch();
 
-                    $objProduct = ProductService::whereIN('id', $products)->get()->pluck('name', 'id')->toArray();
+                    $objProduct = [];
+                    if (module_is_active('ProductService')) {
+                        $objProduct = \Workdo\ProductService\Entities\ProductService::whereIN('id', $products)->get()->pluck('name', 'id')->toArray();
+                    }
 
                     LeadActivityLog::create(
                         [
@@ -1881,6 +2138,10 @@ class LeadController extends Controller
                     return response()->json(['error' => __('Permission Denied.')]);
                 }
 
+                if (!$lead->stagePermissions()->can_edit) {
+                    return response()->json(['error' => __('You do not have permission to edit leads in this stage.')]);
+                }
+
                 $lead_users = $lead->users->pluck('email', 'id')->toArray();
 
                 $oldStageId = $lead->stage_id;
@@ -1896,6 +2157,10 @@ class LeadController extends Controller
                         $customFieldErrors = $this->validateLeadCustomFields($lead, $newStageId);
                         if (!empty($customFieldErrors)) {
                             return response()->json(['error' => $customFieldErrors[0]]);
+                        }
+
+                        if ($oldStage && !$oldStage->permissions($usr)->can_move) {
+                            return response()->json(['error' => __('You do not have permission to move leads out of this stage.')]);
                         }
 
                         if (!$newStage->permissions()->can_move) {
@@ -1940,6 +2205,11 @@ class LeadController extends Controller
                 // NOW explicitly save the moved lead to ensure persistence
                 $lead->stage_id = $newStageId;
                 $lead->save();
+
+                self::triggerWorkflow($lead, $newStageId);
+
+                // Process Conditional Custom Field API integrations
+                $this->triggerCustomFieldApis($lead, $newStageId);
 
                 event(new LeadMoved($request, $lead));
 
@@ -2013,23 +2283,8 @@ class LeadController extends Controller
                 ->where('pipeline_id', $pipelineId)
                 ->where('workspace_id', $workspace);
 
-            // Apply Hierarchy Filters once to the set (Robust)
-            if (module_is_active('Hrm')) {
-                if ($request->has('department_id') && !empty($request->department_id)) {
-                    $deps = (array) $request->department_id;
-                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $deps)->where('workspace', $workspace)->pluck('user_id')->toArray();
-                    $baseQuery->where(function ($q) use ($uids) {
-                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
-                    });
-                }
-                if ($request->has('designation_id') && !empty($request->designation_id)) {
-                    $desigs = (array) $request->designation_id;
-                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $desigs)->where('workspace', $workspace)->pluck('user_id')->toArray();
-                    $baseQuery->where(function ($q) use ($uids) {
-                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
-                    });
-                }
-            }
+            // Apply all filters (browser filters + HRM filters)
+            $baseQuery = $this->applyLeadFilters($baseQuery, $request);
 
             $leadsFetched = $baseQuery->get()->keyBy('id');
 
@@ -2097,20 +2352,7 @@ class LeadController extends Controller
                 }
 
                 // Apply browser filters to counts as well
-                if ($request->has('department_id') && !empty($request->department_id)) {
-                    $deps = (array) $request->department_id;
-                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $deps)->where('workspace', $workspace)->pluck('user_id')->toArray();
-                    $baseCountQuery->where(function ($q) use ($uids) {
-                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
-                    });
-                }
-                if ($request->has('designation_id') && !empty($request->designation_id)) {
-                    $desigs = (array) $request->designation_id;
-                    $uids = \Workdo\Hrm\Entities\Employee::whereIn('designation_id', $desigs)->where('workspace', $workspace)->pluck('user_id')->toArray();
-                    $baseCountQuery->where(function ($q) use ($uids) {
-                        $q->whereIn('user_id', $uids)->orWhereHas('users', fn($sq) => $sq->whereIn('users.id', $uids));
-                    });
-                }
+                $baseCountQuery = $this->applyLeadFilters($baseCountQuery, $request);
 
                 $rawCounts = $baseCountQuery->groupBy('stage_id')
                     ->selectRaw('stage_id, count(*) as total')
@@ -2132,6 +2374,99 @@ class LeadController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    private function applyLeadFilters($query, Request $request)
+    {
+        if ($request->has('responsible_person') && !empty($request->responsible_person)) {
+            $respIds = (array) $request->responsible_person;
+            $query->where(function ($q) use ($respIds) {
+                $q->whereIn('leads.user_id', $respIds)
+                    ->orWhereHas('users', function ($subQ) use ($respIds) {
+                        $subQ->whereIn('users.id', $respIds);
+                    });
+            });
+        }
+        if ($request->has('source_id') && !empty($request->source_id)) {
+            $query->where(function ($q) use ($request) {
+                foreach ((array) $request->source_id as $source) {
+                    $q->orWhereRaw('FIND_IN_SET(?, leads.sources)', [$source]);
+                }
+            });
+        }
+        if ($request->has('start_date') && !empty($request->start_date)) {
+            $query->where('leads.created_at', '>=', $request->start_date . ' 00:00:00');
+        }
+        if ($request->has('end_date') && !empty($request->end_date)) {
+            $query->where('leads.created_at', '<=', $request->end_date . ' 23:59:59');
+        }
+        if ($request->has('created_by') && !empty($request->created_by)) {
+            $query->whereIn('leads.created_by', (array) $request->created_by);
+        }
+        if ($request->has('modified_by') && !empty($request->modified_by)) {
+            $query->whereIn('leads.updated_by', (array) $request->modified_by);
+        }
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $user = Auth::user();
+            $searchFields = !empty($user->search_settings) ? $user->search_settings : ['name', 'subject'];
+
+            $query->where(function ($q) use ($search, $searchFields) {
+                foreach ($searchFields as $field) {
+                    if (str_starts_with($field, 'custom_')) {
+                        $customFieldId = str_replace('custom_', '', $field);
+                        $q->orWhereHas('customFieldValues', function ($subQ) use ($customFieldId, $search) {
+                            $subQ->where('field_id', $customFieldId)
+                                ->where('value', 'like', "%$search%");
+                        });
+                    } else {
+                        // System fields (name, subject, email, phone, etc.)
+                        $q->orWhere('leads.' . $field, 'like', "%$search%");
+                    }
+                }
+            });
+        }
+        // Custom Fields Filter
+        if ($request->has('custom_fields') && !empty($request->custom_fields)) {
+            $customFields = is_array($request->custom_fields) ? $request->custom_fields : [];
+            foreach ($customFields as $fieldId => $value) {
+                if (!empty($value)) {
+                    $query->whereHas('customFieldValues', function ($q) use ($fieldId, $value) {
+                        $q->where('field_id', $fieldId)
+                            ->where('value', 'like', "%$value%");
+                    });
+                }
+            }
+        }
+
+        // Department & Team Filters (HRM Integration)
+        if (module_is_active('Hrm')) {
+            $departmentIdsToFilter = [];
+
+            if ($request->has('department_id') && !empty($request->department_id)) {
+                $departmentIdsToFilter = array_merge($departmentIdsToFilter, (array) $request->department_id);
+            }
+
+            if ($request->has('team_id') && !empty($request->team_id)) {
+                $departmentIdsToFilter = array_merge($departmentIdsToFilter, (array) $request->team_id);
+            }
+
+            if (!empty($departmentIdsToFilter)) {
+                $employeeUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $departmentIdsToFilter)
+                    ->where('workspace', getActiveWorkSpace())
+                    ->pluck('user_id')
+                    ->toArray();
+
+                $query->where(function ($q) use ($employeeUserIds) {
+                    $q->whereIn('leads.user_id', $employeeUserIds)
+                        ->orWhereHas('users', function ($subQ) use ($employeeUserIds) {
+                            $subQ->whereIn('users.id', $employeeUserIds);
+                        });
+                });
+            }
+        }
+
+        return $query;
     }
 
     public function showConvertToDeal($id)
@@ -3111,6 +3446,11 @@ class LeadController extends Controller
                                 $user_to_assign = $usr->id;
                         }
 
+                        // Check stage permissions
+                        if (!$stage->permissions()->can_edit) {
+                            throw new \Exception('Aapko is stage me lead create karne ka permission nahi hai.');
+                        }
+
                         $lead = Lead::create([
                             'subject' => $subject,
                             'name' => $name,
@@ -3328,7 +3668,7 @@ class LeadController extends Controller
                     $tArr = [
                         'lead_name' => $lead->name,
                         'lead_pipeline' => $lead->pipeline->name,
-                        'lead_stage' => $lead->stage->name,
+                        'lead_stage' => $lead->stage?->name ?? '-',
                         'lead_status' => $lead->status,
                         'lead_price' => currency_format_with_sym($lead->price),
                         'task_name' => $leadTask->name,
@@ -3573,20 +3913,142 @@ class LeadController extends Controller
             $action = $request->action;
             $value = $request->value;
 
-            if (empty($ids)) {
-                return response()->json(['success' => false, 'message' => __('No leads selected.')]);
+            $ids = $request->ids;
+            if (is_string($ids) && $ids !== 'all') {
+                $ids = explode(',', $ids);
             }
 
-            if (count($ids) > 500) {
-                return response()->json(['success' => false, 'message' => __('Maximum 500 leads can be processed at once.')]);
+            if ($request->action == 'get_ids') {
+                $dataTable = new \Workdo\Lead\DataTables\LeadDataTable();
+                $allIds = $dataTable->query(new Lead())->pluck('leads.id')->toArray();
+                return response()->json(['success' => true, 'ids' => $allIds]);
             }
 
-            $leads = Lead::whereIn('id', $ids)->where('workspace_id', getActiveWorkSpace())->get();
+            if ($ids === 'all') {
+                return response()->json(['success' => false, 'message' => __('Selecting all records via this legacy endpoint is disabled to prevent memory exhaustion.')]);
+            } else {
+                if (!is_array($ids))
+                    $ids = (array) $ids;
+                $leads = Lead::with(['owner', 'users', 'pipeline', 'stage', 'createdBy', 'updatedBy', 'employee.department', 'customFieldValues'])
+                    ->whereIn('id', $ids)
+                    ->where('workspace_id', getActiveWorkSpace())
+                    ->get();
+            }
+
+            // Build export column config
+            $exportColumns = $request->input('export_columns', []);
+            if (!is_array($exportColumns)) {
+                $exportColumns = (array) $exportColumns;
+            }
+            // Default columns if none selected
+            $defaultExportColumns = ['id', 'name', 'email', 'phone', 'pipeline', 'stage_id', 'user_id', 'created_at'];
+            if (empty($exportColumns)) {
+                $exportColumns = $defaultExportColumns;
+            }
+
+            // Pre-load custom fields for this workspace (for export)
+            $customFieldsMap = [];
+            if ($action == 'export') {
+                $customFieldIds = [];
+                foreach ($exportColumns as $col) {
+                    if (strpos($col, 'custom_') === 0) {
+                        $customFieldIds[] = (int) str_replace('custom_', '', $col);
+                    }
+                }
+                if (!empty($customFieldIds)) {
+                    $cfObjects = \Workdo\Lead\Entities\LeadCustomField::whereIn('id', $customFieldIds)
+                        ->where('workspace_id', getActiveWorkSpace())
+                        ->get()
+                        ->keyBy('id');
+                    foreach ($cfObjects as $id => $cf) {
+                        $customFieldsMap[$id] = $cf->name;
+                    }
+                }
+            }
+
+            // Column label map for headers
+            $columnLabelMap = [
+                'id'            => __('Lead ID'),
+                'name'          => __('Name'),
+                'email'         => __('Email'),
+                'phone'         => __('Phone'),
+                'pipeline'      => __('Pipeline'),
+                'stage_id'      => __('Stage'),
+                'user_id'       => __('Responsible Person'),
+                'created_at'    => __('Created At'),
+                'updated_at'    => __('Modified At'),
+                'subject'       => __('Subject'),
+                'follow_up_date'=> __('Follow Up Date'),
+                'sources'       => __('Sources'),
+                'created_by'    => __('Created By'),
+                'updated_by'    => __('Modified By'),
+                'team'          => __('Team / Department'),
+            ];
+
+            $exportFile = null;
+            if ($action == 'export' && $usr->isAbleTo('lead manage') && !empty($request->export_id)) {
+                $fileName = $request->export_id . '.csv';
+                $exportDir = storage_path('app/public/exports');
+                if (!file_exists($exportDir)) {
+                    mkdir($exportDir, 0777, true);
+                }
+                $filePath = $exportDir . '/' . $fileName;
+                $isFirstChunk = !file_exists($filePath);
+                $exportFile = fopen($filePath, 'a');
+
+                if ($isFirstChunk) {
+                    fputs($exportFile, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM
+                    // Build dynamic header
+                    $headers = [];
+                    foreach ($exportColumns as $col) {
+                        if (strpos($col, 'custom_') === 0) {
+                            $cfId = (int) str_replace('custom_', '', $col);
+                            $headers[] = $customFieldsMap[$cfId] ?? $col;
+                        } else {
+                            $headers[] = $columnLabelMap[$col] ?? $col;
+                        }
+                    }
+                    fputcsv($exportFile, $headers);
+                }
+            }
+
+            // Pre-load lead with customFieldValues if needed
+            $needsCustomFields = !empty($customFieldsMap);
+
+            // Pre-load all Sources for name resolution
+            $allSources = \Workdo\Lead\Entities\Source::where('workspace_id', getActiveWorkSpace())
+                ->get()
+                ->keyBy('id');
+
+            $successDetails = [];
+            $skippedDetails = [];
+            $skippedCount = 0;
+
+            // Track any IDs not found in the workspace or database
+            $foundLeadIds = $leads->pluck('id')->toArray();
+            $missingIds = array_diff($ids, $foundLeadIds);
+            foreach ($missingIds as $missingId) {
+                $skippedCount++;
+                $skippedDetails[] = [
+                    'id' => $missingId,
+                    'name' => __('Unknown / Not Found'),
+                    'stage' => '-',
+                    'reason' => __('Not Found: Lead does not exist or belongs to another workspace.')
+                ];
+            }
 
             foreach ($leads as $lead) {
                 // Ensure the user has access to these leads
-                if (!$lead->isAccessible())
+                if (!$lead->isAccessible()) {
+                    $skippedCount++;
+                    $skippedDetails[] = [
+                        'id' => $lead->id,
+                        'name' => $lead->name,
+                        'stage' => $lead->stage?->name ?? __('Unknown'),
+                        'reason' => __('Access Denied: You do not have permission to view this lead or it belongs to another workspace.')
+                    ];
                     continue;
+                }
 
                 if ($action == 'delete') {
                     if ($usr->isAbleTo('lead delete')) {
@@ -3594,9 +4056,27 @@ class LeadController extends Controller
                     }
                 } elseif ($action == 'change_stage') {
                     if ($usr->isAbleTo('lead edit')) {
+                        if (!$lead->stagePermissions()->can_edit) {
+                            $skippedCount++;
+                            $skippedDetails[] = [
+                                'id' => $lead->id,
+                                'name' => $lead->name,
+                                'stage' => $lead->stage?->name ?? __('Unknown'),
+                                'reason' => __('Stage Locked: You do not have permission to edit leads in this stage.')
+                            ];
+                            continue;
+                        }
+                        // During bulk operations, skip leads with missing custom fields instead of blocking
                         $customFieldErrors = $this->validateLeadCustomFields($lead, $value);
                         if (!empty($customFieldErrors)) {
-                            return response()->json(['success' => false, 'message' => $customFieldErrors[0]]);
+                            $skippedCount++;
+                            $skippedDetails[] = [
+                                'id' => $lead->id,
+                                'name' => $lead->name,
+                                'stage' => $lead->stage?->name ?? __('Unknown'),
+                                'reason' => __('Missing required custom fields: ') . implode(', ', $customFieldErrors)
+                            ];
+                            continue; // Skip this lead, process the rest
                         }
                         $oldStage = LeadStage::find($lead->stage_id);
                         $newStage = LeadStage::find($value);
@@ -3621,13 +4101,88 @@ class LeadController extends Controller
                             $lead,
                             __('Lead "') . $lead->name . __('" stage changed to ') . ($newStage ? $newStage->name : 'Unknown')
                         );
+
+                        $successDetails[] = [
+                            'id' => $lead->id,
+                            'name' => $lead->name,
+                            'stage' => $oldStage ? $oldStage->name : __('Unknown'),
+                            'target_stage' => $newStage ? $newStage->name : __('Unknown')
+                        ];
+                    }
+                } elseif ($action == 'export') {
+                    if ($exportFile) {
+                        $ownerName = $lead->owner ? $lead->owner->name : ($lead->users->first() ? $lead->users->first()->name : '');
+
+                        // Build dynamic row
+                        $row = [];
+                        foreach ($exportColumns as $col) {
+                            if (strpos($col, 'custom_') === 0) {
+                                $cfId = (int) str_replace('custom_', '', $col);
+                                if ($needsCustomFields) {
+                                    $cfVal = $lead->customFieldValues->firstWhere('field_id', $cfId);
+                                    $row[] = $cfVal ? $cfVal->value : '';
+                                } else {
+                                    $row[] = '';
+                                }
+                            } else {
+                                switch ($col) {
+                                    case 'id':            $row[] = $lead->id; break;
+                                    case 'name':          $row[] = $lead->name; break;
+                                    case 'email':         $row[] = $lead->email; break;
+                                    case 'phone':         $row[] = $lead->phone; break;
+                                    case 'pipeline':      $row[] = $lead->pipeline ? $lead->pipeline->name : ''; break;
+                                    case 'stage_id':      $row[] = $lead->stage ? $lead->stage->name : ''; break;
+                                    case 'user_id':       $row[] = $ownerName; break;
+                                    case 'created_at':    $row[] = $lead->created_at ? $lead->created_at->format('Y-m-d H:i:s') : ''; break;
+                                    case 'updated_at':    $row[] = $lead->updated_at ? $lead->updated_at->format('Y-m-d H:i:s') : ''; break;
+                                    case 'subject':       $row[] = $lead->subject ?? ''; break;
+                                    case 'follow_up_date':$row[] = $lead->follow_up_date ? \Carbon\Carbon::parse($lead->follow_up_date)->format('Y-m-d') : ''; break;
+                                    case 'sources':
+                                        if ($lead->sources) {
+                                            $sourceIds = explode(',', $lead->sources);
+                                            $sourceNames = array_map(function($sid) use ($allSources) {
+                                                $s = $allSources->get((int)trim($sid));
+                                                return $s ? $s->name : trim($sid);
+                                            }, $sourceIds);
+                                            $row[] = implode(', ', $sourceNames);
+                                        } else {
+                                            $row[] = '';
+                                        }
+                                        break;
+                                    case 'created_by':    $row[] = $lead->createdBy ? $lead->createdBy->name : ''; break;
+                                    case 'updated_by':    $row[] = $lead->updatedBy ? $lead->updatedBy->name : ''; break;
+                                    case 'team':
+                                        $teamName = '';
+                                        if (module_is_active('Hrm') && $lead->employee && $lead->employee->department) {
+                                            $teamName = $lead->employee->department->name;
+                                        }
+                                        $row[] = $teamName;
+                                        break;
+                                    default:              $row[] = ''; break;
+                                }
+                            }
+                        }
+                        fputcsv($exportFile, $row);
                     }
                 } elseif ($action == 'change_owner') {
                     if ($usr->isAbleTo('lead edit')) {
+                        if (!$lead->stagePermissions()->can_edit) {
+                            $skippedCount++;
+                            $skippedDetails[] = [
+                                'id' => $lead->id,
+                                'name' => $lead->name,
+                                'stage' => $lead->stage?->name ?? __('Unknown'),
+                                'reason' => __('Stage Locked: You do not have permission to edit leads in this stage.')
+                            ];
+                            continue;
+                        }
                         // Reassign leads to another user
                         $oldUserId = $lead->user_id;
-                        $oldUserName = $oldUserId ? User::find($oldUserId)->name : __('Unknown');
-                        $newUserName = User::find($value)->name;
+                        $oldUser = $oldUserId ? User::find($oldUserId) : null;
+                        $oldUserName = $oldUser ? $oldUser->name : __('Unknown');
+                        $newUser = User::find($value);
+                        $newUserName = $newUser ? $newUser->name : __('Unknown');
+                        
                         $lead->user_id = $value;
                         $lead->save();
 
@@ -3662,17 +4217,51 @@ class LeadController extends Controller
                                 'lead_name' => $lead->name,
                                 'lead_email' => $lead->email,
                                 'lead_pipeline' => $lead->pipeline->name,
-                                'lead_stage' => $lead->stage->name,
+                                'lead_stage' => $lead->stage?->name ?? '-',
                             ];
                             $usrEmail = User::find($value);
                             // Send Email
-                            $resp = EmailTemplate::sendEmailTemplate('Lead Assigned', [$usrEmail->id => $usrEmail->email], $lArr);
+                            if ($usrEmail) {
+                                EmailTemplate::sendEmailTemplate('Lead Assigned', [$usrEmail->id => $usrEmail->email], $lArr);
+                            }
                         }
+
+                        $successDetails[] = [
+                            'id' => $lead->id,
+                            'name' => $lead->name,
+                            'stage' => $lead->stage?->name ?? __('Unknown'),
+                            'target_owner' => $newUserName
+                        ];
                     }
                 }
             }
 
-            return response()->json(['success' => true, 'message' => __('Bulk action completed successfully.')]);
+            if ($exportFile) {
+                fclose($exportFile);
+            }
+
+            $message = __('Bulk action completed successfully.');
+            if ($skippedCount > 0) {
+                if (count($ids) == $skippedCount) {
+                    $message = __('Bulk action completed, but all leads were skipped due to lack of permission or workspace mismatch.');
+                } else {
+                    $message = __('Bulk action completed, but ') . $skippedCount . __(' lead(s) were skipped.');
+                }
+            }
+
+            $report = [
+                'action' => $action,
+                'success_count' => count($successDetails),
+                'skipped_count' => $skippedCount,
+                'success_details' => $successDetails,
+                'skipped_details' => $skippedDetails
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'report' => $report
+            ]);
         }
         return response()->json(['success' => false, 'message' => __('Permission Denied.')], 403);
     }
@@ -3691,12 +4280,12 @@ class LeadController extends Controller
             if (empty($ids)) {
                 return response()->json(['error' => __('Please select at least one lead.')]);
             }
-            $ids = implode(',', $ids);
+            $idsString = is_array($ids) ? implode(',', $ids) : $ids;
 
             $getActiveWorkSpace = getActiveWorkSpace();
             $users = User::where('created_by', creatorId())->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
 
-            return view('lead::leads.bulk_create', compact('ids', 'users'));
+            return view('lead::leads.bulk_create', compact('ids', 'idsString', 'users'));
         }
         return response()->json(['error' => __('Permission Denied.')]);
     }
@@ -3704,14 +4293,22 @@ class LeadController extends Controller
     public function bulkTaskReminderStore(Request $request)
     {
         if (\Auth::user()->isAbleTo('lead edit')) {
-            $ids = explode(',', $request->ids);
-            if (empty($ids)) {
-                return redirect()->back()->with('error', __('Please select at least one lead.'));
-            }
-
             $getActiveWorkSpace = getActiveWorkSpace();
-            $leads = Lead::whereIn('id', $ids)->where('workspace_id', $getActiveWorkSpace)->get();
+            $ids = $request->ids;
+
+            if ($ids === 'all') {
+                return $request->ajax() ? response()->json(['success' => false, 'message' => __('Selecting all records via this legacy endpoint is disabled to prevent memory exhaustion.')]) : redirect()->back()->with('error', __('Bulk processing legacy error.'));
+            } else {
+                if (is_string($ids)) {
+                    $ids = explode(',', $ids);
+                }
+                if (empty($ids) || (count($ids) == 1 && $ids[0] == "")) {
+                    return $request->ajax() ? response()->json(['success' => false, 'message' => __('Please select at least one lead.')]) : redirect()->back()->with('error', __('Please select at least one lead.'));
+                }
+                $leads = Lead::whereIn('id', $ids)->where('workspace_id', $getActiveWorkSpace)->get();
+            }
             $count = 0;
+            $skippedCount = 0;
 
             if ($request->type == 'task') {
                 $validator = \Validator::make(
@@ -3727,6 +4324,10 @@ class LeadController extends Controller
                 }
 
                 foreach ($leads as $lead) {
+                    if (!$lead->stagePermissions()->can_edit) {
+                        $skippedCount++;
+                        continue;
+                    }
                     $userId = ($request->task_user_id == 'lead_owner') ? $lead->user_id : $request->task_user_id;
 
                     if (!$userId)
@@ -3751,7 +4352,18 @@ class LeadController extends Controller
                     ]);
                     $count++;
                 }
-                return redirect()->back()->with('success', __('Tasks created successfully for ' . $count . ' leads.'));
+                $message = __('Tasks created successfully for ' . $count . ' leads.');
+                if ($skippedCount > 0) {
+                    if ($count == 0) {
+                        $message = __('Tasks could not be created. You do not have permission to edit these leads.');
+                        return $request->ajax() ? response()->json(['success' => false, 'message' => $message]) : redirect()->back()->with('error', $message);
+                    }
+                    $message .= ' ' . __($skippedCount . ' leads were skipped due to lack of permission.');
+                }
+                if ($request->ajax()) {
+                    return response()->json(['success' => true, 'message' => $message]);
+                }
+                return redirect()->back()->with('success', $message);
 
             } else {
                 $validator = \Validator::make(
@@ -3762,15 +4374,19 @@ class LeadController extends Controller
                     ]
                 );
                 if ($validator->fails()) {
-                    return redirect()->back()->with('error', $validator->errors()->first());
+                    return $request->ajax() ? response()->json(['success' => false, 'message' => $validator->errors()->first()]) : redirect()->back()->with('error', $validator->errors()->first());
                 }
 
                 foreach ($leads as $lead) {
+                    if (!$lead->stagePermissions()->can_edit) {
+                        $skippedCount++;
+                        continue;
+                    }
                     $userId = ($request->reminder_user_id == 'lead_owner') ? $lead->user_id : $request->reminder_user_id;
                     if (!$userId)
                         $userId = \Auth::user()->id; // Fallback
 
-                    Reminder::create([
+                    \Workdo\Lead\Entities\Reminder::create([
                         'created_by' => \Auth::user()->id,
                         'user_id' => $userId,
                         'title' => 'Bulk Reminder',
@@ -3785,49 +4401,71 @@ class LeadController extends Controller
                         'user_id' => \Auth::user()->id,
                         'lead_id' => $lead->id,
                         'log_type' => 'Create Reminder',
-                        'remark' => json_encode(['title' => 'Bulk Reminder']), // Description is in Reminder itself
+                        'remark' => json_encode(['title' => 'Bulk Reminder']),
                     ]);
 
                     $count++;
                 }
-                return redirect()->back()->with('success', __('Reminders created successfully for ' . $count . ' leads.'));
+                $message = __('Reminders created successfully for ' . $count . ' leads.');
+                if ($skippedCount > 0) {
+                    if ($count == 0) {
+                        $message = __('Reminders could not be created. You do not have permission to edit these leads.');
+                        return $request->ajax() ? response()->json(['success' => false, 'message' => $message]) : redirect()->back()->with('error', $message);
+                    }
+                    $message .= ' ' . __($skippedCount . ' leads were skipped due to lack of permission.');
+                }
+                if ($request->ajax()) {
+                    return response()->json(['success' => true, 'message' => $message]);
+                }
+                return redirect()->back()->with('success', $message);
             }
         }
         return redirect()->back()->with('error', __('Permission Denied.'));
     }
     public function kanbanBatch(Request $request)
     {
-        $stage_id = $request->get('stage_id');
-        if (is_array($stage_id)) {
-            $stage_id = $stage_id[0];
+        try {
+            $stage_id = $request->get('stage_id');
+            if (is_array($stage_id)) {
+                $stage_id = $stage_id[0];
+            }
+
+            $offset = $request->offset ?? 0;
+            $limit = $request->limit ?? 50;
+
+            $stage = LeadStage::find($stage_id);
+            if (!$stage) {
+                return response()->json(['success' => false, 'message' => 'Stage not found.']);
+            }
+
+            // Create a new request object with isolated parameters to avoid conflicts
+            $isolatedRequest = new Request($request->all());
+            $isolatedRequest->merge(['stage_id' => $stage_id]);
+
+            $leads = $stage->lead($isolatedRequest, $limit, $offset);
+            $html = '';
+            $permissions = $stage->permissions();
+
+            foreach ($leads as $lead) {
+                $html .= view('lead::leads.card', compact('lead', 'permissions'))->render();
+            }
+
+            return response()->json([
+                'success' => true,
+                'html' => $html,
+                'count' => count($leads),
+                'has_more' => count($leads) == $limit
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Kanban Batch Error for Stage ' . ($stage_id ?? 'unknown') . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'success' => true,
+                'message' => 'Error: ' . $e->getMessage(),
+                'html' => '<div class="text-danger p-2 m-2" style="font-size: 11px; word-break: break-all;">Error: ' . e($e->getMessage()) . ' in ' . e(basename($e->getFile())) . ':' . $e->getLine() . '</div>',
+                'count' => 0,
+                'has_more' => false
+            ]);
         }
-
-        $offset = $request->offset ?? 0;
-        $limit = $request->limit ?? 50;
-
-        $stage = LeadStage::find($stage_id);
-        if (!$stage) {
-            return response()->json(['success' => false, 'message' => 'Stage not found.']);
-        }
-
-        // Create a new request object with isolated parameters to avoid conflicts
-        $isolatedRequest = new Request($request->all());
-        $isolatedRequest->merge(['stage_id' => $stage_id]);
-
-        $leads = $stage->lead($isolatedRequest, $limit, $offset);
-        $html = '';
-        $permissions = $stage->permissions();
-
-        foreach ($leads as $lead) {
-            $html .= view('lead::leads.card', compact('lead', 'permissions'))->render();
-        }
-
-        return response()->json([
-            'success' => true,
-            'html' => $html,
-            'count' => count($leads),
-            'has_more' => count($leads) == $limit
-        ]);
     }
 
     private function validateLeadCustomFields(Lead $lead, $targetStageId, $inputData = [])
@@ -3843,11 +4481,19 @@ class LeadController extends Controller
         // Get all stages in the same pipeline that come before or are the target stage
         $relevantStageIds = \Workdo\Lead\Entities\LeadStage::where('pipeline_id', $targetStage->pipeline_id)
             ->where('workspace_id', $getActiveWorkSpace)
-            ->where('order', '<=', $targetStage->order)
+            ->where(function ($query) use ($targetStage) {
+                $query->where('order', '<', $targetStage->order)
+                      ->orWhere(function ($q) use ($targetStage) {
+                          $q->where('order', '=', $targetStage->order)
+                            ->where('id', '<=', $targetStage->id);
+                      });
+            })
             ->pluck('id')
             ->toArray();
 
-        $fields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)->get();
+        $fields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)
+            ->where('pipeline_id', $targetStage->pipeline_id)
+            ->get();
         $errors = [];
 
         foreach ($fields as $field) {
@@ -3891,6 +4537,18 @@ class LeadController extends Controller
                     if ($value === null || $value === '' || (is_array($value) && empty($value))) {
                         $errors[] = __($field->name . ' is required.');
                     }
+                }
+            }
+
+            // Enforce Minimum Value if Number Field
+            if ($field->type === 'number' && !empty($field->stage_min_values) && is_array($field->stage_min_values) && isset($field->stage_min_values[$targetStageId])) {
+                $minVal = (float)$field->stage_min_values[$targetStageId];
+                $value = $inputData['leadCustomField'][$field->id] ?? null;
+                if ($value === null) {
+                    $value = \Workdo\Lead\Entities\LeadCustomFieldValue::where('lead_id', $lead->id)->where('field_id', $field->id)->value('value');
+                }
+                if ($value === null || $value === '' || (float)$value < $minVal) {
+                    $errors[] = __($field->name . ' must be at least ' . $minVal . ' for this stage.');
                 }
             }
         }
@@ -3967,6 +4625,30 @@ class LeadController extends Controller
         return response()->json(['error' => __('Failed to save search settings.')], 400);
     }
 
+    public function saveStatsConfig(Request $request)
+    {
+        if (Auth::user()->isAbleTo('lead manage')) {
+            $cards = $request->cards ?? [];
+            
+            \App\Models\Setting::updateOrCreate(
+                [
+                    'key' => 'leads_stats_cards_config',
+                    'workspace' => getActiveWorkSpace(),
+                ],
+                [
+                    'value' => json_encode($cards),
+                    'created_by' => creatorId(),
+                ]
+            );
+            
+            // Clear cache to ensure settings are fresh
+            comapnySettingCacheForget();
+            
+            return response()->json(['success' => true, 'message' => __('Lead statistics configuration saved successfully.')]);
+        }
+        return response()->json(['success' => false, 'message' => __('Permission Denied.')], 403);
+    }
+
     public function crmSettings()
     {
         if (Auth::user()->isAbleTo('crm manage')) {
@@ -3984,7 +4666,12 @@ class LeadController extends Controller
 
             $duplicateFields = company_setting('duplicate_fields') ? json_decode(company_setting('duplicate_fields'), true) : [];
 
-            return view('lead::settings.crm_settings', compact('fields', 'duplicateFields'));
+            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', getActiveWorkSpace())->with('leadStages')->get();
+            $workflows = company_setting('lead_workflow_settings') ? json_decode(company_setting('lead_workflow_settings'), true) : [];
+
+            \Illuminate\Support\Facades\Cache::forget('sidebar_menu_v2_' . Auth::user()->id);
+
+            return view('lead::settings.crm_settings', compact('fields', 'duplicateFields', 'pipelines', 'workflows'));
         }
         return redirect()->back()->with('error', __('Permission Denied.'));
     }
@@ -4005,8 +4692,35 @@ class LeadController extends Controller
                 ]
             );
 
+            // Parse and save workflows
+            $workflows = [];
+            if ($request->has('workflows')) {
+                foreach ($request->workflows as $wf) {
+                    if (!empty($wf['from_pipeline_id']) && !empty($wf['from_stage_id']) && !empty($wf['to_pipeline_id']) && !empty($wf['to_stage_id'])) {
+                        $workflows[] = [
+                            'from_pipeline_id' => $wf['from_pipeline_id'],
+                            'from_stage_id' => $wf['from_stage_id'],
+                            'to_pipeline_id' => $wf['to_pipeline_id'],
+                            'to_stage_id' => $wf['to_stage_id'],
+                        ];
+                    }
+                }
+            }
+
+            \App\Models\Setting::updateOrCreate(
+                [
+                    'key' => 'lead_workflow_settings',
+                    'workspace' => getActiveWorkSpace(),
+                ],
+                [
+                    'value' => json_encode($workflows),
+                    'created_by' => creatorId(),
+                ]
+            );
+
             // Clear cache to ensure settings are fresh
             comapnySettingCacheForget();
+            \Illuminate\Support\Facades\Cache::forget('sidebar_menu_v2_' . Auth::user()->id);
 
             return redirect()->back()->with('success', __('CRM settings saved successfully.'));
         }
@@ -4068,27 +4782,67 @@ class LeadController extends Controller
             }
         }
 
+        $stage = \Workdo\Lead\Entities\LeadStage::find($stageId);
+        $pipelineId = $stage ? $stage->pipeline_id : null;
+
+        $relevantStageIds = [];
+        if ($stage) {
+            $relevantStageIds = \Workdo\Lead\Entities\LeadStage::where('pipeline_id', $stage->pipeline_id)
+                ->where('workspace_id', $workspace)
+                ->where(function ($query) use ($stage) {
+                    $query->where('order', '<', $stage->order)
+                          ->orWhere(function ($q) use ($stage) {
+                              $q->where('order', '=', $stage->order)
+                                ->where('id', '<=', $stage->id);
+                          });
+                })
+                ->pluck('id')
+                ->toArray();
+        }
+
         $leadFields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $workspace)->get();
         $dedicatedRequired = [];
         $dedicatedHidden = [];
 
         foreach ($leadFields as $field) {
+            // If field is not for this pipeline, hide it immediately
+            if ($pipelineId && $field->pipeline_id != $pipelineId) {
+                $dedicatedHidden[] = (string) $field->id;
+                continue;
+            }
             $visibleStages = $field->visible_stages ?? [];
             $requiredStages = $field->required_stages ?? [];
 
             $isHidden = false;
             $isRequired = false;
 
-            if (!empty($requiredStages)) {
-                if ($stageId && in_array($stageId, $requiredStages)) {
-                    $isRequired = true;
+            if ($stageId) {
+                // Determine visibility
+                if (!empty($visibleStages)) {
+                    if (!in_array($stageId, $visibleStages)) {
+                        $isHidden = true;
+                    }
                 } else {
-                    $isHidden = true; // User requested: if required for a stage, only visible when that stage is selected.
+                    if (!empty($requiredStages)) {
+                        $intersect = array_intersect($relevantStageIds, $requiredStages);
+                        if (empty($intersect)) {
+                            $isHidden = true;
+                        }
+                    }
+                }
+
+                // Determine requirement: required if target stage or any previous stage requires it
+                if (!empty($requiredStages) && !empty(array_intersect($relevantStageIds, $requiredStages))) {
+                    $isRequired = true;
+                }
+
+                // Or globally required (if it's not hidden in the current stage)
+                if (!$isRequired && $field->is_required) {
+                    if (!$isHidden) {
+                        $isRequired = true;
+                    }
                 }
             } else {
-                if (!empty($visibleStages) && $stageId && !in_array($stageId, $visibleStages)) {
-                    $isHidden = true;
-                }
                 if ($field->is_required) {
                     $isRequired = true;
                 }
@@ -4166,5 +4920,1089 @@ class LeadController extends Controller
         } catch (\Throwable $e) {
             \Log::warning('notifyDepartmentHead failed: ' . $e->getMessage());
         }
+    }
+
+    public function bulkExportDownload(Request $request)
+    {
+        if (Auth::user()->isAbleTo('lead manage')) {
+            $exportId = $request->export_id;
+            if (!$exportId)
+                return redirect()->back()->with('error', __('Invalid export request.'));
+
+            $filePath = storage_path('app/public/exports/' . $exportId . '.csv');
+            if (file_exists($filePath)) {
+                return response()->download($filePath, 'leads_export_' . date('Y_m_d_H_i_s') . '.csv')->deleteFileAfterSend(true);
+            }
+            return redirect()->back()->with('error', __('Export file not found.'));
+        }
+        return redirect()->back()->with('error', __('Permission Denied.'));
+    }
+
+    public function bulkImportView(Request $request)
+    {
+        if (Auth::user()->isAbleTo('lead import')) {
+            $creatorId = creatorId();
+            $getActiveWorkSpace = getActiveWorkSpace();
+
+            $accessibleUsers = Auth::user()->getAccessibleUserIds();
+            $users = User::whereIn('id', $accessibleUsers)->where('type', '!=', 'client')->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
+
+            $pipelines = Pipeline::where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
+            $sources = \Workdo\Lead\Entities\Source::where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
+
+            $custom_fields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)
+                ->where(function ($q) {
+                    $q->whereNull('is_system')->orWhere('is_system', 0);
+                })->get();
+
+            return view('lead::leads.bulk_import', compact('users', 'pipelines', 'sources', 'custom_fields'));
+        } else {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+    }
+
+    public function bulkImportSample()
+    {
+        if (Auth::user()->isAbleTo('lead import')) {
+            $headers = [
+                "Content-type" => "text/csv",
+                "Content-Disposition" => "attachment; filename=leads_bulk_import_sample.csv",
+                "Pragma" => "no-cache",
+                "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+                "Expires" => "0"
+            ];
+
+            $columns = [
+                'Name',
+                'Email',
+                'Phone',
+                'Created Date',
+                'Source',
+                'Responsible Person',
+                'Team',
+                'Created By',
+                'PAN Number',
+                'Aadhar Number',
+                'DP ID'
+            ];
+
+            $sample_row = [
+                'John Doe',
+                'john.doe@example.com',
+                '9876543210',
+                '2026-05-28',
+                'Google',
+                'Responsible User Name or Email or ID',
+                'Sales Team A',
+                'Created By User Name or Email or ID',
+                'ABCDE1234F',
+                '123456789012',
+                'IN300001'
+            ];
+
+            $callback = function () use ($columns, $sample_row) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, $columns);
+                fputcsv($file, $sample_row);
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        }
+        return redirect()->back()->with('error', __('Permission Denied.'));
+    }
+
+    public function bulkImportUpload(Request $request)
+    {
+        if (Auth::user()->isAbleTo('lead import')) {
+            $error = '';
+            $file_header = [];
+            $file_data = [];
+            $total_rows = 0;
+
+            if ($request->hasFile('file') && $request->file('file')->isValid()) {
+                $file = $request->file('file');
+                $file_array = explode(".", $file->getClientOriginalName());
+                $extension = end($file_array);
+
+                if (strtolower($extension) == 'csv') {
+                    $fileName = 'bulk_leads_' . Auth::user()->id . '_' . time() . '.csv';
+                    $filePath = storage_path('framework/cache/' . $fileName);
+                    $file->move(storage_path('framework/cache/'), $fileName);
+
+                    $file_handle = fopen($filePath, 'r');
+                    $file_header = fgetcsv($file_handle);
+
+                    // Read first 100 rows for preview
+                    $lines = 0;
+                    while (($row = fgetcsv($file_handle)) !== false) {
+                        if ($lines < 100) {
+                            $file_data[] = $row;
+                        }
+                        $total_rows++;
+                        $lines++;
+                    }
+                    fclose($file_handle);
+
+                    // Save to session
+                    session()->put('bulk_import_file_path', $filePath);
+                    session()->put('bulk_import_file_header', $this->cleanUtf8($file_header));
+                    session()->put('bulk_import_total_rows', $total_rows);
+                    session()->save();
+                } else {
+                    $error = __('Only .csv files are allowed.');
+                }
+            } else {
+                $error = __('Please select a valid CSV file.');
+            }
+
+            return response()->json([
+                'success' => empty($error),
+                'error' => $error,
+                'file_header' => $this->cleanUtf8($file_header),
+                'file_data' => $this->cleanUtf8($file_data),
+                'total_rows' => $total_rows
+            ]);
+        }
+        return response()->json(['success' => false, 'error' => __('Permission Denied.')], 401);
+    }
+
+    public function bulkImportProcess(Request $request)
+    {
+        file_put_contents(base_path('debug_import.json'), json_encode([
+            'request' => $request->all(),
+            'session' => [
+                'bulk_import_file_path' => session()->get('bulk_import_file_path'),
+                'bulk_import_file_header' => session()->get('bulk_import_file_header'),
+                'bulk_import_total_rows' => session()->get('bulk_import_total_rows'),
+            ]
+        ], JSON_PRETTY_PRINT));
+        \Log::info('bulkImportProcess request payload: ' . json_encode($request->all()));
+        try {
+            if (Auth::user()->isAbleTo('lead import')) {
+                $creatorId = creatorId();
+                $getActiveWorkSpace = getActiveWorkSpace();
+                $filePath = session()->get('bulk_import_file_path') ?? null;
+                $file_header = session()->get('bulk_import_file_header') ?? [];
+                $total_items = session()->get('bulk_import_total_rows') ?? 0;
+
+                $accessibleUserIds = Auth::user()->getAccessibleUserIds();
+                $all_users = \App\Models\User::whereIn('id', $accessibleUserIds)
+                    ->where('type', '!=', 'client')
+                    ->get();
+
+                $all_teams = collect();
+                $all_employees = collect();
+                if (module_is_active('Hrm')) {
+                    $all_teams = \Workdo\Hrm\Entities\Department::where('workspace', $getActiveWorkSpace)->get();
+                    $all_employees = \Workdo\Hrm\Entities\Employee::where('workspace', $getActiveWorkSpace)->get();
+                }
+
+                if (!$filePath || !file_exists($filePath)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('Import file not found or expired. Please re-upload.'),
+                    ]);
+                }
+
+                $chunk_index = intval($request->input('chunk_index', 0));
+                $chunk_size = intval($request->input('chunk_size', 50));
+
+                $process_data = [];
+                $file_handle = fopen($filePath, 'r');
+                fgetcsv($file_handle); // Skip header
+
+                $current_row = 0;
+                while (($row = fgetcsv($file_handle)) !== false) {
+                    if ($current_row >= $chunk_index && $current_row < ($chunk_index + $chunk_size)) {
+                        $temp_row = [];
+                        foreach ($file_header as $i => $header) {
+                            $temp_row[$i] = $row[$i] ?? '';
+                        }
+                        $process_data[] = $temp_row;
+                    }
+                    $current_row++;
+                    if ($current_row >= ($chunk_index + $chunk_size)) {
+                        break;
+                    }
+                }
+                fclose($file_handle);
+
+                // Initialize session logs on first chunk
+                if ($chunk_index == 0) {
+                    session()->put('bulk_imported_phones', []);
+                    session()->put('bulk_imported_emails', []);
+                    session()->put('bulk_failed_leads', []);
+                }
+
+                $imported_phones = session()->get('bulk_imported_phones', []);
+                $imported_emails = session()->get('bulk_imported_emails', []);
+                $failed_leads = session()->get('bulk_failed_leads', []);
+
+                // Get mapping configurations (column indices in the CSV row)
+                $map_name = ($request->input('mapping_name') !== null && $request->input('mapping_name') !== '') ? intval($request->input('mapping_name')) : null;
+                $map_email = ($request->input('mapping_email') !== null && $request->input('mapping_email') !== '') ? intval($request->input('mapping_email')) : null;
+                $map_phone = ($request->input('mapping_phone') !== null && $request->input('mapping_phone') !== '') ? intval($request->input('mapping_phone')) : null;
+                $map_date = ($request->input('mapping_date') !== null && $request->input('mapping_date') !== '') ? intval($request->input('mapping_date')) : null;
+                $map_sources = ($request->input('mapping_sources') !== null && $request->input('mapping_sources') !== '') ? intval($request->input('mapping_sources')) : null;
+                $map_user_id = ($request->input('mapping_user_id') !== null && $request->input('mapping_user_id') !== '') ? intval($request->input('mapping_user_id')) : null;
+                $map_team = ($request->input('mapping_team') !== null && $request->input('mapping_team') !== '') ? intval($request->input('mapping_team')) : null;
+                $map_created_by = ($request->input('mapping_created_by') !== null && $request->input('mapping_created_by') !== '') ? intval($request->input('mapping_created_by')) : null;
+                $map_pan_number = ($request->input('mapping_pan_number') !== null && $request->input('mapping_pan_number') !== '') ? intval($request->input('mapping_pan_number')) : null;
+                $map_aadhar_number = ($request->input('mapping_aadhar_number') !== null && $request->input('mapping_aadhar_number') !== '') ? intval($request->input('mapping_aadhar_number')) : null;
+                $map_dp_id = ($request->input('mapping_dp_id') !== null && $request->input('mapping_dp_id') !== '') ? intval($request->input('mapping_dp_id')) : null;
+
+                $custom_fields = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', $getActiveWorkSpace)
+                    ->where(function ($q) {
+                        $q->whereNull('is_system')->orWhere('is_system', 0);
+                    })->get();
+
+                $map_custom_fields = [];
+                foreach ($custom_fields as $cf) {
+                    $val = $request->input('mapping_custom_field_' . $cf->id);
+                    if ($val !== null && $val !== '') {
+                        $map_custom_fields[$cf->id] = intval($val);
+                    }
+                }
+
+                // Global configurations
+                $global_pipeline = $request->input('global_pipeline');
+                $global_stage = $request->input('global_stage');
+                $global_source = $request->input('global_source');
+                $global_user = $request->input('global_user');
+
+                // Resolve global pipeline
+                $pipeline = null;
+                if (!empty($global_pipeline)) {
+                    $pipeline = \Workdo\Lead\Entities\Pipeline::where('id', $global_pipeline)
+                        ->where('workspace_id', $getActiveWorkSpace)
+                        ->first();
+                }
+                if (empty($pipeline)) {
+                    $user = Auth::user();
+                    if ($user->default_pipeline) {
+                        $pipeline = \Workdo\Lead\Entities\Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->where('id', '=', $user->default_pipeline)->first();
+                    }
+                    if (empty($pipeline)) {
+                        $pipeline = \Workdo\Lead\Entities\Pipeline::where('created_by', $creatorId)->where('workspace_id', $getActiveWorkSpace)->first();
+                    }
+                }
+
+                if (empty($pipeline)) {
+                    return response()->json(['success' => false, 'message' => __('Please create pipeline.')]);
+                }
+
+                // Resolve global stage
+                $stage = null;
+                if (!empty($global_stage)) {
+                    $stage = \Workdo\Lead\Entities\LeadStage::where('id', $global_stage)
+                        ->where('pipeline_id', $pipeline->id)
+                        ->where('workspace_id', $getActiveWorkSpace)
+                        ->first();
+                }
+                if (empty($stage)) {
+                    $stage = \Workdo\Lead\Entities\LeadStage::where('pipeline_id', $pipeline->id)->where('workspace_id', $getActiveWorkSpace)->orderBy('order')->first();
+                }
+
+                if (empty($stage)) {
+                    return response()->json(['success' => false, 'message' => __('Please create stage for this pipeline.')]);
+                }
+
+                $create_fail_log = function ($row_number, $name, $email, $phone, $reason, $row) {
+                    return [
+                        'row' => $row_number,
+                        'name' => $name,
+                        'email' => $email,
+                        'phone' => $phone,
+                        'reason' => $reason,
+                        'original_row' => $row
+                    ];
+                };
+
+                $chunk_failures = [];
+
+                foreach ($process_data as $key => $row) {
+                    $row_number = $chunk_index + $key + 1;
+
+                    // Extract values using mapping
+                    $name = ($map_name !== null && $map_name !== '' && isset($row[$map_name])) ? trim($row[$map_name]) : '';
+                    $email = ($map_email !== null && $map_email !== '' && isset($row[$map_email])) ? trim($row[$map_email]) : '';
+                    $phone = ($map_phone !== null && $map_phone !== '' && isset($row[$map_phone])) ? trim($row[$map_phone]) : '';
+                    $csv_date = ($map_date !== null && $map_date !== '' && isset($row[$map_date])) ? trim($row[$map_date]) : '';
+                    $csv_source = ($map_sources !== null && $map_sources !== '' && isset($row[$map_sources])) ? trim($row[$map_sources]) : '';
+                    $csv_user = ($map_user_id !== null && $map_user_id !== '' && isset($row[$map_user_id])) ? trim($row[$map_user_id]) : '';
+                    $csv_team = ($map_team !== null && $map_team !== '' && isset($row[$map_team])) ? trim($row[$map_team]) : '';
+                    $csv_creator = ($map_created_by !== null && $map_created_by !== '' && isset($row[$map_created_by])) ? trim($row[$map_created_by]) : '';
+                    $pan_number = ($map_pan_number !== null && $map_pan_number !== '' && isset($row[$map_pan_number])) ? trim($row[$map_pan_number]) : '';
+                    $aadhar_number = ($map_aadhar_number !== null && $map_aadhar_number !== '' && isset($row[$map_aadhar_number])) ? trim($row[$map_aadhar_number]) : '';
+                    $dp_id = ($map_dp_id !== null && $map_dp_id !== '' && isset($row[$map_dp_id])) ? trim($row[$map_dp_id]) : '';
+
+                    // Subject
+                    $subject = 'Lead from Bulk Import ' . date('Y-m-d');
+
+                    if (empty($name)) {
+                        $name = !empty($phone) ? $phone : (!empty($email) ? $email : $subject);
+                    }
+
+                    // Validation 1: Phone is required
+                    if (empty($phone)) {
+                        $fail_log = $create_fail_log($row_number, $name, $email, $phone, __('Phone number is required.'), $row);
+                        $failed_leads[] = $fail_log;
+                        $chunk_failures[] = $fail_log;
+                        continue;
+                    }
+
+                    // Validation 2: Email format
+                    if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $fail_log = $create_fail_log($row_number, $name, $email, $phone, __('Invalid email format.'), $row);
+                        $failed_leads[] = $fail_log;
+                        $chunk_failures[] = $fail_log;
+                        continue;
+                    }
+
+                    // Duplicate Check
+                    $is_duplicate = false;
+                    $dup_reason = '';
+
+                    // Check Phone duplicates
+                    if (in_array($phone, $imported_phones)) {
+                        $is_duplicate = true;
+                        $dup_reason = __('Duplicate phone number in CSV file.');
+                    } else {
+                        $exists = \Workdo\Lead\Entities\Lead::where('phone', $phone)->where('workspace_id', $getActiveWorkSpace)->exists();
+                        if ($exists) {
+                            $is_duplicate = true;
+                            $dup_reason = __('Phone number already exists in database.');
+                        }
+                    }
+
+
+
+                    if ($is_duplicate) {
+                        $fail_log = $create_fail_log($row_number, $name, $email, $phone, $dup_reason, $row);
+                        $failed_leads[] = $fail_log;
+                        $chunk_failures[] = $fail_log;
+                        continue;
+                    }
+
+                    // Resolve Dynamic Fields
+                    // 1. Responsible Person (user_id)
+                    $resolved_user_id = null;
+                    $matched_user_record = null;
+                    if (!empty($csv_user)) {
+                        $csv_user_clean = strtolower(trim(preg_replace('/\s+/u', ' ', $csv_user)));
+
+                        // Normalize "Lever / Levers / Leaver / Leavers" suffix variations
+                        $csv_user_normalized = preg_replace('/\s+(levers|leavers|lever|leaver)$/i', '', $csv_user_clean);
+
+                        if (is_numeric($csv_user_clean)) {
+                            $usr = $all_users->firstWhere('id', intval($csv_user_clean));
+                            if ($usr)
+                                $matched_user_record = $usr;
+                        }
+                        // Exact email match
+                        if (!$matched_user_record) {
+                            $usr = $all_users->first(function ($u) use ($csv_user_clean) {
+                                return strtolower(trim($u->email)) === $csv_user_clean;
+                            });
+                            if ($usr)
+                                $matched_user_record = $usr;
+                        }
+                        // Exact name match
+                        if (!$matched_user_record) {
+                            $usr = $all_users->first(function ($u) use ($csv_user_clean) {
+                                return strtolower(trim($u->name)) === $csv_user_clean;
+                            });
+                            if ($usr)
+                                $matched_user_record = $usr;
+                        }
+                        // Partial/contains name match
+                        if (!$matched_user_record) {
+                            $usr = $all_users->first(function ($u) use ($csv_user_clean) {
+                                $db_name = strtolower(trim($u->name));
+                                return str_contains($db_name, $csv_user_clean) || str_contains($csv_user_clean, $db_name);
+                            });
+                            if ($usr)
+                                $matched_user_record = $usr;
+                        }
+                        // ── Lever/Levers/Leaver/Leavers normalization match ──
+                        // Strip suffix from CSV value and match against DB name prefix
+                        // e.g. "legend leavers" → strip → "legend" matches "legend leaver"
+                        if (!$matched_user_record && $csv_user_normalized !== $csv_user_clean) {
+                            $usr = $all_users->first(function ($u) use ($csv_user_normalized) {
+                                $db_name_normalized = preg_replace('/\s+(levers|leavers|lever|leaver)$/i', '', strtolower(trim($u->name)));
+                                return $db_name_normalized === $csv_user_normalized
+                                    || str_contains($db_name_normalized, $csv_user_normalized)
+                                    || str_contains($csv_user_normalized, $db_name_normalized);
+                            });
+                            if ($usr)
+                                $matched_user_record = $usr;
+                        }
+
+                        if ($matched_user_record) {
+                            // Allow Lever/Leaver system accounts (is_enable_login=0) to be responsible persons
+                            // They are internal pool accounts, not real login users
+                            $isLeverAccount = preg_match('/\s+(lever|leaver)$/i', $matched_user_record->name);
+                            if ($matched_user_record->is_disable == 1) {
+                                $fail_log = $create_fail_log($row_number, $name, $email, $phone, sprintf(__('Responsible Person "%s" is inactive/disabled.'), $matched_user_record->name), $row);
+                                $failed_leads[] = $fail_log;
+                                $chunk_failures[] = $fail_log;
+                                continue;
+                            }
+                            if (!$isLeverAccount && $matched_user_record->is_enable_login != 1) {
+                                $fail_log = $create_fail_log($row_number, $name, $email, $phone, sprintf(__('Responsible Person "%s" is inactive/disabled.'), $matched_user_record->name), $row);
+                                $failed_leads[] = $fail_log;
+                                $chunk_failures[] = $fail_log;
+                                continue;
+                            }
+                            $resolved_user_id = $matched_user_record->id;
+                        } else {
+                            $fail_log = $create_fail_log($row_number, $name, $email, $phone, sprintf(__('Responsible Person "%s" not found in the workspace.'), $csv_user), $row);
+                            $failed_leads[] = $fail_log;
+                            $chunk_failures[] = $fail_log;
+                            continue;
+                        }
+                    }
+
+                    if (!$resolved_user_id) {
+                        $resolved_user_id = !empty($global_user) ? $global_user : $creatorId;
+                        $matched_user_record = $all_users->firstWhere('id', $resolved_user_id);
+                    }
+
+                    // 1.1. Team Verification
+                    if ($map_team !== null && $map_team !== '' && !empty($csv_team)) {
+                        $resolved_team = null;
+                        $csv_team_clean = strtolower(trim(preg_replace('/\s+/u', ' ', $csv_team)));
+                        $csv_team_nos = (str_ends_with($csv_team_clean, 's') && !str_ends_with($csv_team_clean, 'ss')) ? substr($csv_team_clean, 0, -1) : $csv_team_clean;
+
+                        if (is_numeric($csv_team_clean)) {
+                            $resolved_team = $all_teams->firstWhere('id', intval($csv_team_clean));
+                        }
+                        if (!$resolved_team) {
+                            $resolved_team = $all_teams->first(function ($t) use ($csv_team_clean) {
+                                return strtolower(trim($t->name)) === $csv_team_clean;
+                            });
+                        }
+                        if (!$resolved_team) {
+                            // Exact singular/plural match (e.g. FIGHTER vs FIGHTERs)
+                            $resolved_team = $all_teams->first(function ($t) use ($csv_team_clean, $csv_team_nos) {
+                                $t_name = strtolower(trim($t->name));
+                                $t_name_nos = (str_ends_with($t_name, 's') && !str_ends_with($t_name, 'ss')) ? substr($t_name, 0, -1) : $t_name;
+                                return $t_name === $csv_team_nos || $t_name_nos === $csv_team_clean || $t_name_nos === $csv_team_nos;
+                            });
+                        }
+                        if (!$resolved_team) {
+                            $resolved_team = $all_teams->first(function ($t) use ($csv_team_clean) {
+                                $t_name = strtolower(trim($t->name));
+                                return str_contains($t_name, $csv_team_clean) || str_contains($csv_team_clean, $t_name);
+                            });
+                        }
+
+                        if (!$resolved_team) {
+                            $fail_log = $create_fail_log($row_number, $name, $email, $phone, sprintf(__('Team "%s" not found in the workspace.'), $csv_team), $row);
+                            $failed_leads[] = $fail_log;
+                            $chunk_failures[] = $fail_log;
+                            continue;
+                        }
+
+                        // Validate if the resolved user belongs to the team
+                        if ($resolved_user_id) {
+                            $emp = $all_employees->firstWhere('user_id', $resolved_user_id);
+                            if (!$emp || $emp->department_id != $resolved_team->id) {
+                                $fail_log = $create_fail_log($row_number, $name, $email, $phone, sprintf(__('Responsible Person "%s" does not belong to Team "%s".'), $matched_user_record ? $matched_user_record->name : $csv_user, $resolved_team->name), $row);
+                                $failed_leads[] = $fail_log;
+                                $chunk_failures[] = $fail_log;
+                                continue;
+                            }
+                        }
+                    }
+
+                    // 2. Created By (created_by)
+                    $resolved_created_by = null;
+                    if (!empty($csv_creator)) {
+                        $csv_creator_clean = strtolower(trim(preg_replace('/\s+/u', ' ', $csv_creator)));
+                        $matched_creator_record = null;
+                        if (is_numeric($csv_creator_clean)) {
+                            $usr = $all_users->firstWhere('id', intval($csv_creator_clean));
+                            if ($usr)
+                                $matched_creator_record = $usr;
+                        }
+                        if (!$matched_creator_record) {
+                            $usr = $all_users->first(function ($u) use ($csv_creator_clean) {
+                                return strtolower(trim($u->email)) === $csv_creator_clean;
+                            });
+                            if ($usr)
+                                $matched_creator_record = $usr;
+                        }
+                        if (!$matched_creator_record) {
+                            $usr = $all_users->first(function ($u) use ($csv_creator_clean) {
+                                return strtolower(trim($u->name)) === $csv_creator_clean;
+                            });
+                            if ($usr)
+                                $matched_creator_record = $usr;
+                        }
+                        if (!$matched_creator_record) {
+                            $usr = $all_users->first(function ($u) use ($csv_creator_clean) {
+                                $db_name = strtolower(trim($u->name));
+                                return str_contains($db_name, $csv_creator_clean) || str_contains($csv_creator_clean, $db_name);
+                            });
+                            if ($usr)
+                                $matched_creator_record = $usr;
+                        }
+
+                        if ($matched_creator_record) {
+                            if ($matched_creator_record->is_disable == 1 || $matched_creator_record->is_enable_login != 1) {
+                                $fail_log = $create_fail_log($row_number, $name, $email, $phone, sprintf(__('Created By User "%s" is inactive/disabled.'), $matched_creator_record->name), $row);
+                                $failed_leads[] = $fail_log;
+                                $chunk_failures[] = $fail_log;
+                                continue;
+                            }
+                            $resolved_created_by = $matched_creator_record->id;
+                        } else {
+                            $fail_log = $create_fail_log($row_number, $name, $email, $phone, sprintf(__('Created By User "%s" not found.'), $csv_creator), $row);
+                            $failed_leads[] = $fail_log;
+                            $chunk_failures[] = $fail_log;
+                            continue;
+                        }
+                    }
+                    if (!$resolved_created_by) {
+                        $resolved_created_by = $creatorId;
+                    }
+
+                    // 3. Source (sources)
+                    $resolved_source_id = null;
+                    if (!empty($csv_source)) {
+                        if (is_numeric($csv_source)) {
+                            $src = \Workdo\Lead\Entities\Source::where('id', $csv_source)->where('workspace_id', $getActiveWorkSpace)->first();
+                            if ($src)
+                                $resolved_source_id = $src->id;
+                        } else {
+                            $src = \Workdo\Lead\Entities\Source::where('name', 'like', '%' . $csv_source . '%')->where('workspace_id', $getActiveWorkSpace)->first();
+                            if ($src) {
+                                $resolved_source_id = $src->id;
+                            } else {
+                                $src = \Workdo\Lead\Entities\Source::create([
+                                    'name' => $csv_source,
+                                    'workspace_id' => $getActiveWorkSpace,
+                                    'created_by' => $creatorId
+                                ]);
+                                $resolved_source_id = $src->id;
+                            }
+                        }
+                    }
+                    if (!$resolved_source_id) {
+                        $resolved_source_id = $global_source ?? null;
+                    }
+
+                    // 4. Created Date (date)
+                    $resolved_date = date('Y-m-d');
+                    if (!empty($csv_date)) {
+                        $time = strtotime($csv_date);
+                        if ($time) {
+                            $resolved_date = date('Y-m-d', $time);
+                        }
+                    }
+
+                    try {
+                        // Check stage permissions
+                        if ($stage && !$stage->permissions()->can_edit) {
+                            throw new \Exception(__('You do not have permission to create leads in this stage.'));
+                        }
+
+                        $lead = \Workdo\Lead\Entities\Lead::create([
+                            'subject' => $subject,
+                            'name' => $name,
+                            'user_id' => $resolved_user_id,
+                            'email' => $email,
+                            'phone' => $phone,
+                            'pipeline_id' => $pipeline->id,
+                            'stage_id' => $stage->id,
+                            'sources' => $resolved_source_id,
+                            'created_by' => $resolved_created_by,
+                            'workspace_id' => $getActiveWorkSpace,
+                            'date' => $resolved_date,
+                            'pan_number' => $pan_number,
+                            'aadhar_number' => $aadhar_number,
+                        ]);
+
+                        \Workdo\Lead\Entities\UserLead::firstOrCreate([
+                            'user_id' => $resolved_user_id,
+                            'lead_id' => $lead->id
+                        ]);
+
+                        $lead->activities()->create([
+                            'user_id' => Auth::user()->id,
+                            'log_type' => 'Lead Imported',
+                            'remark' => json_encode(['message' => __('Lead imported via Bulk CSV by ') . Auth::user()->name]),
+                        ]);
+
+                        foreach ($map_custom_fields as $cf_id => $col_idx) {
+                            $cf_val = isset($row[$col_idx]) ? trim($row[$col_idx]) : '';
+                            if ($cf_val !== '') {
+                                \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
+                                    ['lead_id' => $lead->id, 'field_id' => $cf_id],
+                                    ['value' => $cf_val]
+                                );
+                            }
+                        }
+
+                        // Successfully processed, track to avoid duplicates
+                        $imported_phones[] = $phone;
+                        if (!empty($email)) {
+                            $imported_emails[] = $email;
+                        }
+
+                    } catch (\Exception $e) {
+                        $fail_log = $create_fail_log($row_number, $name, $email, $phone, $e->getMessage(), $row);
+                        $failed_leads[] = $fail_log;
+                        $chunk_failures[] = $fail_log;
+                    }
+                }
+
+                // Save lists to session
+                session()->put('bulk_imported_phones', $imported_phones);
+                session()->put('bulk_imported_emails', $imported_emails);
+                session()->put('bulk_failed_leads', $failed_leads);
+                session()->save();
+
+                $processed_count = $chunk_index + count($process_data);
+                $is_finished = ($processed_count >= $total_items);
+
+                // Clean up file if finished
+                if ($is_finished && !empty($filePath) && file_exists($filePath)) {
+                    @unlink($filePath);
+                    session()->forget('bulk_import_file_path');
+                }
+
+                return response()->json($this->cleanUtf8([
+                    'success' => true,
+                    'current' => $processed_count,
+                    'total' => $total_items,
+                    'is_finished' => $is_finished,
+                    'failed_count' => count($failed_leads),
+                    'chunk_failures' => $chunk_failures,
+                    'all_failed_leads' => $is_finished ? $failed_leads : []
+                ]));
+
+            } else {
+                return response()->json(['success' => false, 'message' => __('Permission Denied')]);
+            }
+        } catch (\Exception $e) {
+            \Log::error("CRITICAL BULK IMPORT PROCESS ERROR: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            return response()->json([
+                'success' => false,
+                'message' => 'Critical error: ' . $this->cleanUtf8($e->getMessage())
+            ], 500);
+        }
+    }
+
+    public function syncSectionApi(Request $request)
+    {
+        $leadId = $request->lead_id;
+        $sectionId = $request->section_id;
+
+        $lead = Lead::find($leadId);
+        if (!$lead) {
+            return response()->json(['error' => __('Lead not found')], 404);
+        }
+
+        $section = \Workdo\Lead\Entities\LeadSection::find($sectionId);
+        if (!$section) {
+            return response()->json(['error' => __('Section not found')], 404);
+        }
+
+        // Check if there is an API configured on the section level
+        if (!empty($section->api_url)) {
+            $updatedValues = $this->executeSectionApi($lead, $section);
+            return response()->json([
+                'success' => __('Section API synced successfully.'),
+                'values' => $updatedValues
+            ]);
+        }
+
+        $apiFields = $section->fields()->whereNotNull('api_url')->get();
+        if ($apiFields->isEmpty()) {
+            return response()->json(['error' => __('No API configured for this section')], 400);
+        }
+
+        $updatedValues = [];
+        foreach ($apiFields as $cf) {
+            $updatedVal = $this->executeSingleFieldApi($lead, $cf);
+            if ($updatedVal !== null) {
+                $updatedValues[$cf->id] = $updatedVal;
+            }
+        }
+
+        return response()->json([
+            'success' => __('Section fields synced successfully.'),
+            'values' => $updatedValues
+        ]);
+    }
+
+    private function triggerCustomFieldApis($lead, $stageId)
+    {
+        // 1. Process Section level APIs
+        $sections = \Workdo\Lead\Entities\LeadSection::where('api_trigger_stage_id', $stageId)
+            ->whereNotNull('api_url')
+            ->where('workspace_id', getActiveWorkSpace())
+            ->get();
+            
+        foreach ($sections as $section) {
+            $this->executeSectionApi($lead, $section, $stageId);
+        }
+
+        // 2. Process Custom Field level APIs
+        $apiFields = \Workdo\Lead\Entities\LeadCustomField::where('api_trigger_stage_id', $stageId)
+            ->whereNotNull('api_url')
+            ->where('workspace_id', getActiveWorkSpace())
+            ->get();
+
+        foreach ($apiFields as $cf) {
+            $this->executeSingleFieldApi($lead, $cf, $stageId);
+        }
+    }
+
+    private function executeSectionApi($lead, $section, $stageId = null)
+    {
+        $updatedValues = [];
+        try {
+            $url = $section->api_url;
+            $method = strtoupper($section->api_method ?? 'GET');
+            $payload = [
+                'lead_id' => $lead->id,
+                'lead_name' => $lead->name,
+                'lead_email' => $lead->email,
+                'lead_phone' => $lead->phone,
+                'stage_id' => $stageId ?? $lead->stage_id,
+            ];
+
+            $response = null;
+            if ($method === 'POST') {
+                $response = \Illuminate\Support\Facades\Http::post($url, $payload);
+            } else {
+                $response = \Illuminate\Support\Facades\Http::get($url, $payload);
+            }
+
+            if ($response && $response->successful()) {
+                $resData = $response->json();
+                $mappingStr = $section->api_response_mapping;
+                if (!empty($mappingStr)) {
+                    $mappings = json_decode($mappingStr, true);
+                    if (is_array($mappings)) {
+                        foreach ($mappings as $resKey => $targetField) {
+                            $valueToSave = data_get($resData, $resKey);
+                            if ($valueToSave !== null) {
+                                $valStr = is_array($valueToSave) ? json_encode($valueToSave) : (string)$valueToSave;
+                                
+                                // Check if it is a system field
+                                if (in_array($targetField, ['name', 'email', 'phone', 'pan_number', 'aadhar_number', 'notes'])) {
+                                    $lead->{$targetField} = $valStr;
+                                    $lead->save();
+                                    $updatedValues[$targetField] = $valStr;
+                                } else {
+                                    // Custom field
+                                    \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
+                                        [
+                                            'lead_id' => $lead->id,
+                                            'field_id' => $targetField
+                                        ],
+                                        [
+                                            'value' => $valStr
+                                        ]
+                                    );
+                                    $updatedValues[$targetField] = $valStr;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $ex) {
+            \Log::warning("Lead Section API trigger failed for section ID {$section->id}: " . $ex->getMessage());
+        }
+        return $updatedValues;
+    }
+
+    private function executeSingleFieldApi($lead, $cf, $stageId = null)
+    {
+        try {
+            $url = $cf->api_url;
+            $method = strtoupper($cf->api_method ?? 'GET');
+            $payload = [
+                'lead_id' => $lead->id,
+                'lead_name' => $lead->name,
+                'lead_email' => $lead->email,
+                'lead_phone' => $lead->phone,
+                'stage_id' => $stageId ?? $lead->stage_id,
+            ];
+
+            $response = null;
+            if ($method === 'POST') {
+                $response = \Illuminate\Support\Facades\Http::post($url, $payload);
+            } else {
+                $response = \Illuminate\Support\Facades\Http::get($url, $payload);
+            }
+
+            if ($response && $response->successful()) {
+                $resData = $response->json();
+                $valueToSave = null;
+                if (!empty($cf->api_response_key)) {
+                    $valueToSave = data_get($resData, $cf->api_response_key);
+                } else {
+                    $valueToSave = $response->body();
+                }
+
+                if ($valueToSave !== null) {
+                    $valStr = is_array($valueToSave) ? json_encode($valueToSave) : $valueToSave;
+                    \Workdo\Lead\Entities\LeadCustomFieldValue::updateOrCreate(
+                        [
+                            'lead_id' => $lead->id,
+                            'field_id' => $cf->id
+                        ],
+                        [
+                            'value' => $valStr
+                        ]
+                    );
+                    return $valStr;
+                }
+            }
+        } catch (\Exception $ex) {
+            \Log::warning("Lead Custom Field API trigger failed for field ID {$cf->id}: " . $ex->getMessage());
+        }
+        return null;
+    }
+
+    public static function triggerWorkflow($lead, $newStageId)
+    {
+        if (self::$isCopying) {
+            return;
+        }
+        self::$isCopying = true;
+        try {
+            $workspaceId = $lead->workspace_id;
+            
+            if (self::$cachedWorkflowData === null || !isset(self::$cachedWorkflowData[$workspaceId])) {
+                $settings = \App\Models\Setting::where('key', 'lead_workflow_settings')
+                    ->where('workspace', $workspaceId)
+                    ->first();
+                if (!$settings) {
+                    self::$cachedWorkflowData[$workspaceId] = [];
+                } else {
+                    self::$cachedWorkflowData[$workspaceId] = json_decode($settings->value, true) ?: [];
+                }
+            }
+
+            $workflowData = self::$cachedWorkflowData[$workspaceId];
+            if (!is_array($workflowData)) {
+                return;
+            }
+
+            // Support both old flat rules format and new nested rules format
+            $rules = isset($workflowData['rules']) && is_array($workflowData['rules']) ? $workflowData['rules'] : $workflowData;
+
+            foreach ($rules as $rule) {
+                if ($rule['from_pipeline_id'] == $lead->pipeline_id && $rule['from_stage_id'] == $newStageId) {
+                    $actionType = $rule['action'] ?? 'copy';
+
+                    if ($actionType === 'move') {
+                        // Move the lead itself directly to target pipeline and stage
+                        $lead->pipeline_id = $rule['to_pipeline_id'];
+                        $lead->stage_id = $rule['to_stage_id'];
+                        $lead->save();
+
+                        // Add Activity Log
+                        \Workdo\Lead\Entities\LeadActivityLog::create([
+                            'user_id' => \Auth::user() ? \Auth::user()->id : 1,
+                            'lead_id' => $lead->id,
+                            'log_type' => 'Workflow Move Triggered',
+                            'remark' => json_encode([
+                                'title' => $lead->name,
+                                'message' => __('Lead moved directly to target pipeline via automation workflow.')
+                            ])
+                        ]);
+                    } else {
+                        // Check if this lead was already processed by the workflow to prevent duplicate triggers
+                        $alreadyTriggered = \Workdo\Lead\Entities\LeadActivityLog::where('lead_id', $lead->id)
+                            ->where('log_type', 'Workflow Triggered')
+                            ->exists();
+                        if ($alreadyTriggered) {
+                            continue;
+                        }
+
+                        // Precise check: check if a copy already exists in target stage with same name and phone
+                        $exists = \Workdo\Lead\Entities\Lead::where('stage_id', $rule['to_stage_id'])
+                            ->where('name', $lead->name)
+                            ->where('workspace_id', $workspaceId)
+                            ->when($lead->phone, function($query) use ($lead) {
+                                return $query->where('phone', $lead->phone);
+                            })
+                            ->exists();
+                        if ($exists) {
+                            continue;
+                        }
+
+                        // We have a match! Let's duplicate the lead.
+                        $newLead = new Lead();
+                        $newLead->name = $lead->name;
+                        $newLead->email = $lead->email;
+                        $newLead->subject = $lead->subject;
+                        $newLead->user_id = $lead->user_id;
+                        $newLead->pipeline_id = $rule['to_pipeline_id'];
+                        $newLead->stage_id = $rule['to_stage_id'];
+                        $newLead->phone = $lead->phone;
+                        $newLead->created_by = $lead->created_by;
+                        $newLead->workspace_id = $lead->workspace_id;
+                        $newLead->date = date('Y-m-d');
+                        $newLead->follow_up_date = $lead->follow_up_date;
+                        $newLead->pan_number = $lead->pan_number;
+                        $newLead->aadhar_number = $lead->aadhar_number;
+                        $newLead->updated_by = \Auth::user() ? \Auth::user()->id : $lead->updated_by;
+                        
+                        // Copy products/sources relation fields (comma-separated strings in DB)
+                        $newLead->sources = $lead->sources;
+                        $newLead->products = $lead->products;
+                        $newLead->notes = $lead->notes;
+                        $newLead->labels = $lead->labels;
+                        $newLead->save();
+
+                        // Assign users to user_lead relation (copy all assigned users from original lead)
+                        $oldUserLeads = \Workdo\Lead\Entities\UserLead::where('lead_id', $lead->id)->get();
+                        if ($oldUserLeads->count() > 0) {
+                            foreach ($oldUserLeads as $oldUL) {
+                                \Workdo\Lead\Entities\UserLead::firstOrCreate([
+                                    'lead_id' => $newLead->id,
+                                    'user_id' => $oldUL->user_id
+                                ]);
+                            }
+                        } else {
+                            \Workdo\Lead\Entities\UserLead::firstOrCreate([
+                                'lead_id' => $newLead->id,
+                                'user_id' => $newLead->user_id
+                            ]);
+                        }
+
+                        // Copy custom field values (where names match)
+                        $oldCustomFieldValues = \Workdo\Lead\Entities\LeadCustomFieldValue::where('lead_id', $lead->id)->get();
+                        if ($oldCustomFieldValues->count() > 0) {
+                            $oldFields = \Workdo\Lead\Entities\LeadCustomField::whereIn('id', $oldCustomFieldValues->pluck('field_id'))->get()->keyBy('id');
+                            $newFields = \Workdo\Lead\Entities\LeadCustomField::where('pipeline_id', $rule['to_pipeline_id'])
+                                ->where('workspace_id', $workspaceId)
+                                ->get()
+                                ->keyBy('name');
+
+                            foreach ($oldCustomFieldValues as $oldVal) {
+                                $oldField = $oldFields->get($oldVal->field_id);
+                                if ($oldField && $newFields->has($oldField->name)) {
+                                    $targetField = $newFields->get($oldField->name);
+                                    \Workdo\Lead\Entities\LeadCustomFieldValue::create([
+                                        'lead_id' => $newLead->id,
+                                        'field_id' => $targetField->id,
+                                        'value' => $oldVal->value
+                                    ]);
+                                }
+                            }
+                        }
+
+                        // Add Activity Log on old lead
+                        \Workdo\Lead\Entities\LeadActivityLog::create([
+                            'user_id' => \Auth::user() ? \Auth::user()->id : 1,
+                            'lead_id' => $lead->id,
+                            'log_type' => 'Workflow Triggered',
+                            'remark' => json_encode([
+                                'title' => $lead->name,
+                                'message' => __('Lead duplicated to target pipeline via automation workflow.')
+                            ])
+                        ]);
+
+                        // Add Activity Log on new lead
+                        $fromPipeline = \Workdo\Lead\Entities\Pipeline::find($lead->pipeline_id);
+                        \Workdo\Lead\Entities\LeadActivityLog::create([
+                            'user_id' => \Auth::user() ? \Auth::user()->id : 1,
+                            'lead_id' => $newLead->id,
+                            'log_type' => 'Workflow Copy Created',
+                            'remark' => json_encode([
+                                'title' => $newLead->name,
+                                'message' => __('Lead created as a workflow copy from pipeline: ') . ($fromPipeline ? $fromPipeline->name : 'Unknown')
+                            ])
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Lead copy workflow failed: ' . $e->getMessage());
+        } finally {
+            self::$isCopying = false;
+        }
+    }
+
+    public function automationsIndex()
+    {
+        if (Auth::user()->isAbleTo('crm manage')) {
+            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', getActiveWorkSpace())
+                ->with('leadStages')
+                ->get();
+                
+            $settings = \App\Models\Setting::where('key', 'lead_workflow_settings')
+                ->where('workspace', getActiveWorkSpace())
+                ->first();
+                
+            $workflowData = $settings ? json_decode($settings->value, true) : [];
+            
+            \Illuminate\Support\Facades\Cache::forget('sidebar_menu_v2_' . Auth::user()->id);
+            
+            return view('lead::settings.automations_graph', compact('pipelines', 'workflowData'));
+        }
+        return redirect()->back()->with('error', __('Permission Denied.'));
+    }
+
+    public function saveAutomations(Request $request)
+    {
+        if (Auth::user()->isAbleTo('crm manage')) {
+            // Set large execution time and memory limit to handle copying large datasets (e.g. 7k+ leads)
+            @set_time_limit(600);
+            @ini_set('memory_limit', '1024M');
+
+            $rules = $request->input('rules', []);
+            $positions = $request->input('positions', []);
+
+            $workflowData = [
+                'rules' => $rules,
+                'positions' => $positions
+            ];
+
+            \App\Models\Setting::updateOrCreate(
+                [
+                    'key' => 'lead_workflow_settings',
+                    'workspace' => getActiveWorkSpace(),
+                ],
+                [
+                    'value' => json_encode($workflowData),
+                    'created_by' => creatorId(),
+                ]
+            );
+
+            // Clear static cache to ensure newly saved rules are loaded
+            self::$cachedWorkflowData = null;
+
+            // Retroactively trigger workflow for existing leads in chunks to prevent timeout
+            $workspaceId = getActiveWorkSpace();
+            foreach ($rules as $rule) {
+                $fromStageId = $rule['from_stage_id'];
+                
+                \Workdo\Lead\Entities\Lead::where('stage_id', $fromStageId)
+                    ->where('workspace_id', $workspaceId)
+                    ->chunk(100, function ($leads) use ($fromStageId) {
+                        foreach ($leads as $lead) {
+                            self::triggerWorkflow($lead, $fromStageId);
+                        }
+                    });
+            }
+
+            comapnySettingCacheForget();
+            \Illuminate\Support\Facades\Cache::forget('sidebar_menu_v2_' . Auth::user()->id);
+
+            return response()->json(['success' => true, 'message' => __('Automations saved successfully and applied to existing leads.')]);
+        }
+        return response()->json(['success' => false, 'message' => __('Permission Denied.')], 403);
     }
 }

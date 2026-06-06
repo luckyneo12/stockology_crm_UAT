@@ -57,6 +57,11 @@
                     <i class="ti ti-file-description me-2"></i>{{ __('PDF Management') }}
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" id="pills-stages-tab" data-bs-toggle="pill" href="#pills-stages" role="tab">
+                    <i class="ti ti-list me-2"></i>{{ __('Stages') }}
+                </a>
+            </li>
         </ul>
 
         <div class="tab-content" id="pills-tabContent">
@@ -726,6 +731,61 @@
                                 <button type="submit" class="btn btn-primary px-5">{{ __('Save PDF Configuration') }}</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stages Tab -->
+            <div class="tab-pane fade" id="pills-stages" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>{{ __('Manage Stages') }}</h5>
+                        @permission('ekyc manage')
+                            <a href="#" class="btn btn-sm btn-primary" data-ajax-popup="true" data-size="md" data-title="{{__('Create Stage')}}" data-url="{{route('ekyc.stages.create')}}">
+                                <i class="ti ti-plus me-1"></i>{{ __('Create Stage') }}
+                            </a>
+                        @endpermission
+                    </div>
+                    <div class="card-body table-border-style">
+                        <div class="table-responsive">
+                            <table class="table" id="stages">
+                                <thead>
+                                    <tr>
+                                        <th>{{__('Stage Name')}}</th>
+                                        <th>{{__('Pipeline')}}</th>
+                                        <th width="250px">{{__('Action')}}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php
+                                        $stages = \Workdo\Ekyc\Entities\EkycStage::where('created_by', '=', creatorId())->where('workspace_id', '=', getActiveWorkSpace())->orderBy('order')->get();
+                                    @endphp
+                                    @foreach ($stages as $stage)
+                                        <tr>
+                                            <td>{{ $stage->name }}</td>
+                                            <td>{{ !empty($stage->pipeline) ? $stage->pipeline->name : '' }}</td>
+                                            <td class="Action">
+                                                <span>
+                                                @permission('ekyc manage')
+                                                    <div class="action-btn me-2 mt-1">
+                                                        <a href="#" data-url="{{ route('ekyc.stages.edit', $stage->id) }}" data-ajax-popup="true" data-title="{{__('Edit Stage')}}" class="mx-3 btn btn-sm align-items-center bg-info" data-bs-toggle="tooltip" data-bs-placement="top" title="{{__('Edit')}}" ><i class="ti ti-pencil text-white"></i></a>
+                                                    </div>
+                                                @endpermission
+                                                @permission('ekyc manage')
+                                                    <div class="action-btn">
+                                                        {!! Form::open(['method' => 'DELETE', 'route' => ['ekyc.stages.destroy', $stage->id]]) !!}
+                                                        <a href="#!" class="btn btn-sm align-items-center show_confirm bg-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="{{__('Delete')}}" data-confirm="{{ __('Are You Sure?') }}" data-text="{{ __('This action can not be undone. Do you want to continue?') }}">
+                                                            <span class="text-white"> <i class="ti ti-trash"></i></span></a>
+                                                        {!! Form::close() !!}
+                                                    </div>
+                                                @endpermission
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

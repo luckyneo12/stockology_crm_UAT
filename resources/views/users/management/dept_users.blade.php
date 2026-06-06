@@ -1,28 +1,37 @@
-<div class="row">
+<div class="row g-4 align-items-stretch">
     <div class="col-md-7">
-        <h6>{{ __('Current Users') }}</h6>
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead>
+        <div class="d-flex align-items-center mb-3">
+            <i class="ti ti-users text-primary me-2 fs-5"></i>
+            <h6 class="mb-0 fw-bold">{{ __('Current Users') }}</h6>
+            <span class="badge bg-light-primary text-primary ms-2 rounded-pill">{{ count($employees) }}</span>
+        </div>
+        <div class="table-responsive" style="max-height: 380px; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 10px; background: #fff;">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light sticky-top">
                     <tr>
-                        <th>{{ __('Name') }}</th>
-                        <th>{{ __('Role') }}</th>
-                        <th class="text-end">{{ __('Action') }}</th>
+                        <th class="ps-3 border-0 py-3">{{ __('Name') }}</th>
+                        <th class="border-0 py-3">{{ __('Role') }}</th>
+                        <th class="text-end pe-3 border-0 py-3">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($employees as $emp)
                         <tr>
-                            <td>
+                            <td class="ps-3 py-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="{{ (!empty($emp->user) && check_file($emp->user->avatar)) ? get_file($emp->user->avatar) : get_file('uploads/users-avatar/avatar.png') }}" class="wid-20 rounded-circle me-2">
-                                    <span>{{ $emp->user->name ?? ($emp->name ?? __('Unknown')) }}</span>
+                                    <img src="{{ (!empty($emp->user) && check_file($emp->user->avatar)) ? get_file($emp->user->avatar) : get_file('uploads/users-avatar/avatar.png') }}" class="rounded-circle me-2 border" style="width: 32px; height: 32px; object-fit: cover;">
+                                    <div>
+                                        <span class="fw-semibold text-dark d-block">{{ $emp->user->name ?? ($emp->name ?? __('Unknown')) }}</span>
+                                        <small class="text-muted" style="font-size:0.75rem;">{{ $emp->user->email ?? '' }}</small>
+                                    </div>
                                 </div>
                             </td>
-                            <td><span class="badge bg-light-primary text-primary">{{ ucfirst($emp->user->type ?? '-') }}</span></td>
-                            <td class="text-end">
+                            <td class="py-3">
+                                <span class="badge bg-light-success text-success px-2.5 py-1.5 rounded-pill text-xs fw-semibold">{{ ucfirst($emp->user->type ?? '-') }}</span>
+                            </td>
+                            <td class="text-end pe-3 py-3">
                                 @permission('department edit')
-                                    <button class="btn btn-sm btn-danger btn-remove-user" data-emp-id="{{ $emp->id }}" data-dept-id="{{ $department->id }}" data-bs-toggle="tooltip" title="{{ __('Remove from Department') }}">
+                                    <button class="btn btn-sm btn-outline-danger btn-remove-user p-2 rounded-circle d-inline-flex align-items-center justify-content-center" style="width:32px; height:32px;" data-emp-id="{{ $emp->id }}" data-dept-id="{{ $department->id }}" data-bs-toggle="tooltip" title="{{ __('Remove from Department') }}">
                                         <i class="ti ti-trash"></i>
                                     </button>
                                 @endpermission
@@ -30,28 +39,96 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="text-center text-muted">{{ __('No users in this department.') }}</td>
+                            <td colspan="3" class="text-center text-muted py-5">
+                                <i class="ti ti-users-group fs-2 d-block mb-2 text-muted"></i>
+                                <span>{{ __('No users in this department.') }}</span>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
-    <div class="col-md-5 border-start">
-        <h6>{{ __('Add User to Department') }}</h6>
-        <div class="form-group mb-3">
-            <select class="form-control" id="user_to_add">
-                <option value="">{{ __('Select User') }}</option>
-                @foreach($availableUsers as $user)
-                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
-                @endforeach
-            </select>
+    <div class="col-md-5">
+        <div class="h-100 p-4 rounded-3 border bg-light d-flex flex-column justify-content-between" style="border-color: #f1f5f9 !important;">
+            <div>
+                <div class="d-flex align-items-center mb-3">
+                    <i class="ti ti-user-plus text-success me-2 fs-5"></i>
+                    <h6 class="mb-0 fw-bold">{{ __('Add User') }}</h6>
+                </div>
+                <p class="text-muted small mb-3">{{ __('Assign an existing employee to this department.') }}</p>
+                <div class="form-group mb-4">
+                    <select class="form-control select2-searchable" id="user_to_add" style="width:100%;">
+                        <option value="">{{ __('Search user by name or email...') }}</option>
+                        @foreach($availableUsers as $user)
+                            <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-success rounded-pill w-100 py-2.5 fw-semibold d-flex align-items-center justify-content-center gap-2" id="btn_add_user_to_dept" data-dept-id="{{ $department->id }}">
+                <i class="ti ti-circle-plus"></i> {{ __('Add User') }}
+            </button>
         </div>
-        <button class="btn btn-primary btn-sm w-100" id="btn_add_user_to_dept" data-dept-id="{{ $department->id }}">{{ __('Add User') }}</button>
     </div>
 </div>
 
+<style>
+    /* Select2 override for modal */
+    .select2-container--default .select2-selection--single {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #334155;
+        line-height: 42px;
+        padding-left: 14px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 42px;
+    }
+    .select2-dropdown {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+        z-index: 9999;
+    }
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        outline: none;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #18bf6b;
+        color: #fff;
+    }
+    .select2-results__option {
+        padding: 10px 14px;
+        font-size: 0.88rem;
+    }
+    .select2-container { width: 100% !important; }
+</style>
+
 <script>
+    // Initialize Select2 on the searchable dropdown
+    $(document).ready(function() {
+        if (typeof $.fn.select2 !== 'undefined') {
+            $('#user_to_add').select2({
+                placeholder: '{{ __("Search user by name or email...") }}',
+                allowClear: true,
+                dropdownParent: $('#deptModal'),
+                width: '100%'
+            });
+        }
+    });
+
     // Function to refresh modal content with a slight fade effect
     function refreshModal(deptId) {
         var modalBody = $('#deptModalBody');

@@ -24,7 +24,6 @@ use Workdo\Lead\Entities\Source;
 use Workdo\Lead\Entities\User as EntitiesUser;
 use Workdo\Lead\Entities\UserDeal;
 use Workdo\Lead\Entities\Reminder;
-use Workdo\ProductService\Entities\ProductService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
 use Workdo\Lead\DataTables\DealDataTable;
@@ -433,6 +432,7 @@ class DealController extends Controller
                 $pipelines = Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
                 $pipelines->prepend(__('Select Pipeline'), '');
                 $sources = Source::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
+                $products = [];
                 if (module_is_active('ProductService')) {
                     $products = ProductService::where('created_by', '=', $creatorId)->where('workspace_id', $getActiveWorkSpace)->get()->pluck('name', 'id');
                 }
@@ -911,7 +911,10 @@ class DealController extends Controller
             $getActiveWorkSpace = getActiveWorkSpace();
             $deal = Deal::find($id);
             if ($deal->created_by == $creatorId && $deal->workspace_id == $getActiveWorkSpace) {
-                $products = \Workdo\ProductService\Entities\ProductService::where('workspace_id', '=', $getActiveWorkSpace)->where('created_by', '=', $creatorId)->whereNOTIn('id', explode(',', $deal->products))->get()->pluck('name', 'id');
+                $products = [];
+                if (module_is_active('ProductService')) {
+                    $products = \Workdo\ProductService\Entities\ProductService::where('workspace_id', '=', $getActiveWorkSpace)->where('created_by', '=', $creatorId)->whereNOTIn('id', explode(',', $deal->products))->get()->pluck('name', 'id');
+                }
 
                 return view('lead::deals.products', compact('deal', 'products'));
             } else {
@@ -939,7 +942,10 @@ class DealController extends Controller
                     $deal->products = implode(',', array_merge($old_products, $products));
                     $deal->save();
 
-                    $objProduct = ProductService::whereIN('id', $products)->get()->pluck('name', 'id')->toArray();
+                    $objProduct = [];
+                    if (module_is_active('ProductService')) {
+                        $objProduct = \Workdo\ProductService\Entities\ProductService::whereIN('id', $products)->get()->pluck('name', 'id')->toArray();
+                    }
                     DealActivityLog::create(
                         [
                             'user_id' => $usr->id,

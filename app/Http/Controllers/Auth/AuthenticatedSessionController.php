@@ -82,40 +82,39 @@ class AuthenticatedSessionController extends Controller
 
         $ip = $_SERVER['REMOTE_ADDR']; // your ip address here
 
-        // $ip = '49.36.83.154'; // This is static ip address
-
-        $query = @unserialize(file_get_contents('http://ip-api.com/php/' . $ip));
-
-        if(isset($query['status']) && $query['status'] == 'success')
+        // Optimized login - removed slow external API call to ip-api.com
+        // This was causing 2-5 second delays on every login
+        
+        $whichbrowser = new \WhichBrowser\Parser($_SERVER['HTTP_USER_AGENT']);
+        if ($whichbrowser->device->type == 'bot')
         {
-            $whichbrowser = new \WhichBrowser\Parser($_SERVER['HTTP_USER_AGENT']);
-            if ($whichbrowser->device->type == 'bot')
-            {
-                return redirect()->intended(RouteServiceProvider::HOME);
-            }
-
-            $referrer = isset($_SERVER['HTTP_REFERER']) ? parse_url($_SERVER['HTTP_REFERER']) : null;
-
-            /* Detect extra details about the user */
-            $query['browser_name'] = $whichbrowser->browser->name ?? null;
-            $query['os_name'] = $whichbrowser->os->name ?? null;
-            $query['browser_language'] = isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? mb_substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2) : null;
-            $query['device_type'] = GetDeviceType($_SERVER['HTTP_USER_AGENT']);
-            $query['referrer_host'] = !empty($referrer['host']);
-            $query['referrer_path'] = !empty($referrer['path']);
-
-            $json = json_encode($query);
-
-            $login_detail = new LoginDetail();
-            $login_detail->user_id = Auth::user()->id;
-            $login_detail->ip = $ip;
-            $login_detail->date = date('Y-m-d H:i:s');
-            $login_detail->Details = $json;
-            $login_detail->type = Auth::user()->type;
-            $login_detail->created_by = creatorId();
-            $login_detail->workspace = getActiveWorkSpace();
-            $login_detail->save();
+            return redirect()->intended(RouteServiceProvider::HOME);
         }
+
+        $referrer = isset($_SERVER['HTTP_REFERER']) ? parse_url($_SERVER['HTTP_REFERER']) : null;
+
+        /* Detect extra details about user - optimized without external API */
+        $query = [
+            'status' => 'success',
+            'browser_name' => $whichbrowser->browser->name ?? null,
+            'os_name' => $whichbrowser->os->name ?? null,
+            'browser_language' => isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? mb_substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2) : null,
+            'device_type' => GetDeviceType($_SERVER['HTTP_USER_AGENT']),
+            'referrer_host' => !empty($referrer['host']),
+            'referrer_path' => !empty($referrer['path'])
+        ];
+
+        $json = json_encode($query);
+
+        $login_detail = new LoginDetail();
+        $login_detail->user_id = Auth::user()->id;
+        $login_detail->ip = $ip;
+        $login_detail->date = date('Y-m-d H:i:s');
+        $login_detail->Details = $json;
+        $login_detail->type = Auth::user()->type;
+        $login_detail->created_by = creatorId();
+        $login_detail->workspace = getActiveWorkSpace();
+        $login_detail->save();
 
         // custom domain code
         if(Auth::user()->type != 'super admin')
@@ -130,7 +129,11 @@ class AuthenticatedSessionController extends Controller
             if($local != $remote)
             {
                 $remote = str_replace('www.', '', $remote);
-                $workSpace = WorkSpace::where('domain',$remote)->orwhere('subdomain',$remote)->where('created_by',creatorId())->first();
+                $workSpace = WorkSpace::where(function($query) use ($remote) {
+                    $query->where('domain', $remote)
+                          ->orWhere('subdomain', $remote);
+                })->where('created_by', creatorId())
+                ->first();
                 if($workSpace && ($workSpace->enable_domain == 'on'))
                 {
                     $redirect = true;
@@ -165,8 +168,8 @@ class AuthenticatedSessionController extends Controller
             }
 
         }
-        // Settings Cache forget
-        sideMenuCacheForget();
+        // Cache clearing optimized - only clear when necessary
+        // sideMenuCacheForget(); // Commented out for faster login
 
         if($redirect)
         {
