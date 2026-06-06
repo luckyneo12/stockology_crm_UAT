@@ -641,6 +641,11 @@ class TargetTest extends TestCase
         $this->assertTrue($targets->contains('id', $targetDept->id));
         $this->assertTrue($targets->contains('id', $targetTeam->id));
         $this->assertTrue($targets->contains('id', $targetMember->id));
+        
+        $monthlyTargetsList = $response->viewData('monthlyTargetsList');
+        $this->assertNotNull($monthlyTargetsList);
+        // June is month 6: should contain dept, team, and member targets
+        $this->assertEquals(3, count($monthlyTargetsList[6]));
 
         // 2. Department Head gets all three (because they manage dept & child team & members)
         $response = $this->actingAs($deptHeadUser)->get(route('targets.index'));

@@ -1030,12 +1030,33 @@
                                                     $tVal = $stats['monthly_target'][$idx];
                                                     $aVal = $stats['monthly_achieved'][$idx];
                                                     $rate = $tVal > 0 ? round(($aVal / $tVal) * 100, 1) : 0;
+                                                    $mNumber = $idx + 1;
+                                                    $mTargets = $monthlyTargetsList[$mNumber] ?? [];
                                                 @endphp
                                                 <tr class="text-xs">
-                                                    <td class="font-weight-bold text-dark">{{ $monthLabel }}</td>
-                                                    <td class="text-center">{{ $tVal }}</td>
-                                                    <td class="text-center">{{ $aVal }}</td>
-                                                    <td class="text-center">
+                                                    <td class="font-weight-bold text-dark" style="vertical-align: middle;">
+                                                        <div class="d-flex flex-column gap-1">
+                                                            <span>{{ $monthLabel }}</span>
+                                                            @if(count($mTargets) > 0)
+                                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                                    @foreach($mTargets as $mt)
+                                                                        @php
+                                                                            $mtStatusBadge = $mt->status == 'Completed' ? 'bg-light-success text-success' : 'bg-light-warning text-warning';
+                                                                        @endphp
+                                                                        <span class="badge bg-light text-dark border d-inline-flex align-items-center gap-1 py-1 px-2 text-xxs" style="font-size: 10px; font-weight: 500; border-radius: 6px;" title="{{ $mt->target_name }} (Quota: {{ $mt->target_value }}, Achieved: {{ $mt->achieved_value }})">
+                                                                            <i class="ti ti-target text-primary" style="font-size: 10px;"></i>
+                                                                            <span class="text-truncate" style="max-width: 150px;">{{ $mt->target_name }}</span>
+                                                                            <strong class="ms-1">({{ $mt->target_value }})</strong>
+                                                                            <span class="badge {{ $mtStatusBadge }} p-0.5 rounded-circle" style="width: 6px; height: 6px;" title="{{ __($mt->status) }}"></span>
+                                                                        </span>
+                                                                    @endforeach
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center" style="vertical-align: middle;">{{ $tVal }}</td>
+                                                    <td class="text-center" style="vertical-align: middle;">{{ $aVal }}</td>
+                                                    <td class="text-center" style="vertical-align: middle;">
                                                         <span class="badge {{ $rate >= 80 ? 'bg-light-success text-success' : ($rate >= 45 ? 'bg-light-primary text-primary' : 'bg-light-danger text-danger') }}">
                                                             {{ $rate }}%
                                                         </span>

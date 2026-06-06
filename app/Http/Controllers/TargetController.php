@@ -637,16 +637,20 @@ class TargetController extends Controller
                 'remaining' => max(0, $tVal - $aVal)
             ];
         }
-        usort($employeePerformance, function($a, $b) {
-            return $b['progress'] <=> $a['progress'];
-        });
+        $monthlyTargetsList = array_fill(1, 12, []);
+        foreach ($targets as $t) {
+            if ($t->start_date) {
+                $m = (int)date('n', strtotime($t->start_date));
+                $monthlyTargetsList[$m][] = $t;
+            }
+        }
 
         $templates = TargetTemplate::where('workspace', getActiveWorkSpace())->get();
         return view('targets.index', compact(
             'targets', 'isManager', 'subordinateUsers', 'statuses', 'departments', 'teams',
             'stats', 'unitPerformance', 'teamPerformance', 'templates', 'employeePerformance',
             'isDeptHead', 'isTeamLead', 'myDeptTarget', 'myTeamTarget', 'myDept', 'myTeam',
-            'departmentLedger', 'teamLedger', 'memberLedger'
+            'departmentLedger', 'teamLedger', 'memberLedger', 'monthlyTargetsList'
         ));
     }
 
