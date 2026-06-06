@@ -24,7 +24,7 @@ class TargetController extends Controller
 
         $allDeptIds = [];
         foreach ($managedDepartments as $dept) {
-            $allDeptIds = array_merge($allDeptIds, $dept->allChildIds());
+            $allDeptIds = array_merge($allDeptIds, [$dept->id], $dept->allChildIds());
         }
 
         return \Workdo\Hrm\Entities\Employee::whereIn('department_id', $allDeptIds)
@@ -153,107 +153,110 @@ class TargetController extends Controller
         }
 
         // ── Hierarchy context variables ───────────────────────────────────────
-        $isDeptHead   = false;
-        $isTeamLead   = false;
-        $myDeptTarget = null;
-        $myTeamTarget = null;
-        $myDept       = null;
-        $myTeam       = null;
+        $isDeptHead     = false;
+        $isTeamLead     = false;
+        $myDeptTarget   = null;
+        $myTeamTarget   = null;
+        $myDept         = null;
+        $myTeam         = null;
+        $managedDeptIds = [];
+        $managedTeamIds = [];
+        $deptUserIds    = [];
+        $teamUserIds    = [];
 
         if (!$isCompany && module_is_active('Hrm')) {
             $myEmployee = \Workdo\Hrm\Entities\Employee::where('user_id', $usr->id)->first();
             if ($myEmployee) {
-                $myDeptObj = \Workdo\Hrm\Entities\Department::find($myEmployee->department_id);
-                if ($myDeptObj) {
-                    if ($myDeptObj->type == 'team') {
-                        // User belongs to a team — check if they are its manager
-                        if ($myDeptObj->manager_id == $myEmployee->id) {
-                            $isTeamLead   = true;
-                            $myTeam       = $myDeptObj;
-                            $myTeamTarget = Target::where('workspace', getActiveWorkSpace())
-                                ->where('team_id', $myDeptObj->id)
-                                ->latest()->first();
+                $managedDepts = \Workdo\Hrm\Entities\Department::where('manager_id', $myEmployee->id)
+                    ->where('workspace', getActiveWorkSpace())
+                    ->get();
+                
+                foreach ($managedDepts as $d) {
+                    if ($d->type == 'department') {
+                        $isDeptHead = true;
+                        if (!$myDept) {
+                            $myDept = $d;
                         }
-                        // Also check if the parent dept's manager is this user
-                        if ($myDeptObj->parent_id) {
-                            $parentDept = \Workdo\Hrm\Entities\Department::find($myDeptObj->parent_id);
-                            if ($parentDept && $parentDept->manager_id == $myEmployee->id) {
-                                $isDeptHead   = true;
-                                $myDept       = $parentDept;
-                                $myDeptTarget = Target::where('workspace', getActiveWorkSpace())
-                                    ->where('department_id', $parentDept->id)
-                                    ->latest()->first();
-                            }
+                        $managedDeptIds = array_merge($managedDeptIds, [$d->id], $d->allChildIds());
+                    } elseif ($d->type == 'team') {
+                        if (!$myTeam) {
+                            $myTeam = $d;
                         }
-                    } elseif ($myDeptObj->type == 'department') {
-                        // User belongs to a department — check if they are its manager
-                        if ($myDeptObj->manager_id == $myEmployee->id) {
-                            $isDeptHead   = true;
-                            $myDept       = $myDeptObj;
-                            $myDeptTarget = Target::where('workspace', getActiveWorkSpace())
-                                ->where('department_id', $myDeptObj->id)
-                                ->latest()->first();
-                        }
+                        $managedTeamIds[] = $d->id;
                     }
+                }
+                
+                if (!$isDeptHead && count($managedTeamIds) > 0) {
+                    $isTeamLead = true;
+                }
+
+                if ($isDeptHead && !empty($managedDeptIds)) {
+                    $managedDeptIds = array_unique(array_filter($managedDeptIds));
+                    $deptUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $managedDeptIds)
+                        ->whereNotNull('user_id')
+                        ->pluck('user_id')
+                        ->unique()
+                        ->toArray();
+                }
+
+                if ($isTeamLead && !empty($managedTeamIds)) {
+                    $teamUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $managedTeamIds)
+                        ->whereNotNull('user_id')
+                        ->pluck('user_id')
+                        ->unique()
+                        ->toArray();
+                }
+
+                if ($myDept) {
+                    $myDeptTarget = Target::where('workspace', getActiveWorkSpace())
+                        ->where('department_id', $myDept->id)
+                        ->latest()->first();
+                }
+                if ($myTeam) {
+                    $myTeamTarget = Target::where('workspace', getActiveWorkSpace())
+                        ->where('team_id', $myTeam->id)
+                        ->latest()->first();
                 }
             }
         }
         // ──────────────────────────────────────────────────────────────────────
 
-        $query = Target::where('workspace', getActiveWorkSpace());
+        $filterClosure = function($query) use ($usr, $isCompany, $isDeptHead, $isTeamLead, $managedDeptIds, $managedTeamIds, $deptUserIds, $teamUserIds) {
+            if ($isCompany) {
+                return;
+            }
 
-        // Hierarchy visibility filtering
-        if (!$isCompany) {
-            if ($visibility == 'all') {
-                // Can see everything in the workspace
-            } elseif ($visibility == 'department' && module_is_active('Hrm')) {
-                $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $usr->id)->first();
-                if ($employee) {
-                    $myDeptId = $employee->department_id;
-                    $dept = \Workdo\Hrm\Entities\Department::find($myDeptId);
-                    $allDeptIds = $dept ? array_merge([$myDeptId], $dept->allChildIds()) : [$myDeptId];
-                    $deptUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $allDeptIds)->pluck('user_id')->toArray();
-                    
-                    $query->where(function($q) use ($usr, $allDeptIds, $deptUserIds) {
-                        $q->where('assigned_to', $usr->id)
-                          ->orWhere('responsible_user_id', $usr->id)
-                          ->orWhere('assigned_by', $usr->id)
-                          ->orWhereIn('department_id', $allDeptIds)
-                          ->orWhereIn('team_id', $allDeptIds)
-                          ->orWhereIn('assigned_to', $deptUserIds);
-                    });
+            $query->where(function($q) use ($usr, $isDeptHead, $isTeamLead, $managedDeptIds, $managedTeamIds, $deptUserIds, $teamUserIds) {
+                if ($isDeptHead) {
+                    $q->where('assigned_to', $usr->id)
+                      ->orWhere('responsible_user_id', $usr->id)
+                      ->orWhere('assigned_by', $usr->id);
+                    if (!empty($managedDeptIds)) {
+                        $q->orWhereIn('department_id', $managedDeptIds)
+                          ->orWhereIn('team_id', $managedDeptIds);
+                    }
+                    if (!empty($deptUserIds)) {
+                        $q->orWhereIn('assigned_to', $deptUserIds);
+                    }
+                } elseif ($isTeamLead) {
+                    $q->where('assigned_to', $usr->id)
+                      ->orWhere('responsible_user_id', $usr->id)
+                      ->orWhere('assigned_by', $usr->id);
+                    if (!empty($managedTeamIds)) {
+                        $q->orWhereIn('team_id', $managedTeamIds);
+                    }
+                    if (!empty($teamUserIds)) {
+                        $q->orWhereIn('assigned_to', $teamUserIds);
+                    }
                 } else {
-                    $query->where(function($q) use ($usr) {
-                        $q->where('assigned_to', $usr->id)
-                          ->orWhere('responsible_user_id', $usr->id);
-                    });
-                }
-            } elseif ($visibility == 'team' && module_is_active('Hrm')) {
-                $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $usr->id)->first();
-                if ($employee) {
-                    $myTeamId = $employee->department_id;
-                    $teamUserIds = \Workdo\Hrm\Entities\Employee::where('department_id', $myTeamId)->pluck('user_id')->toArray();
-                    
-                    $query->where(function($q) use ($usr, $myTeamId, $teamUserIds) {
-                        $q->where('assigned_to', $usr->id)
-                          ->orWhere('responsible_user_id', $usr->id)
-                          ->orWhere('assigned_by', $usr->id)
-                          ->orWhere('team_id', $myTeamId)
-                          ->orWhereIn('assigned_to', $teamUserIds);
-                    });
-                } else {
-                    $query->where(function($q) use ($usr) {
-                        $q->where('assigned_to', $usr->id)
-                          ->orWhere('responsible_user_id', $usr->id);
-                    });
-                }
-            } else { // 'self'
-                $query->where(function ($q) use ($usr) {
                     $q->where('assigned_to', $usr->id)
                       ->orWhere('responsible_user_id', $usr->id);
-                });
-            }
-        }
+                }
+            });
+        };
+
+        $query = Target::where('workspace', getActiveWorkSpace());
+        $filterClosure($query);
 
         // View mine toggle for managers
         if ($isManager && $request->has('view_mine') && $request->view_mine == 1) {
@@ -295,7 +298,7 @@ class TargetController extends Controller
         $thirtyDaysAgo = date('Y-m-d', strtotime('-30 days'));
         $today = date('Y-m-d');
         
-        $last30DaysTargets = Target::where('workspace', getActiveWorkSpace())
+        $last30DaysQuery = Target::where('workspace', getActiveWorkSpace())
             ->where(function($q) use ($thirtyDaysAgo, $today) {
                 $q->whereNull('start_date')
                   ->orWhere('start_date', '<=', $today);
@@ -303,8 +306,9 @@ class TargetController extends Controller
             ->where(function($q) use ($thirtyDaysAgo) {
                 $q->whereNull('end_date')
                   ->orWhere('end_date', '>=', $thirtyDaysAgo);
-            })
-            ->get();
+            });
+        $filterClosure($last30DaysQuery);
+        $last30DaysTargets = $last30DaysQuery->get();
 
         // Dashboard Stats
         $stats = [
@@ -408,16 +412,33 @@ class TargetController extends Controller
         // Team Performance Comparison Leaderboard
         $teamPerformance = [];
         if (module_is_active('Hrm')) {
-            $allTeams = \Workdo\Hrm\Entities\Department::where('type', 'team')->where('workspace', getActiveWorkSpace())->get();
+            if ($isCompany) {
+                $allTeams = \Workdo\Hrm\Entities\Department::where('type', 'team')->where('workspace', getActiveWorkSpace())->get();
+            } elseif ($isDeptHead && !empty($managedDeptIds)) {
+                $allTeams = \Workdo\Hrm\Entities\Department::where('type', 'team')
+                    ->whereIn('parent_id', $managedDeptIds)
+                    ->where('workspace', getActiveWorkSpace())
+                    ->get();
+            } elseif ($isTeamLead && !empty($managedTeamIds)) {
+                $allTeams = \Workdo\Hrm\Entities\Department::where('type', 'team')
+                    ->whereIn('id', $managedTeamIds)
+                    ->where('workspace', getActiveWorkSpace())
+                    ->get();
+            } else {
+                $allTeams = collect();
+            }
+
             foreach ($allTeams as $team) {
                 // Get all targets assigned to this team OR to individuals in this team
-                $teamTargets = Target::where('workspace', getActiveWorkSpace())
+                $teamTargetsQuery = Target::where('workspace', getActiveWorkSpace())
                     ->where(function($q) use ($team) {
                         $q->where('team_id', $team->id)
                           ->orWhereHas('assignedToUser.employee', function($eq) use ($team) {
                               $eq->where('department_id', $team->id);
                           });
-                    })->get();
+                    });
+                $filterClosure($teamTargetsQuery);
+                $teamTargets = $teamTargetsQuery->get();
                 
                 if ($teamTargets->count() > 0) {
                     $tVal = $teamTargets->sum('target_value');
@@ -440,12 +461,13 @@ class TargetController extends Controller
         $monthlyTarget = array_fill(1, 12, 0);
         $monthlyAchieved = array_fill(1, 12, 0);
         
-        $monthlyData = Target::where('workspace', getActiveWorkSpace())
+        $monthlyQuery = Target::where('workspace', getActiveWorkSpace())
             ->whereYear('start_date', date('Y'))
             ->selectRaw('MONTH(start_date) as month, SUM(target_value) as total_target, SUM(achieved_value) as total_achieved')
             ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+            ->orderBy('month');
+        $filterClosure($monthlyQuery);
+        $monthlyData = $monthlyQuery->get();
             
         foreach ($monthlyData as $data) {
             $monthlyTarget[$data->month] = (int) $data->total_target;
@@ -461,17 +483,19 @@ class TargetController extends Controller
         if (module_is_active('Hrm')) {
             if ($isCompany) {
                 // Admin/Company sees all departments (type == 'department') that have targets
-                $departments = \Workdo\Hrm\Entities\Department::where('workspace', getActiveWorkSpace())
+                $departmentsList = \Workdo\Hrm\Entities\Department::where('workspace', getActiveWorkSpace())
                     ->where('type', 'department')
                     ->get();
-                foreach ($departments as $dept) {
+                foreach ($departmentsList as $dept) {
                     $deptTargets = Target::where('workspace', getActiveWorkSpace())
                         ->where(function($q) use ($dept) {
                             $q->where('department_id', $dept->id)
                               ->orWhereHas('assignedToUser.employee', function($eq) use ($dept) {
                                   $eq->where('department_id', $dept->id);
                               });
-                        })->get();
+                        });
+                    $filterClosure($deptTargets);
+                    $deptTargets = $deptTargets->get();
                     if ($deptTargets->count() > 0) {
                         $tVal = $deptTargets->sum('target_value');
                         $aVal = $deptTargets->sum('achieved_value');
@@ -485,10 +509,10 @@ class TargetController extends Controller
                         ];
                     }
                 }
-            } elseif ($isDeptHead && $myDept) {
-                // Department Head sees only the teams under their department that have targets
+            } elseif ($isDeptHead && !empty($managedDeptIds)) {
+                // Department Head sees only the teams under their departments that have targets
                 $childTeams = \Workdo\Hrm\Entities\Department::where('workspace', getActiveWorkSpace())
-                    ->where('parent_id', $myDept->id)
+                    ->whereIn('parent_id', $managedDeptIds)
                     ->where('type', 'team')
                     ->get();
                 foreach ($childTeams as $team) {
@@ -498,7 +522,9 @@ class TargetController extends Controller
                               ->orWhereHas('assignedToUser.employee', function($eq) use ($team) {
                                   $eq->where('department_id', $team->id);
                               });
-                        })->get();
+                        });
+                    $filterClosure($teamTargets);
+                    $teamTargets = $teamTargets->get();
                     if ($teamTargets->count() > 0) {
                         $tVal = $teamTargets->sum('target_value');
                         $aVal = $teamTargets->sum('achieved_value');
@@ -512,17 +538,18 @@ class TargetController extends Controller
                         ];
                     }
                 }
-            } elseif ($isTeamLead && $myTeam) {
-                // Team Lead sees members of their team that have targets
-                $memberUserIds = \Workdo\Hrm\Entities\Employee::where('department_id', $myTeam->id)
+            } elseif ($isTeamLead && !empty($managedTeamIds)) {
+                // Team Lead sees members of their teams that have targets
+                $memberUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $managedTeamIds)
                     ->whereNotNull('user_id')
                     ->pluck('user_id')
                     ->toArray();
                 $members = User::whereIn('id', $memberUserIds)->get();
                 foreach ($members as $member) {
                     $memberTargets = Target::where('workspace', getActiveWorkSpace())
-                        ->where('assigned_to', $member->id)
-                        ->get();
+                        ->where('assigned_to', $member->id);
+                    $filterClosure($memberTargets);
+                    $memberTargets = $memberTargets->get();
                     if ($memberTargets->count() > 0) {
                         $tVal = $memberTargets->sum('target_value');
                         $aVal = $memberTargets->sum('achieved_value');
@@ -539,8 +566,9 @@ class TargetController extends Controller
             } else {
                 // Regular Member sees only their own target performance card (if they have targets)
                 $myTargets = Target::where('workspace', getActiveWorkSpace())
-                    ->where('assigned_to', $usr->id)
-                    ->get();
+                    ->where('assigned_to', $usr->id);
+                $filterClosure($myTargets);
+                $myTargets = $myTargets->get();
                 if ($myTargets->count() > 0) {
                     $tVal = $myTargets->sum('target_value');
                     $aVal = $myTargets->sum('achieved_value');
@@ -561,31 +589,15 @@ class TargetController extends Controller
         $teams = [];
         if (module_is_active('Hrm')) {
             if (!$isCompany) {
-                $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $usr->id)->first();
-                if ($employee) {
-                    // Start with departments managed by the user
-                    $managedDeptIds = \Workdo\Hrm\Entities\Department::where('manager_id', $employee->id)->get()->flatMap(function($d) {
-                        return array_merge([$d->id], $d->allChildIds());
-                    })->toArray();
-
-                    $myDeptId = $employee->department_id;
-                    $dept = \Workdo\Hrm\Entities\Department::find($myDeptId);
-
-                    if ($visibility == 'all') {
-                        $allowedIds = \Workdo\Hrm\Entities\Department::where('workspace', getActiveWorkSpace())->pluck('id')->toArray();
-                    } elseif ($visibility == 'department') {
-                        $allDeptIds = $dept ? array_merge([$myDeptId], $dept->allChildIds()) : [$myDeptId];
-                        $allowedIds = array_merge($managedDeptIds, $allDeptIds);
-                    } elseif ($visibility == 'team') {
-                        $allowedIds = array_merge($managedDeptIds, [$myDeptId]);
-                    } else { // 'self'
-                        $allowedIds = array_merge($managedDeptIds, [$myDeptId]);
-                    }
-
-                    $allowedIds = array_unique(array_filter($allowedIds));
-
-                    $departments = \Workdo\Hrm\Entities\Department::whereIn('id', $allowedIds)->where('type', 'department')->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
-                    $teams = \Workdo\Hrm\Entities\Department::whereIn('id', $allowedIds)->where('type', 'team')->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
+                if ($isDeptHead && !empty($managedDeptIds)) {
+                    $departments = \Workdo\Hrm\Entities\Department::whereIn('id', $managedDeptIds)->where('type', 'department')->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
+                    $teams = \Workdo\Hrm\Entities\Department::whereIn('id', $managedDeptIds)->where('type', 'team')->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
+                } elseif ($isTeamLead && !empty($managedTeamIds)) {
+                    $departments = [];
+                    $teams = \Workdo\Hrm\Entities\Department::whereIn('id', $managedTeamIds)->where('type', 'team')->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
+                } else {
+                    $departments = [];
+                    $teams = [];
                 }
             } else {
                 $departments = \Workdo\Hrm\Entities\Department::where('type', 'department')->where('workspace', getActiveWorkSpace())->pluck('name', 'id');
@@ -598,7 +610,10 @@ class TargetController extends Controller
         $statuses = ['Pending' => __('Pending'), 'Completed' => __('Completed'), 'Missed' => __('Missed')];
 
         $employeePerformance = [];
-        $allTargets = Target::where('workspace', getActiveWorkSpace())->get();
+        $allTargetsQuery = Target::where('workspace', getActiveWorkSpace());
+        $filterClosure($allTargetsQuery);
+        $allTargets = $allTargetsQuery->get();
+
         $assignedUserIds = $allTargets->where('assigned_to', '>', 0)->pluck('assigned_to')->unique()->toArray();
         $usersWithTargets = User::whereIn('id', $assignedUserIds)->get();
         foreach ($usersWithTargets as $user) {

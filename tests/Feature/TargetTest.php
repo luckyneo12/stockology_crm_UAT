@@ -476,4 +476,191 @@ class TargetTest extends TestCase
         $responseSuccess->assertRedirect(route('targets.index'));
         $responseSuccess->assertSessionHasNoErrors();
     }
+
+    public function test_hierarchy_visibility_rules()
+    {
+        $admin = User::where('type', 'company')->first();
+        if (!$admin) {
+            $this->markTestSkipped('No company admin user found in database.');
+        }
+
+        $workspaceId = $admin->active_workspace ?? 1;
+
+        if (!class_exists('\Workdo\Hrm\Entities\Department') || !class_exists('\Workdo\Hrm\Entities\Employee')) {
+            $this->markTestSkipped('HRM entity classes not found.');
+        }
+
+        Target::query()->delete();
+
+        // Create Department
+        $dept = \Workdo\Hrm\Entities\Department::create([
+            'name' => 'Dept ' . time(),
+            'type' => 'department',
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'branch_id' => 1,
+        ]);
+
+        // Create Team under Dept
+        $team = \Workdo\Hrm\Entities\Department::create([
+            'name' => 'Team ' . time(),
+            'type' => 'team',
+            'parent_id' => $dept->id,
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'branch_id' => 1,
+        ]);
+
+        $employeeRole = \App\Models\Role::firstOrCreate([
+            'name' => 'employee',
+            'guard_name' => 'web',
+            'created_by' => $admin->id,
+        ]);
+
+        // Dept Head
+        $deptHeadUser = User::create([
+            'name' => 'DH User',
+            'email' => 'dh_' . time() . '@test.com',
+            'password' => bcrypt('password'),
+            'type' => 'employee',
+            'workspace_id' => $workspaceId,
+            'active_workspace' => $workspaceId,
+            'email_verified_at' => now(),
+            'created_by' => $admin->id,
+        ]);
+        $deptHeadUser->addRole($employeeRole);
+        $deptHeadEmp = \Workdo\Hrm\Entities\Employee::create([
+            'user_id' => $deptHeadUser->id,
+            'name' => 'DH Employee',
+            'email' => $deptHeadUser->email,
+            'department_id' => $dept->id,
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'employee_id' => rand(1000, 9999),
+        ]);
+        $dept->manager_id = $deptHeadEmp->id;
+        $dept->save();
+
+        // Team Lead
+        $teamLeadUser = User::create([
+            'name' => 'TL User',
+            'email' => 'tl_' . time() . '@test.com',
+            'password' => bcrypt('password'),
+            'type' => 'employee',
+            'workspace_id' => $workspaceId,
+            'active_workspace' => $workspaceId,
+            'email_verified_at' => now(),
+            'created_by' => $admin->id,
+        ]);
+        $teamLeadUser->addRole($employeeRole);
+        $teamLeadEmp = \Workdo\Hrm\Entities\Employee::create([
+            'user_id' => $teamLeadUser->id,
+            'name' => 'TL Employee',
+            'email' => $teamLeadUser->email,
+            'department_id' => $team->id,
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'employee_id' => rand(1000, 9999),
+        ]);
+        $team->manager_id = $teamLeadEmp->id;
+        $team->save();
+
+        // Regular Member
+        $memberUser = User::create([
+            'name' => 'M User',
+            'email' => 'm_' . time() . '@test.com',
+            'password' => bcrypt('password'),
+            'type' => 'employee',
+            'workspace_id' => $workspaceId,
+            'active_workspace' => $workspaceId,
+            'email_verified_at' => now(),
+            'created_by' => $admin->id,
+        ]);
+        $memberUser->addRole($employeeRole);
+        \Workdo\Hrm\Entities\Employee::create([
+            'user_id' => $memberUser->id,
+            'name' => 'M Employee',
+            'email' => $memberUser->email,
+            'department_id' => $team->id,
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'employee_id' => rand(1000, 9999),
+        ]);
+
+        // Department Target
+        $targetDept = Target::create([
+            'target_name' => 'Dept Target',
+            'assigned_to' => 0,
+            'department_id' => $dept->id,
+            'team_id' => 0,
+            'assigned_by' => $admin->id,
+            'responsible_user_id' => $admin->id,
+            'start_date' => '2026-06-01',
+            'end_date' => '2026-06-30',
+            'target_value' => 100,
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'target_type' => 'manual',
+        ]);
+
+        // Team Target
+        $targetTeam = Target::create([
+            'target_name' => 'Team Target',
+            'assigned_to' => 0,
+            'department_id' => 0,
+            'team_id' => $team->id,
+            'assigned_by' => $admin->id,
+            'responsible_user_id' => $admin->id,
+            'start_date' => '2026-06-01',
+            'end_date' => '2026-06-30',
+            'target_value' => 50,
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'target_type' => 'manual',
+        ]);
+
+        // Member Target
+        $targetMember = Target::create([
+            'target_name' => 'Member Target',
+            'assigned_to' => $memberUser->id,
+            'department_id' => 0,
+            'team_id' => 0,
+            'assigned_by' => $admin->id,
+            'responsible_user_id' => $admin->id,
+            'start_date' => '2026-06-01',
+            'end_date' => '2026-06-30',
+            'target_value' => 10,
+            'workspace' => $workspaceId,
+            'created_by' => $admin->id,
+            'target_type' => 'manual',
+        ]);
+
+        // 1. Admin gets all targets
+        $response = $this->actingAs($admin)->get(route('targets.index'));
+        $targets = $response->viewData('targets');
+        $this->assertTrue($targets->contains('id', $targetDept->id));
+        $this->assertTrue($targets->contains('id', $targetTeam->id));
+        $this->assertTrue($targets->contains('id', $targetMember->id));
+
+        // 2. Department Head gets all three (because they manage dept & child team & members)
+        $response = $this->actingAs($deptHeadUser)->get(route('targets.index'));
+        $targets = $response->viewData('targets');
+        $this->assertTrue($targets->contains('id', $targetDept->id));
+        $this->assertTrue($targets->contains('id', $targetTeam->id));
+        $this->assertTrue($targets->contains('id', $targetMember->id));
+
+        // 3. Team Lead gets team & member targets, but NOT department target
+        $response = $this->actingAs($teamLeadUser)->get(route('targets.index'));
+        $targets = $response->viewData('targets');
+        $this->assertFalse($targets->contains('id', $targetDept->id));
+        $this->assertTrue($targets->contains('id', $targetTeam->id));
+        $this->assertTrue($targets->contains('id', $targetMember->id));
+
+        // 4. Regular Member gets only their own target
+        $response = $this->actingAs($memberUser)->get(route('targets.index'));
+        $targets = $response->viewData('targets');
+        $this->assertFalse($targets->contains('id', $targetDept->id));
+        $this->assertFalse($targets->contains('id', $targetTeam->id));
+        $this->assertTrue($targets->contains('id', $targetMember->id));
+    }
 }
