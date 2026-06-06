@@ -1018,6 +1018,7 @@
                                     <table class="table table-sm table-hover mb-0">
                                         <thead>
                                             <tr class="text-muted text-xxs uppercase">
+                                                <th>{{ __('Target Name') }}</th>
                                                 <th>{{ __('Month') }}</th>
                                                 <th class="text-center">{{ __('Quota Assigned') }}</th>
                                                 <th class="text-center">{{ __('Quota Achieved') }}</th>
@@ -1025,44 +1026,38 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($stats['monthly_labels'] as $idx => $monthLabel)
+                                            @forelse($targets as $t)
                                                 @php
-                                                    $tVal = $stats['monthly_target'][$idx];
-                                                    $aVal = $stats['monthly_achieved'][$idx];
+                                                    $tVal = $t->target_value;
+                                                    $aVal = $t->achieved_value;
                                                     $rate = $tVal > 0 ? round(($aVal / $tVal) * 100, 1) : 0;
-                                                    $mNumber = $idx + 1;
-                                                    $mTargets = $monthlyTargetsList[$mNumber] ?? [];
+                                                    $monthLabel = $t->start_date ? date('M Y', strtotime($t->start_date)) : __('N/A');
+                                                    $tStatusBadge = $t->status == 'Completed' ? 'bg-light-success text-success' : 'bg-light-warning text-warning';
                                                 @endphp
                                                 <tr class="text-xs">
-                                                    <td class="font-weight-bold text-dark" style="vertical-align: middle;">
-                                                        <div class="d-flex flex-column gap-1">
-                                                            <span>{{ $monthLabel }}</span>
-                                                            @if(count($mTargets) > 0)
-                                                                <div class="d-flex flex-wrap gap-1 mt-1">
-                                                                    @foreach($mTargets as $mt)
-                                                                        @php
-                                                                            $mtStatusBadge = $mt->status == 'Completed' ? 'bg-light-success text-success' : 'bg-light-warning text-warning';
-                                                                        @endphp
-                                                                        <span class="badge bg-light text-dark border d-inline-flex align-items-center gap-1 py-1 px-2 text-xxs" style="font-size: 10px; font-weight: 500; border-radius: 6px;" title="{{ $mt->target_name }} (Quota: {{ $mt->target_value }}, Achieved: {{ $mt->achieved_value }})">
-                                                                            <i class="ti ti-target text-primary" style="font-size: 10px;"></i>
-                                                                            <span class="text-truncate" style="max-width: 150px;">{{ $mt->target_name }}</span>
-                                                                            <strong class="ms-1">({{ $mt->target_value }})</strong>
-                                                                            <span class="badge {{ $mtStatusBadge }} p-0.5 rounded-circle" style="width: 6px; height: 6px;" title="{{ __($mt->status) }}"></span>
-                                                                        </span>
-                                                                    @endforeach
-                                                                </div>
-                                                            @endif
+                                                    <td class="font-weight-bold text-dark">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="ti ti-target text-primary fs-6"></i>
+                                                            <span class="text-truncate" style="max-width: 250px;">{{ $t->target_name }}</span>
+                                                            <span class="badge {{ $tStatusBadge }} text-xxs px-2 py-0.5" style="border-radius: 6px;">{{ __($t->status) }}</span>
                                                         </div>
                                                     </td>
-                                                    <td class="text-center" style="vertical-align: middle;">{{ $tVal }}</td>
-                                                    <td class="text-center" style="vertical-align: middle;">{{ $aVal }}</td>
-                                                    <td class="text-center" style="vertical-align: middle;">
+                                                    <td class="text-muted">{{ $monthLabel }}</td>
+                                                    <td class="text-center font-weight-bold">{{ $tVal }}</td>
+                                                    <td class="text-center text-success font-weight-bold">{{ $aVal }}</td>
+                                                    <td class="text-center">
                                                         <span class="badge {{ $rate >= 80 ? 'bg-light-success text-success' : ($rate >= 45 ? 'bg-light-primary text-primary' : 'bg-light-danger text-danger') }}">
                                                             {{ $rate }}%
                                                         </span>
                                                     </td>
                                                 </tr>
-                                            @endforeach
+                                            @empty
+                                                <tr>
+                                                    <td colspan="5" class="text-center py-4 text-muted">
+                                                        {{ __('No targets found.') }}
+                                                    </td>
+                                                </tr>
+                                            @endforelse
                                         </tbody>
                                     </table>
                                 </div>
