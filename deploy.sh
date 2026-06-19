@@ -10,15 +10,19 @@ git pull origin main
 
 # 2. Install PHP Dependencies & Optimize
 echo "📦 Installing Composer dependencies..."
-composer install --no-dev --optimize-autoloader
+composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
 # 3. Run Database Migrations
 echo "🗄️ Running database migrations..."
 php artisan migrate --force
 
-# 4. Compile React Assets & Install Node dependencies
-echo "⚡ Building React Vite assets and installing Node services..."
-npm run prod:build
+# 4. Compile React Assets & Install Node dependencies (optional)
+echo "⚡ Checking for NPM to install node services..."
+if command -v npm &> /dev/null; then
+    npm run prod:build
+else
+    echo "NPM not found on CLI. Pre-compiled Vite assets will be used. Please run 'NPM Install' for whatsapp-node-service and sheet-node-service inside the Hostinger hPanel Node.js Dashboard."
+fi
 
 # 5. Restart background Node services
 echo "🔄 Reloading background Node services..."

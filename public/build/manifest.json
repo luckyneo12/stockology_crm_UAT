@@ -1,0 +1,41 @@
+{
+  "_index-C3NysTWN.js": {
+    "file": "assets/index-C3NysTWN.js",
+    "name": "index"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-CEo9Ld8-.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app-react.jsx": {
+    "file": "assets/app-react-BfcpdjSx.js",
+    "name": "app-react",
+    "src": "resources/js/app-react.jsx",
+    "isEntry": true,
+    "imports": [
+      "_index-C3NysTWN.js"
+    ],
+    "css": [
+      "assets/app-react-qrn3meSm.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-Cs0QkU1O.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/whatsapp-chat/WhatsAppChatApp.jsx": {
+    "file": "assets/WhatsAppChatApp-DXuLghzA.js",
+    "name": "WhatsAppChatApp",
+    "src": "resources/js/whatsapp-chat/WhatsAppChatApp.jsx",
+    "isEntry": true,
+    "imports": [
+      "_index-C3NysTWN.js"
+    ],
+    "css": [
+      "assets/WhatsAppChatApp-TidW3wIr.css"
+    ]
+  }
+}
