@@ -1499,10 +1499,158 @@ class LeadController extends Controller
             // Initialize saved_filters (can be extended later for filter persistence)
             $saved_filters = [];
 
-            return $dataTable->render('lead::leads.list', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'teams'));
+            return view('lead::leads.list_react', compact('pipelines', 'pipeline', 'stages', 'sources', 'users', 'creators', 'modifiers', 'saved_filters', 'departments', 'teams'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+    }
+
+    // ─── React Leads List JSON API ─────────────────────────────────────────────
+    public function listJson(Request $request)
+    {
+        $usr = Auth::user();
+        if (!$usr->isAbleTo('lead manage')) {
+            return response()->json(['success' => false, 'message' => 'Permission Denied'], 403);
+        }
+
+        $perPage     = min((int) ($request->per_page ?? 25), 500);
+        $page        = max((int) ($request->page ?? 1), 1);
+        $search      = $request->search ?? '';
+        $sortField   = $request->sort_field ?? 'created_at';
+        $sortDir     = $request->sort_dir === 'ascend' ? 'asc' : 'desc';
+        $wsId        = getActiveWorkSpace();
+        $creatorId   = creatorId();
+
+        // Resolve pipeline
+        $pipeline_id = $request->pipeline_id ?? $usr->default_pipeline;
+        if (!$pipeline_id) {
+            $firstPipeline = Pipeline::where('created_by', $creatorId)->where('workspace_id', $wsId)->first();
+            $pipeline_id   = $firstPipeline ? $firstPipeline->id : 0;
+        }
+
+        $accessibleUserIds = $usr->getAccessibleUserIds();
+
+        $query = Lead::where('leads.pipeline_id', $pipeline_id)
+            ->where('leads.workspace_id', $wsId)
+            ->with(['users', 'stage', 'owner', 'createdBy'])
+            ->withCount([
+                'tasks',
+                'complete_tasks',
+                'reminders as reminders_count' => fn($q) => $q->whereIn('user_id', $accessibleUserIds),
+                'reminders as today_reminders_count' => fn($q) => $q->whereIn('user_id', $accessibleUserIds)->whereDate('remind_at', date('Y-m-d')),
+            ]);
+
+        // Visibility restriction
+        if ($usr->type !== 'company' && $usr->visibility_level !== 'all') {
+            $query->where(function ($q) use ($accessibleUserIds) {
+                $q->whereIn('leads.user_id', $accessibleUserIds)
+                  ->orWhereExists(fn($sub) => $sub->select(\DB::raw(1))->from('user_leads')->whereColumn('user_leads.lead_id', 'leads.id')->whereIn('user_leads.user_id', $accessibleUserIds));
+            });
+        }
+
+        // Stage visibility restriction
+        if ($usr->type !== 'company') {
+            $hiddenStageIds = [];
+            $filteredStages = (array) ($request->stage_id ?? []);
+            $allStages = LeadStage::where('pipeline_id', $pipeline_id)->where('workspace_id', $wsId)->get();
+            foreach ($allStages as $s) {
+                if (!$s->permissions($usr)->can_view) { $hiddenStageIds[] = $s->id; continue; }
+                if (!$s->permissions($usr)->can_edit && !in_array($s->id, $filteredStages)) { $hiddenStageIds[] = $s->id; }
+            }
+            if (!empty($hiddenStageIds)) $query->whereNotIn('leads.stage_id', $hiddenStageIds);
+        }
+
+        // Filters
+        if (!empty($request->stage_id))       $query->whereIn('leads.stage_id', (array) $request->stage_id);
+        if (!empty($request->source_id)) {
+            $query->where(function ($q) use ($request) {
+                foreach ((array) $request->source_id as $src) $q->orWhereRaw('FIND_IN_SET(?, leads.sources)', [$src]);
+            });
+        }
+        if (!empty($request->responsible_person)) {
+            $rIds = (array) $request->responsible_person;
+            $query->where(fn($q) => $q->whereIn('leads.user_id', $rIds)->orWhereExists(fn($s) => $s->select(\DB::raw(1))->from('user_leads')->whereColumn('user_leads.lead_id','leads.id')->whereIn('user_leads.user_id', $rIds)));
+        }
+        if (!empty($request->start_date))           $query->where('leads.created_at', '>=', $request->start_date . ' 00:00:00');
+        if (!empty($request->end_date))             $query->where('leads.created_at', '<=', $request->end_date . ' 23:59:59');
+        if (!empty($request->modified_start_date))  $query->where('leads.updated_at', '>=', $request->modified_start_date . ' 00:00:00');
+        if (!empty($request->modified_end_date))    $query->where('leads.updated_at', '<=', $request->modified_end_date . ' 23:59:59');
+        if (!empty($request->created_by))           $query->whereIn('leads.created_by', (array) $request->created_by);
+        if ($request->duplicates == 1) {
+            $query->where(fn($q) => $q
+                ->whereRaw("leads.email IN (SELECT email FROM (SELECT email FROM leads WHERE workspace_id=? AND email IS NOT NULL AND email!='' GROUP BY email HAVING COUNT(email)>1) as t)", [$wsId])
+                ->orWhereRaw("leads.phone IN (SELECT phone FROM (SELECT phone FROM leads WHERE workspace_id=? AND phone IS NOT NULL AND phone!='' GROUP BY phone HAVING COUNT(phone)>1) as t2)", [$wsId])
+            );
+        }
+        if (!empty($search)) {
+            $query->where(fn($q) => $q->where('leads.name', 'like', "%$search%")->orWhere('leads.subject', 'like', "%$search%")->orWhere('leads.email', 'like', "%$search%")->orWhere('leads.phone', 'like', "%$search%"));
+        }
+
+        // Sort
+        $allowedSorts = ['name', 'subject', 'email', 'phone', 'created_at', 'updated_at', 'follow_up_date'];
+        if (!in_array($sortField, $allowedSorts)) $sortField = 'created_at';
+        $query->orderBy('leads.' . $sortField, $sortDir);
+
+        // Stats (on filtered query clone before pagination)
+        $statsQuery = clone $query;
+        $stats = [
+            'total'           => (clone $statsQuery)->count(),
+            'active'          => (clone $statsQuery)->where('leads.is_active', 1)->count(),
+            'reminders_today' => (clone $statsQuery)->whereHas('reminders', fn($q) => $q->whereIn('user_id', $accessibleUserIds)->whereDate('remind_at', date('Y-m-d')))->count(),
+        ];
+
+        $paginated = $query->paginate($perPage, ['leads.*'], 'page', $page);
+
+        $stagesCache = LeadStage::where('pipeline_id', $pipeline_id)->orderBy('order')->get();
+        $totalStages = $stagesCache->count();
+        $stageColors = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#f43f5e','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+
+        $rows = $paginated->map(function (Lead $lead) use ($stagesCache, $totalStages, $stageColors, $usr) {
+            $currentIdx = 0;
+            foreach ($stagesCache as $idx => $s) {
+                if ($s->id == $lead->stage_id) { $currentIdx = $idx + 1; break; }
+            }
+            $pct   = $totalStages > 0 ? round(($currentIdx / $totalStages) * 100) : 0;
+            $color = $stageColors[($currentIdx > 0 ? $currentIdx - 1 : 0) % count($stageColors)];
+            $owner = $lead->owner ?? $lead->users->first();
+
+            return [
+                'id'                  => $lead->id,
+                'name'                => $lead->name,
+                'subject'             => $lead->subject ?? '',
+                'email'               => $lead->email ?? '',
+                'phone'               => $lead->phone ?? '',
+                'is_active'           => (bool) $lead->is_active,
+                'stage_name'          => $lead->stage?->name ?? '-',
+                'stage_color'         => $color,
+                'stage_progress'      => $pct,
+                'tasks_total'         => $lead->tasks_count ?? 0,
+                'tasks_done'          => $lead->complete_tasks_count ?? 0,
+                'reminders_today'     => $lead->today_reminders_count ?? 0,
+                'reminders_total'     => $lead->reminders_count ?? 0,
+                'owner_name'          => $owner?->name ?? '-',
+                'created_by_name'     => $lead->createdBy?->name ?? '-',
+                'created_at'          => company_date_formate($lead->created_at),
+                'updated_at'          => company_date_formate($lead->updated_at),
+                'follow_up_date'      => $lead->follow_up_date ? company_date_formate($lead->follow_up_date) : null,
+                'can_show'            => $usr->isAbleTo('lead show') && $lead->is_active,
+                'can_edit'            => $usr->isAbleTo('lead edit'),
+                'can_delete'          => $usr->isAbleTo('lead delete'),
+                'show_url'            => route('leads.show', $lead->id),
+                'edit_url'            => route('leads.edit', $lead->id),
+                'delete_url'          => route('leads.destroy', $lead->id),
+            ];
+        });
+
+        return response()->json([
+            'success'      => true,
+            'data'         => $rows,
+            'total'        => $paginated->total(),
+            'per_page'     => $paginated->perPage(),
+            'current_page' => $paginated->currentPage(),
+            'last_page'    => $paginated->lastPage(),
+            'stats'        => $stats,
+        ]);
     }
 
     public function json(Request $request)
@@ -4488,6 +4636,365 @@ class LeadController extends Controller
         }
         return redirect()->back()->with('error', __('Permission Denied.'));
     }
+    public function kanbanData(Request $request)
+    {
+        try {
+            $lead_id = $request->get('lead_id');
+            if ($lead_id) {
+                $lead = Lead::find($lead_id);
+                if (!$lead || !$lead->isAccessible()) {
+                    return response()->json(['success' => false, 'message' => 'Lead not found or access denied.']);
+                }
+                
+                $labels = [];
+                $leadLabels = $lead->labels() ?: [];
+                foreach ($leadLabels as $label) {
+                    $labels[] = [
+                        'name' => $label->name,
+                        'color' => $label->color,
+                    ];
+                }
+
+                $user = $lead->owner ?? $lead->users->first();
+                $teamName = '';
+                if ($user && module_is_active('Hrm')) {
+                    if ($user->relationLoaded('employee') && $user->employee) {
+                        $teamName = $user->employee->department ? $user->employee->department->name : '';
+                    } else if (class_exists('\Workdo\Hrm\Entities\Employee')) {
+                        $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
+                        $teamName = $emp && $emp->department ? $emp->department->name : '';
+                    }
+                }
+
+                $leadData = [
+                    'id' => $lead->id,
+                    'name' => $lead->name,
+                    'email' => $lead->email,
+                    'phone' => $lead->phone,
+                    'subject' => $lead->subject,
+                    'date' => $lead->date ? company_date_formate($lead->date) : '',
+                    'task_completed' => count($lead->complete_tasks),
+                    'task_total' => count($lead->tasks),
+                    'reminder_today' => $lead->getTodayRemindersCount(),
+                    'reminder_total' => $lead->getFilteredReminders()->count(),
+                    'labels' => $labels,
+                    'kyc_comment_count' => $lead->discussions->where('is_kyc', 1)->count(),
+                    'sources_count' => count($lead->sources()),
+                    'owner_name' => $user ? $user->name : '',
+                    'team_name' => $teamName,
+                    'is_responsible' => $lead->isResponsible(),
+                    'can_edit' => $lead->stagePermissions()->can_edit,
+                    'can_move' => true,
+                    'is_active' => $lead->is_active,
+                ];
+
+                return response()->json([
+                    'success' => true,
+                    'lead' => $leadData
+                ]);
+            }
+
+            $stage_id = $request->get('stage_id');
+            if (is_array($stage_id)) {
+                $stage_id = $stage_id[0];
+            }
+
+            $offset = $request->offset ?? 0;
+            $limit = $request->limit ?? 50;
+
+            $stage = LeadStage::find($stage_id);
+            if (!$stage) {
+                return response()->json(['success' => false, 'message' => 'Stage not found.']);
+            }
+
+            $isolatedRequest = new Request($request->all());
+            $isolatedRequest->merge(['stage_id' => $stage_id]);
+
+            $leads = $stage->lead($isolatedRequest, $limit, $offset);
+            $data = [];
+            $permissions = $stage->permissions();
+
+            foreach ($leads as $lead) {
+                $labels = [];
+                $leadLabels = $lead->labels() ?: [];
+                foreach ($leadLabels as $label) {
+                    $labels[] = [
+                        'name' => $label->name,
+                        'color' => $label->color,
+                    ];
+                }
+
+                $user = $lead->owner ?? $lead->users->first();
+                $teamName = '';
+                if ($user && module_is_active('Hrm')) {
+                    if ($user->relationLoaded('employee') && $user->employee) {
+                        $teamName = $user->employee->department ? $user->employee->department->name : '';
+                    } else if (class_exists('\Workdo\Hrm\Entities\Employee')) {
+                        $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
+                        $teamName = $emp && $emp->department ? $emp->department->name : '';
+                    }
+                }
+
+                $data[] = [
+                    'id' => $lead->id,
+                    'name' => $lead->name,
+                    'email' => $lead->email,
+                    'phone' => $lead->phone,
+                    'subject' => $lead->subject,
+                    'date' => $lead->date ? company_date_formate($lead->date) : '',
+                    'task_completed' => count($lead->complete_tasks),
+                    'task_total' => count($lead->tasks),
+                    'reminder_today' => $lead->getTodayRemindersCount(),
+                    'reminder_total' => $lead->getFilteredReminders()->count(),
+                    'labels' => $labels,
+                    'kyc_comment_count' => $lead->discussions->where('is_kyc', 1)->count(),
+                    'sources_count' => count($lead->sources()),
+                    'owner_name' => $user ? $user->name : '',
+                    'team_name' => $teamName,
+                    'is_responsible' => $lead->isResponsible(),
+                    'can_edit' => $permissions->can_edit && $lead->stagePermissions()->can_edit,
+                    'can_move' => $permissions->can_move,
+                    'is_active' => $lead->is_active,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'leads' => $data,
+                'count' => count($leads),
+                'has_more' => count($leads) == $limit
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Kanban Data Error for Stage ' . ($stage_id ?? 'unknown') . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+                'leads' => [],
+                'count' => 0,
+                'has_more' => false
+            ]);
+        }
+    }
+
+    public function detailsJson($id)
+    {
+        try {
+            $lead = Lead::find($id);
+            $user = Auth::user();
+            \Log::info('LeadDetails JSON Debug Start', [
+                'requested_id' => $id,
+                'lead_exists' => (bool)$lead,
+                'lead_id' => $lead ? $lead->id : null,
+                'lead_workspace_id' => $lead ? $lead->workspace_id : null,
+                'active_workspace' => getActiveWorkSpace(),
+                'user_id' => $user ? $user->id : null,
+                'user_type' => $user ? $user->type : null,
+                'user_visibility' => $user ? $user->visibility_level : null,
+                'stage_permissions_can_view' => $lead ? $lead->stagePermissions($user)->can_view : null,
+                'is_accessible' => $lead ? $lead->isAccessible($user) : null,
+            ]);
+
+            if (!$lead || !$lead->isAccessible()) {
+                return response()->json(['success' => false, 'message' => 'Lead not found or access denied.'], 403);
+            }
+
+            $user = Auth::user();
+            $stageCnt = LeadStage::where('pipeline_id', '=', $lead->pipeline_id)->where('created_by', '=', $lead->created_by)->get();
+            $i = 0;
+            foreach ($stageCnt as $stage) {
+                $i++;
+                if ($stage->id == $lead->stage_id) {
+                    break;
+                }
+            }
+            $percentage = count($stageCnt) > 0 ? round(($i * 100) / count($stageCnt)) : 0;
+
+            // Fetch Dedicated Lead Custom Fields and Values
+            \Workdo\Lead\Entities\LeadSection::ensurePipelineLayout($lead->pipeline_id, getActiveWorkSpace());
+            $leadSections = \Workdo\Lead\Entities\LeadSection::where('workspace_id', getActiveWorkSpace())
+                ->where('pipeline_id', $lead->pipeline_id)
+                ->with([
+                    'fields' => function ($q) use ($lead) {
+                        $q->where('pipeline_id', $lead->pipeline_id)->orderBy('order');
+                    }
+                ])
+                ->orderBy('order')
+                ->get();
+            $leadCustomFieldValues = \Workdo\Lead\Entities\LeadCustomFieldValue::where('lead_id', $lead->id)->pluck('value', 'field_id')->toArray();
+
+            // Accessible users scope
+            $accessibleUserIds = $user->getAccessibleUserIds();
+            $tasks = $lead->tasks()->whereIn('user_id', $accessibleUserIds)->orderBy('id', 'desc')->get();
+            $reminders = $lead->getFilteredReminders()->sortByDesc('id');
+            $calls = $lead->calls()->orderBy('id', 'desc')->get();
+            $activities = $lead->activities()->orderBy('id', 'desc')->get();
+            $kycComments = $lead->discussions()->where('is_kyc', 1)->orderBy('id', 'desc')->get();
+            $orionLogs = \Workdo\Lead\Entities\OrionLeadLog::where('lead_id', $lead->id)->orderBy('id', 'desc')->get();
+
+            // Format stages for stepper
+            $allStages = \Workdo\Lead\Entities\LeadStage::where('pipeline_id', $lead->pipeline_id)
+                ->orderBy('order')
+                ->get();
+            $stagesData = [];
+            foreach ($allStages as $st) {
+                $perm = $st->permissions($user);
+                if ($perm->can_view) {
+                    $stagesData[] = [
+                        'id' => $st->id,
+                        'name' => $st->name,
+                        'order' => $st->order,
+                        'can_move' => $perm->can_move,
+                    ];
+                }
+            }
+
+            // Format sections & fields
+            $sectionsData = [];
+            foreach ($leadSections as $section) {
+                $secVisibility = !empty($section->visible_stages) ? ($section->visible_stages[$lead->stage_id] ?? 'visible') : 'visible';
+                if ($secVisibility === 'hidden') continue;
+
+                $fieldsData = [];
+                foreach ($section->fields as $field) {
+                    if (!empty($field->visible_stages) && !in_array($lead->stage_id, $field->visible_stages)) continue;
+                    if (!empty($field->visible_roles)) {
+                        $userRoleIds = $user->roles->pluck('id')->toArray();
+                        if (empty(array_intersect($userRoleIds, $field->visible_roles))) continue;
+                    }
+
+                    $rawVal = $field->is_system ? $lead->{$field->system_field_id} : ($leadCustomFieldValues[$field->id] ?? '');
+                    $fieldsData[] = [
+                        'id' => $field->id,
+                        'name' => $field->name,
+                        'type' => $field->type,
+                        'options' => $field->options,
+                        'is_system' => $field->is_system,
+                        'system_field_id' => $field->system_field_id,
+                        'value' => $rawVal,
+                        'width' => $field->width,
+                        'can_edit' => (!$field->is_system || in_array($field->system_field_id, ['email', 'phone', 'pan_number', 'aadhar_number'])) && $user->isAbleTo('lead edit'),
+                    ];
+                }
+
+                $sectionsData[] = [
+                    'id' => $section->id,
+                    'name' => $section->name,
+                    'layout_type' => $section->layout_type ?? 'section',
+                    'columns' => $section->columns ?? 3,
+                    'eye_toggle' => ($secVisibility === 'eye_toggle'),
+                    'fields' => $fieldsData,
+                ];
+            }
+
+            // Format lists for React
+            $tasksData = $tasks->map(fn($t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+                'status' => $t->status,
+                'date' => $t->date,
+                'time' => $t->time,
+                'status_label' => __(Workdo\Lead\Entities\LeadTask::$status[$t->status]),
+                'update_url' => route('leads.tasks.update.status', [$lead->id, $t->id]),
+            ]);
+
+            $remindersData = $reminders->map(fn($r) => [
+                'id' => $r->id,
+                'title' => $r->title,
+                'remind_at' => $r->remind_at,
+                'type' => $r->type,
+                'user_name' => $r->user->name ?? '-',
+            ]);
+
+            $callsData = $calls->map(fn($c) => [
+                'id' => $c->id,
+                'subject' => $c->subject,
+                'duration' => $c->duration,
+                'date_time' => $c->date_time,
+                'summary' => $c->summary,
+                'user_name' => $c->getLeadCallUser->name ?? '-',
+            ]);
+
+            $activitiesData = $activities->map(fn($a) => [
+                'id' => $a->id,
+                'description' => $a->description,
+                'created_at' => $a->created_at->diffForHumans(),
+                'user_name' => $a->user->name ?? 'System',
+            ]);
+
+            $kycCommentsData = $kycComments->map(fn($k) => [
+                'id' => $k->id,
+                'comment' => $k->comment,
+                'created_at' => $k->created_at->diffForHumans(),
+                'user_name' => $k->user->name,
+                'user_avatar' => get_file(!empty($k->user->avatar) ? $k->user->avatar : 'uploads/users-avatar/avatar.png'),
+            ]);
+
+            // Orion settings
+            $orionSettings = \Workdo\Lead\Http\Controllers\OrionIntegrationController::getOrionSettings();
+            $orionRules = $orionSettings['rules'] ?? [];
+            $activeOrionRule = collect($orionRules)->first(fn($r) => ($r['stage_id'] ?? null) == $lead->stage_id);
+
+            $clientCodeValue = '';
+            if ($activeOrionRule) {
+                $mapping = $activeOrionRule['field_mapping'] ?? [];
+                $clientCodeKey = $mapping['ClientCode'] ?? null;
+                if ($clientCodeKey === 'dp_id') {
+                    $clientCodeValue = $lead->dp_id;
+                } elseif ($clientCodeKey && strpos($clientCodeKey, 'custom_') === 0) {
+                    $cfId = substr($clientCodeKey, 7);
+                    $clientCodeValue = $leadCustomFieldValues[$cfId] ?? '';
+                }
+                if (empty($clientCodeValue)) {
+                    $customFieldsList = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', getActiveWorkSpace())->get();
+                    $cfClientCode = $customFieldsList->first(fn($f) => in_array(strtoupper(trim($f->name)), ['CLIENT CODE', 'CLIENT_CODE']));
+                    if ($cfClientCode && !empty($leadCustomFieldValues[$cfClientCode->id])) {
+                        $clientCodeValue = $leadCustomFieldValues[$cfClientCode->id];
+                    }
+                }
+                if (empty($clientCodeValue)) {
+                    $clientCodeValue = $lead->dp_id ?? $lead->pan_number ?? '';
+                }
+            }
+
+            $owner = $lead->owner;
+            $primaryOwnerData = $owner ? [
+                'name' => $owner->name,
+                'avatar' => get_file(!empty($owner->avatar) ? $owner->avatar : 'uploads/users-avatar/avatar.png'),
+            ] : null;
+
+            return response()->json([
+                'success' => true,
+                'lead' => [
+                    'id' => $lead->id,
+                    'name' => $lead->name,
+                    'email' => $lead->email,
+                    'phone' => $lead->phone,
+                    'subject' => $lead->subject,
+                    'created_at' => company_date_formate($lead->created_at),
+                    'creator_name' => $lead->createdBy->name ?? '-',
+                    'stage_id' => $lead->stage_id,
+                    'stage_name' => $lead->stage?->name ?? '-',
+                    'pipeline_name' => $lead->pipeline?->name ?? '-',
+                    'percentage' => $percentage,
+                    'is_responsible' => $lead->isResponsible(),
+                    'primary_owner' => $primaryOwnerData,
+                    'client_code_value' => $clientCodeValue,
+                    'active_orion_rule_id' => $activeOrionRule['id'] ?? null,
+                ],
+                'stages' => $stagesData,
+                'sections' => $sectionsData,
+                'tasks' => $tasksData,
+                'reminders' => $remindersData,
+                'calls' => $callsData,
+                'activities' => $activitiesData,
+                'kyc_comments' => $kycCommentsData,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Lead Details JSON API Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json(['success' => false, 'message' => 'Server Error: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function kanbanBatch(Request $request)
     {
         try {

@@ -81,6 +81,8 @@ Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
     Route::post('leads/bulk-import/upload', [LeadController::class, 'bulkImportUpload'])->name('leads.bulk.import.upload');
     Route::post('leads/bulk-import/process', [LeadController::class, 'bulkImportProcess'])->name('leads.bulk.import.process');
 
+    Route::get('/leads/kanban-data', [LeadController::class, 'kanbanData'])->name('leads.kanban.data');
+    Route::get('/leads/{id}/details-json', [LeadController::class, 'detailsJson'])->name('leads.details.json');
     Route::resource('leads', LeadController::class);
     Route::get('dashboard/crm', [LeadController::class, 'dashboard'])->name('lead.dashboard');
 
@@ -89,6 +91,7 @@ Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
     Route::post('/deals/change-pipeline', [DealController::class, 'changePipeline'])->name('deals.change.pipeline');
 
     Route::match(['get', 'post'], '/leads-list', [LeadController::class, 'lead_list'])->name('leads.list');
+    Route::get('/leads-list-json', [LeadController::class, 'listJson'])->name('leads.list.json');
 
     Route::resource('lead-stages', LeadStageController::class);
     Route::post('/lead_stages/order', [LeadStageController::class, 'order'])->name('lead_stages.order');

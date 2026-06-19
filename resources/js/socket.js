@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 // In production (via Apache) → direct connection to Node server
 const NODE_SERVER = import.meta.env.DEV
   ? window.location.origin          // Vite proxy handles it
-  : 'http://localhost:3000';        // direct for XAMPP prod
+  : 'http://localhost:3001';        // direct for XAMPP prod
 
 const socket = io(NODE_SERVER, {
   transports: ['websocket', 'polling'],

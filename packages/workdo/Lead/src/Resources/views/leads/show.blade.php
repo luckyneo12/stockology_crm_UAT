@@ -1,4 +1,4 @@
-@extends('layouts.main')
+@extends(request()->has('layout') && request('layout') == 'iframe' ? 'layouts.iframe' : 'layouts.main')
 
 @section('page-title')
     {{ $lead->name }}
@@ -726,17 +726,35 @@
             flex-direction: row;
             align-items: center;
             flex-wrap: nowrap;
-            overflow: hidden;
+            overflow-x: auto;
             gap: 0;
             width: 100%;
+            padding-bottom: 12px;
+            margin-bottom: -6px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--theme-emerald) rgba(0, 0, 0, 0.05);
+        }
+        .stepper-track::-webkit-scrollbar {
+            height: 6px;
+        }
+        .stepper-track::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 4px;
+        }
+        .stepper-track::-webkit-scrollbar-thumb {
+            background: rgba(5, 150, 105, 0.25);
+            border-radius: 4px;
+        }
+        .stepper-track::-webkit-scrollbar-thumb:hover {
+            background: var(--theme-emerald);
         }
         .stepper-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
-            flex: 1;
-            min-width: 0;
+            flex: 0 0 115px;
+            min-width: 115px;
         }
         .stepper-item:not(:last-child)::after {
             content: '';
@@ -811,18 +829,23 @@
             color: #64748b;
         }
         .stepper-label {
-            font-size: 8px;
+            font-size: 9px;
             font-weight: 700;
             text-align: center;
-            margin-top: 5px;
-            line-height: 1.1;
+            margin-top: 6px;
+            line-height: 1.2;
             max-width: 100%;
+            padding: 0 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
-            color: #94a3b8;
+            white-space: normal;
+            color: #64748b;
             transition: color 0.3s ease;
             letter-spacing: 0.1px;
+            height: 22px;
         }
         .stepper-item.active .stepper-label { color: var(--theme-emerald); font-weight: 800; }
         .stepper-item.completed .stepper-label { color: var(--theme-emerald); }
@@ -831,6 +854,90 @@
             border: 1px solid rgba(5,150,105,0.08) !important;
             background: #fff !important;
             box-shadow: 0 4px 16px rgba(5,150,105,0.05), 0 1px 4px rgba(15,23,42,0.04) !important;
+        }
+
+        /* Responsive Overhaul for Iframe Detail Drawer on Mobile (<768px) */
+        @media (max-width: 767px) {
+            body {
+                padding: 4px !important;
+            }
+            .container-fluid {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+            #useradd-sidenav {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                background: #ffffff !important;
+                border: 1px solid rgba(15, 23, 42, 0.08) !important;
+                box-shadow: var(--shadow-sm) !important;
+                padding: 10px !important;
+                margin-bottom: 18px !important;
+                gap: 8px !important;
+                border-radius: 14px !important;
+                position: sticky !important;
+                top: 0px;
+                z-index: 1000;
+                scrollbar-width: none !important;
+            }
+            #useradd-sidenav::-webkit-scrollbar {
+                display: none !important;
+            }
+            #useradd-sidenav .list-group-item {
+                flex: 0 0 auto !important;
+                margin-bottom: 0 !important;
+                padding: 8px 16px !important;
+                border-radius: 20px !important;
+                white-space: nowrap !important;
+                background: #f8fafc !important;
+                border: 1px solid rgba(15, 23, 42, 0.05) !important;
+                transform: none !important;
+                font-size: 0.78rem !important;
+                color: #475569 !important;
+            }
+            #useradd-sidenav .list-group-item:hover {
+                color: var(--theme-emerald) !important;
+                background-color: var(--primary-emerald-light) !important;
+                transform: none !important;
+            }
+            #useradd-sidenav .list-group-item.active {
+                background: linear-gradient(135deg, var(--theme-emerald) 0%, #047857 100%) !important;
+                color: #ffffff !important;
+                border-color: transparent !important;
+                box-shadow: var(--shadow-glow-emerald) !important;
+            }
+            #useradd-sidenav .list-group-item .ti-chevron-right,
+            #useradd-sidenav .list-group-item .float-end {
+                display: none !important;
+            }
+            #useradd-sidenav .list-group-item .ti {
+                font-size: 1rem !important;
+                margin-right: 6px !important;
+            }
+            .card.card-modern {
+                margin-bottom: 16px !important;
+            }
+            .card.card-modern .card-body {
+                padding: 16px !important;
+            }
+            .card.hero-gradient {
+                border-radius: 14px !important;
+            }
+            .card.hero-gradient .card-body {
+                padding: 20px !important;
+            }
+            .lead-hero-name {
+                font-size: 1.8rem !important;
+            }
+            .stepper-card {
+                padding: 12px !important;
+            }
+            .col-12 {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+            }
         }
     </style>
     <link rel="stylesheet" href="{{ asset('assets/js/plugins/summernote-0.8.18-dist/summernote-lite.min.css') }}">
@@ -850,7 +957,34 @@
         var scrollSpy = new bootstrap.ScrollSpy(document.body, {
             target: '#useradd-sidenav',
             offset: 300
-        })
+        });
+
+        // Auto-scroll mobile sticky tab bar when ScrollSpy changes
+        $(window).on('activate.bs.scrollspy', function (e) {
+            var activeItem = $('#useradd-sidenav .list-group-item.active');
+            if (activeItem.length > 0 && window.innerWidth < 768) {
+                var container = $('#useradd-sidenav');
+                var scrollLeft = activeItem.position().left + container.scrollLeft() - (container.width() / 2) + (activeItem.width() / 2);
+                container.stop().animate({ scrollLeft: scrollLeft }, 250);
+            }
+        });
+    </script>
+    <script>
+        $(document).ready(function() {
+            setTimeout(function() {
+                var activeNode = $('.stepper-item.active');
+                if (activeNode.length > 0) {
+                    var track = $('.stepper-track');
+                    if (track.length > 0) {
+                        var trackWidth = track.outerWidth();
+                        var activeLeft = activeNode.position().left;
+                        var activeWidth = activeNode.outerWidth();
+                        var scrollLeft = track.scrollLeft() + activeLeft - (trackWidth / 2) + (activeWidth / 2);
+                        track.animate({ scrollLeft: scrollLeft }, 600);
+                    }
+                }
+            }, 300);
+        });
     </script>
     <script src="{{ asset('packages/workdo/Lead/src/Resources/assets/js/dropzone.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugins/summernote-0.8.18-dist/summernote-lite.min.js') }}"></script>
@@ -1377,7 +1511,7 @@
     <div class="row">
         <div class="col-12 mb-3">
             <div class="row">
-                <div class="col-xl-3">
+                <div class="col-xl-3 col-lg-4 col-md-4 col-12">
                     <div class="card sticky-top border-0 shadow-sm" style="top:30px">
                         <div class="list-group list-group-flush rounded-3 p-3" id="useradd-sidenav">
                             <a class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between px-3 py-2 active" href="#general">
@@ -1393,7 +1527,7 @@
                                     @if($secVisibility !== 'hidden')
                                         <a class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between px-3 py-2"
                                             href="#section-{{ $section->id }}">
-                                            <span class="d-flex align-items-center"><i class="ti ti-folder me-2"></i> {{ $section->name }}</span>
+                                            <span class="d-flex align-items-center"><i class="ti ti-folder me-2"></i> {{ ucwords(strtolower(trim($section->name))) }}</span>
                                             <div class="float-end"><i class="ti ti-chevron-right" style="font-size: 0.8rem;"></i></div>
                                         </a>
                                     @endif
@@ -1441,7 +1575,7 @@
                     </div>
                 </div>
 
-                <div class="col-9">
+                <div class="col-xl-9 col-lg-8 col-md-8 col-12">
                     @php
                         $kycComments = $lead->discussions->where('is_kyc', 1);
                         $latestKyc = $kycComments->first();
@@ -1788,7 +1922,7 @@
                                             <span class="icon-shape {{ $iconShapeClass }} rounded-circle me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
                                                 <i class="ti {{ $iconClass }}"></i>
                                             </span>
-                                            <span class="fw-bold">{{ $section->name }}</span>
+                                            <span class="fw-bold">{{ ucwords(strtolower(trim($section->name))) }}</span>
                                             @if($hasApi)
                                                 <a href="javascript:void(0);" class="btn btn-sm btn-icon btn-light-success ms-2 sync-section-api-btn" 
                                                    data-section-id="{{ $section->id }}" 

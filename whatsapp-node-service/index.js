@@ -505,6 +505,30 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('lead_moved', ({ workspace_id, lead_id, stage_id, order }) => {
+        if (workspace_id) {
+            const room = `workspace_${workspace_id}`;
+            socket.to(room).emit('lead_moved', { lead_id, stage_id, order });
+            console.log(`[Socket] Lead ${lead_id} moved to stage ${stage_id} in workspace ${workspace_id}`);
+        }
+    });
+
+    socket.on('lead_created', ({ workspace_id, lead }) => {
+        if (workspace_id) {
+            const room = `workspace_${workspace_id}`;
+            socket.to(room).emit('lead_created', { lead });
+            console.log(`[Socket] Lead created in workspace ${workspace_id}`);
+        }
+    });
+
+    socket.on('lead_updated', ({ workspace_id, lead_id, lead }) => {
+        if (workspace_id) {
+            const room = `workspace_${workspace_id}`;
+            socket.to(room).emit('lead_updated', { lead_id, lead });
+            console.log(`[Socket] Lead ${lead_id} updated in workspace ${workspace_id}`);
+        }
+    });
+
     // Join config-specific room for QR updates
     socket.on('join_config', ({ config_id }) => {
         if (config_id) {

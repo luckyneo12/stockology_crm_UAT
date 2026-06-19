@@ -1,20 +1,45 @@
 {
-  "_index-C3NysTWN.js": {
-    "file": "assets/index-C3NysTWN.js",
-    "name": "index"
+  "_index-C4i9H3YV.js": {
+    "file": "assets/index-C4i9H3YV.js",
+    "name": "index",
+    "imports": [
+      "_vendor-react-C7y6a8gk.js"
+    ]
+  },
+  "_vendor-antd-DsMSMTML.js": {
+    "file": "assets/vendor-antd-DsMSMTML.js",
+    "name": "vendor-antd",
+    "imports": [
+      "_vendor-react-C7y6a8gk.js"
+    ]
+  },
+  "_vendor-anticons-BNGpvsC2.js": {
+    "file": "assets/vendor-anticons-BNGpvsC2.js",
+    "name": "vendor-anticons",
+    "imports": [
+      "_vendor-react-C7y6a8gk.js",
+      "_vendor-antd-DsMSMTML.js"
+    ]
+  },
+  "_vendor-react-C7y6a8gk.js": {
+    "file": "assets/vendor-react-C7y6a8gk.js",
+    "name": "vendor-react"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CEo9Ld8-.css",
+    "file": "assets/app-CZw148F2.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/js/app-react.jsx": {
-    "file": "assets/app-react-BfcpdjSx.js",
+    "file": "assets/app-react-yrQHrvqI.js",
     "name": "app-react",
     "src": "resources/js/app-react.jsx",
     "isEntry": true,
     "imports": [
-      "_index-C3NysTWN.js"
+      "_index-C4i9H3YV.js",
+      "_vendor-react-C7y6a8gk.js",
+      "_vendor-antd-DsMSMTML.js",
+      "_vendor-anticons-BNGpvsC2.js"
     ],
     "css": [
       "assets/app-react-qrn3meSm.css"
@@ -27,12 +52,14 @@
     "isEntry": true
   },
   "resources/js/whatsapp-chat/WhatsAppChatApp.jsx": {
-    "file": "assets/WhatsAppChatApp-DXuLghzA.js",
+    "file": "assets/WhatsAppChatApp-BJhYw27E.js",
     "name": "WhatsAppChatApp",
     "src": "resources/js/whatsapp-chat/WhatsAppChatApp.jsx",
     "isEntry": true,
     "imports": [
-      "_index-C3NysTWN.js"
+      "_index-C4i9H3YV.js",
+      "_vendor-react-C7y6a8gk.js",
+      "_vendor-antd-DsMSMTML.js"
     ],
     "css": [
       "assets/WhatsAppChatApp-TidW3wIr.css"

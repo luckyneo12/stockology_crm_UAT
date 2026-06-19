@@ -15,6 +15,18 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    build: {
+        chunkSizeWarningLimit: 1600,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react':   ['react', 'react-dom'],
+                    'vendor-antd':    ['antd'],
+                    'vendor-anticons': ['@ant-design/icons'],
+                },
+            },
+        },
+    },
     server: {
         proxy: {
             // All /api/node/* requests → Node.js Express on :3000
@@ -25,10 +37,11 @@ export default defineConfig({
             },
             // Socket.IO websocket proxy
             '/socket.io': {
-                target: 'http://localhost:3000',
+                target: 'http://localhost:3001',
                 changeOrigin: true,
                 ws: true,
             },
         },
     },
 });
+
