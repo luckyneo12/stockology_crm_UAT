@@ -843,10 +843,14 @@ export default function ReactHeader() {
 
       {/* ── Core Header Styles ── */}
       <style>{`
+        header.dash-header {
+          overflow: visible !important;
+        }
+
         .crm-hdr-container {
           display: flex;
           align-items: center;
-          height: 60px;
+          height: 70px;
           padding: 0 16px;
           background: rgba(255, 255, 255, 0.45);
           backdrop-filter: blur(16px);
