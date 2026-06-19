@@ -8,6 +8,15 @@ echo "🚀 Starting deployment..."
 echo "📥 Pulling latest code..."
 git pull origin main
 
+# Ensure storage directories exist and have correct permissions
+echo "📁 Setting up Laravel storage directories..."
+mkdir -p storage/framework/cache/data
+mkdir -p storage/framework/sessions
+mkdir -p storage/framework/views
+mkdir -p storage/logs
+chmod -R 775 storage bootstrap/cache
+
+
 # 2. Install PHP Dependencies & Optimize
 echo "📦 Installing Composer dependencies..."
 composer install --no-dev --optimize-autoloader --ignore-platform-reqs
