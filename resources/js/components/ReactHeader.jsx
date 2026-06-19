@@ -601,7 +601,7 @@ export default function ReactHeader() {
 
           {/* Action Buttons: Refresh, Import, Grid, List, Create */}
           <Group gap="5px">
-            <Tooltip label="Refresh Leads">
+            <Tooltip label="Refresh Leads" position="top" withArrow>
               <ActionIcon 
                 variant="light" 
                 color="teal" 
@@ -615,7 +615,7 @@ export default function ReactHeader() {
             </Tooltip>
 
             {canImportLead && (
-              <Tooltip label="Import Leads">
+              <Tooltip label="Import Leads" position="top" withArrow>
                 <ActionIcon 
                   variant="light" 
                   color="teal" 
@@ -630,7 +630,7 @@ export default function ReactHeader() {
             )}
 
             {/* List / Grid Toggles */}
-            <Tooltip label="Kanban Board View">
+            <Tooltip label="Kanban Board View" position="top" withArrow>
               <ActionIcon 
                 variant={routeName === 'leads.index' ? 'filled' : 'light'} 
                 color="teal" 
@@ -643,7 +643,7 @@ export default function ReactHeader() {
               </ActionIcon>
             </Tooltip>
             
-            <Tooltip label="Table List View">
+            <Tooltip label="Table List View" position="top" withArrow>
               <ActionIcon 
                 variant={routeName === 'leads.list' ? 'filled' : 'light'} 
                 color="teal" 
@@ -657,7 +657,7 @@ export default function ReactHeader() {
             </Tooltip>
 
             {canCreateLead && (
-              <Tooltip label="Create New Lead">
+              <Tooltip label="Create New Lead" position="top" withArrow>
                 <ActionIcon 
                   variant="filled" 
                   color="emerald" 
@@ -686,7 +686,7 @@ export default function ReactHeader() {
         {/* Notifications Popover */}
         <Popover width={320} position="bottom-end" shadow="md" radius="md" withArrow onOpen={fetchNotifications}>
           <Popover.Target>
-            <Tooltip label="Notifications">
+            <Tooltip label="Notifications" position="top" withArrow>
               <div className="crm-hdr-bell-wrapper">
                 <ActionIcon 
                   variant="subtle" 
@@ -746,7 +746,7 @@ export default function ReactHeader() {
 
         {/* Create Workspace Short Button */}
         {canCreateWorkspace && (
-          <Tooltip label="Create Workspace">
+          <Tooltip label="Create Workspace" position="top" withArrow>
             <ActionIcon
               variant="subtle"
               color="teal"
