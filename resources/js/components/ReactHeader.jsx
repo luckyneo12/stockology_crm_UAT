@@ -116,6 +116,26 @@ export default function ReactHeader() {
   // Open filters panel
   const handleOpenFilters = () => {
     window.dispatchEvent(new CustomEvent('crm-open-filters'));
+    const modalEl = document.getElementById('leadFilterModal');
+    if (modalEl) {
+      if (window.bootstrap && window.bootstrap.Modal) {
+        try {
+          let filterModal = window.bootstrap.Modal.getInstance(modalEl);
+          if (!filterModal) {
+            filterModal = new window.bootstrap.Modal(modalEl);
+          }
+          filterModal.show();
+        } catch (err) {
+          console.error("Error opening leadFilterModal:", err);
+        }
+      } else if (window.$ || window.jQuery) {
+        try {
+          window.$(modalEl).modal('show');
+        } catch (err) {
+          console.error("Error opening leadFilterModal via jQuery:", err);
+        }
+      }
+    }
   };
 
   // Refresh current list/board data
