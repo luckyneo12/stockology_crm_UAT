@@ -103,9 +103,44 @@
                         <div class="wa-form-desc">{{ __('The verified WhatsApp telephone number associated with your account.') }}</div>
                     </div>
                     <div class="form-group col-md-12 mb-3">
-                        {{ Form::label('connection_type', __('Connection Type'), ['class' => 'wa-form-label']) }}
-                        {{ Form::select('connection_type', ['meta_cloud' => __('Meta Cloud API (Official)'), 'qr_session' => __('QR Code Session (whatsapp-web.js)')], null, array('class' => 'form-control', 'required' => 'required', 'id' => 'wa_connection_type')) }}
-                        <div class="wa-form-desc">{{ __('Select how you want to connect this number to the CRM.') }}</div>
+                        {{ Form::label('connection_type', __('Select Connection Method'), ['class' => 'wa-form-label d-block mb-3']) }}
+                        <input type="hidden" name="connection_type" id="wa_connection_type" value="{{ $config->connection_type }}">
+                        <div class="row g-3">
+                            <!-- Option 1: QR Code -->
+                            <div class="col-md-6">
+                                <div class="wa-connection-card" id="card_qr_session" onclick="selectConnectionType('qr_session')" style="border: 2px solid #cbd5e1; border-radius: 12px; padding: 1.25rem; cursor: pointer; transition: all 0.25s ease; background: #ffffff; height: 100%;">
+                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                        <div style="width: 40px; height: 40px; border-radius: 8px; background: #25d366; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                            <i class="ti ti-qrcode"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="font-weight-bold mb-0 text-dark" style="font-size: 0.95rem;">QR Code Scan</h6>
+                                            <span class="badge bg-success text-xs" style="font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px;">whatsapp-web.js</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted mb-0" style="font-size: 0.775rem; line-height: 1.4;">
+                                        Link instantly by scanning a QR code with your phone. No Meta approval or business registration required.
+                                    </p>
+                                </div>
+                            </div>
+                            <!-- Option 2: Meta API -->
+                            <div class="col-md-6">
+                                <div class="wa-connection-card" id="card_meta_cloud" onclick="selectConnectionType('meta_cloud')" style="border: 2px solid #cbd5e1; border-radius: 12px; padding: 1.25rem; cursor: pointer; transition: all 0.25s ease; background: #ffffff; height: 100%;">
+                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                        <div style="width: 40px; height: 40px; border-radius: 8px; background: #06b6d4; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                            <i class="ti ti-brand-meta"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="font-weight-bold mb-0 text-dark" style="font-size: 0.95rem;">Meta Cloud API</h6>
+                                            <span class="badge bg-info text-xs" style="font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px;">Official API</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted mb-0" style="font-size: 0.775rem; line-height: 1.4;">
+                                        Connect officially via Meta WhatsApp Business Cloud API. Requires Phone Number ID, Access Token & Meta approval.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -272,8 +307,34 @@
             $('#verify_token_container').find('input').attr('required', 'required');
         }
     });
+
+    window.selectConnectionType = function(type) {
+        $('#wa_connection_type').val(type).trigger('change');
+        
+        // Update card styling
+        if (type === 'qr_session') {
+            $('#card_qr_session').css({
+                'border-color': '#25d366',
+                'background': '#f0fdf4'
+            });
+            $('#card_meta_cloud').css({
+                'border-color': '#cbd5e1',
+                'background': '#ffffff'
+            });
+        } else {
+            $('#card_meta_cloud').css({
+                'border-color': '#06b6d4',
+                'background': '#ecfeff'
+            });
+            $('#card_qr_session').css({
+                'border-color': '#cbd5e1',
+                'background': '#ffffff'
+            });
+        }
+    };
+
     // Trigger on load
     setTimeout(function() {
-        $('#wa_connection_type').trigger('change');
-    }, 100);
-</script>
+        var defaultType = $('#wa_connection_type').val() || 'qr_session';
+        window.selectConnectionType(defaultType);
+    }, 150);
