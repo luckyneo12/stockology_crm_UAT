@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MantineProvider, createTheme, Table, Checkbox, Badge, Progress,
   Tooltip, ActionIcon, Menu, Button, Text, TextInput, Select, MultiSelect,
-  Drawer, Group, Stack, Flex, Paper, Switch, Popover, Loader
+  Drawer, Group, Stack, Flex, Paper, Switch, Popover, Loader, Pagination
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import {

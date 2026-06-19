@@ -6,8 +6,8 @@
       "_vendor-react-DX0GdSc1.js"
     ]
   },
-  "_vendor-mantine-Df7jQOP6.js": {
-    "file": "assets/vendor-mantine-Df7jQOP6.js",
+  "_vendor-mantine-DVGJwBie.js": {
+    "file": "assets/vendor-mantine-DVGJwBie.js",
     "name": "vendor-mantine",
     "imports": [
       "_vendor-react-DX0GdSc1.js"
@@ -23,12 +23,12 @@
     "isEntry": true
   },
   "resources/js/app-react.jsx": {
-    "file": "assets/app-react-STaT4Wv4.js",
+    "file": "assets/app-react-DRnXTe5C.js",
     "name": "app-react",
     "src": "resources/js/app-react.jsx",
     "isEntry": true,
     "imports": [
-      "_vendor-mantine-Df7jQOP6.js",
+      "_vendor-mantine-DVGJwBie.js",
       "_vendor-react-DX0GdSc1.js",
       "_index-DE7BOPJ2.js"
     ],
@@ -43,12 +43,12 @@
     "isEntry": true
   },
   "resources/js/whatsapp-chat/WhatsAppChatApp.jsx": {
-    "file": "assets/WhatsAppChatApp-CSmFSXQZ.js",
+    "file": "assets/WhatsAppChatApp-YA5Qkrpd.js",
     "name": "WhatsAppChatApp",
     "src": "resources/js/whatsapp-chat/WhatsAppChatApp.jsx",
     "isEntry": true,
     "imports": [
-      "_vendor-mantine-Df7jQOP6.js",
+      "_vendor-mantine-DVGJwBie.js",
       "_vendor-react-DX0GdSc1.js",
       "_index-DE7BOPJ2.js"
     ],
