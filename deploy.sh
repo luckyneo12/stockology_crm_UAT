@@ -20,12 +20,21 @@ php artisan migrate --force
 echo "⚡ Building React Vite assets and installing Node services..."
 npm run prod:build
 
-# 5. Restart PM2 background Node services
-echo "🔄 Reloading PM2 background services..."
-if pm2 describe whatsapp-crm-service > /dev/null 2>&1; then
-    pm2 startOrReload ecosystem.config.js --env production
+# 5. Restart background Node services
+echo "🔄 Reloading background Node services..."
+if command -v pm2 &> /dev/null; then
+    echo "PM2 detected, restarting via PM2..."
+    if pm2 describe whatsapp-crm-service > /dev/null 2>&1; then
+        pm2 startOrReload ecosystem.config.js --env production
+    else
+        pm2 start ecosystem.config.js --env production
+    fi
 else
-    pm2 start ecosystem.config.js --env production
+    echo "PM2 not found, triggering Passenger restart (Hostinger Cloud)..."
+    mkdir -p whatsapp-node-service/tmp
+    touch whatsapp-node-service/tmp/restart.txt
+    mkdir -p sheet-node-service/tmp
+    touch sheet-node-service/tmp/restart.txt
 fi
 
 # 6. Clear Laravel Cache
