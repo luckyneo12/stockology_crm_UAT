@@ -22,8 +22,9 @@
         "vite": "^5.0"
     },
     "dependencies": {
-        "@ant-design/icons": "^6.2.5",
-        "antd": "^6.4.4",
+        "@mantine/core": "^7.17.8",
+        "@mantine/dates": "^7.17.8",
+        "@mantine/hooks": "^7.17.8",
         "chart.js": "^4.4.2",
         "lucide-react": "^0.363.0",
         "react": "^18.2.0",

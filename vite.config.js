@@ -21,8 +21,7 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     'vendor-react':   ['react', 'react-dom'],
-                    'vendor-antd':    ['antd'],
-                    'vendor-anticons': ['@ant-design/icons'],
+                    'vendor-mantine': ['@mantine/core', '@mantine/hooks', '@mantine/dates'],
                 },
             },
         },

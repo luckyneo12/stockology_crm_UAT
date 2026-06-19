@@ -1,28 +1,20 @@
 {
-  "_index-C4i9H3YV.js": {
-    "file": "assets/index-C4i9H3YV.js",
+  "_index-DE7BOPJ2.js": {
+    "file": "assets/index-DE7BOPJ2.js",
     "name": "index",
     "imports": [
-      "_vendor-react-C7y6a8gk.js"
+      "_vendor-react-DX0GdSc1.js"
     ]
   },
-  "_vendor-antd-DsMSMTML.js": {
-    "file": "assets/vendor-antd-DsMSMTML.js",
-    "name": "vendor-antd",
+  "_vendor-mantine-Df7jQOP6.js": {
+    "file": "assets/vendor-mantine-Df7jQOP6.js",
+    "name": "vendor-mantine",
     "imports": [
-      "_vendor-react-C7y6a8gk.js"
+      "_vendor-react-DX0GdSc1.js"
     ]
   },
-  "_vendor-anticons-BNGpvsC2.js": {
-    "file": "assets/vendor-anticons-BNGpvsC2.js",
-    "name": "vendor-anticons",
-    "imports": [
-      "_vendor-react-C7y6a8gk.js",
-      "_vendor-antd-DsMSMTML.js"
-    ]
-  },
-  "_vendor-react-C7y6a8gk.js": {
-    "file": "assets/vendor-react-C7y6a8gk.js",
+  "_vendor-react-DX0GdSc1.js": {
+    "file": "assets/vendor-react-DX0GdSc1.js",
     "name": "vendor-react"
   },
   "resources/css/app.css": {
@@ -31,18 +23,17 @@
     "isEntry": true
   },
   "resources/js/app-react.jsx": {
-    "file": "assets/app-react-yrQHrvqI.js",
+    "file": "assets/app-react-STaT4Wv4.js",
     "name": "app-react",
     "src": "resources/js/app-react.jsx",
     "isEntry": true,
     "imports": [
-      "_index-C4i9H3YV.js",
-      "_vendor-react-C7y6a8gk.js",
-      "_vendor-antd-DsMSMTML.js",
-      "_vendor-anticons-BNGpvsC2.js"
+      "_vendor-mantine-Df7jQOP6.js",
+      "_vendor-react-DX0GdSc1.js",
+      "_index-DE7BOPJ2.js"
     ],
     "css": [
-      "assets/app-react-qrn3meSm.css"
+      "assets/app-react-Dn7gSjrJ.css"
     ]
   },
   "resources/js/app.js": {
@@ -52,14 +43,14 @@
     "isEntry": true
   },
   "resources/js/whatsapp-chat/WhatsAppChatApp.jsx": {
-    "file": "assets/WhatsAppChatApp-BJhYw27E.js",
+    "file": "assets/WhatsAppChatApp-CSmFSXQZ.js",
     "name": "WhatsAppChatApp",
     "src": "resources/js/whatsapp-chat/WhatsAppChatApp.jsx",
     "isEntry": true,
     "imports": [
-      "_index-C4i9H3YV.js",
-      "_vendor-react-C7y6a8gk.js",
-      "_vendor-antd-DsMSMTML.js"
+      "_vendor-mantine-Df7jQOP6.js",
+      "_vendor-react-DX0GdSc1.js",
+      "_index-DE7BOPJ2.js"
     ],
     "css": [
       "assets/WhatsAppChatApp-TidW3wIr.css"

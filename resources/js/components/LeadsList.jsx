@@ -1,30 +1,40 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Table, Button, Input, Select, DatePicker, Drawer, Space, Tag, Tooltip,
-  Popconfirm, Badge, Statistic, Progress, Divider, Switch, Dropdown, Menu,
-  Row, Col, Card, Typography, ConfigProvider, theme, Spin, Empty, Checkbox
-} from 'antd';
+  MantineProvider, createTheme, Table, Checkbox, Badge, Progress,
+  Tooltip, ActionIcon, Menu, Button, Text, TextInput, Select, MultiSelect,
+  Drawer, Group, Stack, Flex, Paper, Switch, Popover, Loader
+} from '@mantine/core';
+import { DatePickerInput } from '@mantine/dates';
 import {
-  SearchOutlined, FilterOutlined, ReloadOutlined, PlusOutlined,
-  ExportOutlined, DeleteOutlined, EditOutlined, EyeOutlined,
-  PhoneOutlined, MailOutlined, UserOutlined, CalendarOutlined,
-  CheckCircleOutlined, BellOutlined,
-  TeamOutlined, DatabaseOutlined, CloseOutlined, DownOutlined,
-  FileExcelOutlined, FileTextOutlined, SettingOutlined,
-} from '@ant-design/icons';
+  Search, Filter, RotateCw, Plus, Download, ChevronDown, Settings, Eye,
+  ExternalLink, Edit, Trash2, Mail, Phone, User, Calendar, Bell, Database,
+  Users, CheckCircle2, X, ChevronUp, FileText, FileSpreadsheet
+} from 'lucide-react';
 import dayjs from 'dayjs';
 import LeadDetails from './LeadDetails';
 
-const { Search } = Input;
-const { RangePicker } = DatePicker;
-const { Text, Title } = Typography;
-const { useToken } = theme;
+import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 
-// ─── Color palette for stage badges ────────────────────────────────────────
-const STAGE_COLORS = [
-  '#6366f1','#0ea5e9','#10b981','#f59e0b','#f43f5e',
-  '#8b5cf6','#ec4899','#14b8a6','#f97316'
-];
+// ─── Theme Configuration ──────────────────────────────────────────────────
+const theme = createTheme({
+  primaryColor: 'emerald',
+  colors: {
+    emerald: [
+      '#ecfdf5',
+      '#d1fae5',
+      '#a7f3d0',
+      '#6ee7b7',
+      '#34d399',
+      '#10b981',
+      '#059669', // Primary green
+      '#047857',
+      '#065f46',
+      '#064e3b',
+    ],
+  },
+  fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+});
 
 // ─── Avatar Cell ────────────────────────────────────────────────────────────
 function NameAvatar({ name = '' }) {
@@ -46,26 +56,27 @@ function NameAvatar({ name = '' }) {
 // ─── KPI Stat Card ───────────────────────────────────────────────────────────
 function StatCard({ title, value, icon, color, suffix = '', loading }) {
   return (
-    <Card
-      size="small"
+    <Paper
+      p="md"
       style={{
         borderRadius: 14, border: 'none',
         boxShadow: `0 1px 3px rgba(0,0,0,0.06), 0 4px 16px ${color}18`,
-        background: '#fff', overflow: 'hidden', cursor: 'default'
+        background: '#fff', overflow: 'hidden', cursor: 'default',
+        width: '100%'
       }}
-      bodyStyle={{ padding: '16px 20px' }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Flex align="center" justify="space-between">
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4 }}>
+          <Text size="xs" fw={700} c="dimmed" style={{ textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4 }}>
             {title}
-          </div>
-          {loading
-            ? <div style={{ width: 60, height: 28, borderRadius: 6, background: '#f1f5f9', animation: 'llPulse 1.2s infinite' }} />
-            : <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>
-                {value?.toLocaleString()}<span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 500 }}>{suffix}</span>
-              </div>
-          }
+          </Text>
+          {loading ? (
+            <div style={{ width: 60, height: 28, borderRadius: 6, background: '#f1f5f9', animation: 'llPulse 1.2s infinite' }} />
+          ) : (
+            <Text size="xl" fw={800} color="#0f172a" style={{ lineHeight: 1.1 }}>
+              {value?.toLocaleString()}<span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 500 }}>{suffix}</span>
+            </Text>
+          )}
         </div>
         <div style={{
           width: 44, height: 44, borderRadius: 12,
@@ -75,8 +86,8 @@ function StatCard({ title, value, icon, color, suffix = '', loading }) {
         }}>
           {icon}
         </div>
-      </div>
-    </Card>
+      </Flex>
+    </Paper>
   );
 }
 
@@ -109,6 +120,7 @@ export default function LeadsList() {
   const [total, setTotal]             = useState(0);
   const [page, setPage]               = useState(1);
   const [perPage, setPerPage]         = useState(25);
+  const [lastPage, setLastPage]       = useState(1);
   const [sortField, setSortField]     = useState('created_at');
   const [sortDir, setSortDir]         = useState('descend');
   const [search, setSearch]           = useState('');
@@ -134,6 +146,9 @@ export default function LeadsList() {
 
   // Selected rows (bulk)
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+
+  // Delete popover state
+  const [deletingRowId, setDeletingRowId] = useState(null);
 
   // Detail drawer
   const [detailOpen, setDetailOpen]   = useState(false);
@@ -173,6 +188,7 @@ export default function LeadsList() {
       if (json.success) {
         setData(json.data);
         setTotal(json.total);
+        if (json.last_page) setLastPage(json.last_page);
         if (json.stats) { setStats(json.stats); setStatsLoading(false); }
       }
     } catch (e) {
@@ -193,13 +209,23 @@ export default function LeadsList() {
     }, 400);
   };
 
-  const handleTableChange = (pagination, _, sorter) => {
-    setPage(pagination.current);
-    setPerPage(pagination.pageSize);
-    if (sorter?.field) {
-      setSortField(sorter.field);
-      setSortDir(sorter.order || 'descend');
+  const handleHeaderClick = (field) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'ascend' ? 'descend' : 'ascend');
+    } else {
+      setSortField(field);
+      setSortDir('descend');
     }
+    setPage(1);
+  };
+
+  const renderSortIcon = (field) => {
+    if (sortField !== field) return null;
+    return sortDir === 'ascend' ? (
+      <ChevronUp size={13} style={{ marginLeft: 4, display: 'inline-block', verticalAlign: 'middle' }} />
+    ) : (
+      <ChevronDown size={13} style={{ marginLeft: 4, display: 'inline-block', verticalAlign: 'middle' }} />
+    );
   };
 
   const openDetail = (leadId) => {
@@ -244,247 +270,6 @@ export default function LeadsList() {
     window.open(`/leads-list?${params.toString()}`, '_blank');
   };
 
-  // ── Columns ─────────────────────────────────────────────────────────────────
-  const columns = [
-    {
-      title: '#',
-      dataIndex: 'DT_RowIndex',
-      width: 52,
-      render: (_, __, idx) => (
-        <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>
-          {(page - 1) * perPage + idx + 1}
-        </span>
-      ),
-    },
-    {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      sorter: true,
-      render: (name, row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <NameAvatar name={name} />
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-              onClick={() => openDetail(row.id)}
-            >
-              {name}
-            </div>
-            {!row.is_active && (
-              <Tag color="default" style={{ fontSize: '0.6rem', lineHeight: '14px', borderRadius: 4, padding: '0 5px' }}>
-                Inactive
-              </Tag>
-            )}
-          </div>
-        </div>
-      ),
-    },
-    colVisible.subject && {
-      title: 'Subject',
-      dataIndex: 'subject',
-      key: 'subject',
-      sorter: true,
-      render: v => <Text type="secondary" style={{ fontSize: '0.78rem' }}>{v || '—'}</Text>,
-    },
-    colVisible.email && {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      render: v => v ? (
-        <a href={`mailto:${v}`} style={{ fontSize: '0.78rem', color: '#6366f1' }}>
-          <MailOutlined style={{ marginRight: 4 }} />{v}
-        </a>
-      ) : <Text type="secondary">—</Text>,
-    },
-    colVisible.phone && {
-      title: 'Phone',
-      dataIndex: 'phone',
-      key: 'phone',
-      render: (v, row) => v ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: '0.78rem' }}>{v}</span>
-          <Tooltip title="Call">
-            <a href="javascript:void(0)" className="click-to-call" data-phone={v}
-              style={{ color: '#059669', fontSize: 13 }}>
-              <PhoneOutlined />
-            </a>
-          </Tooltip>
-          <Tooltip title="WhatsApp">
-            <a href={`/whatsapp-chats?lead_id=${row.id}`}
-              style={{ color: '#25d366', fontSize: 13 }}>
-              <i className="ti ti-brand-whatsapp" />
-            </a>
-          </Tooltip>
-        </div>
-      ) : <Text type="secondary">—</Text>,
-    },
-    colVisible.stage && {
-      title: 'Stage',
-      dataIndex: 'stage_name',
-      key: 'stage_id',
-      width: 160,
-      render: (stageName, row) => (
-        <div style={{ minWidth: 130 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: row.stage_color, display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
-              {stageName}
-            </span>
-          </div>
-          <Progress
-            percent={row.stage_progress}
-            showInfo={false}
-            strokeColor={row.stage_color}
-            trailColor="#f1f5f9"
-            strokeWidth={4}
-            style={{ margin: 0 }}
-          />
-        </div>
-      ),
-    },
-    colVisible.tasks && {
-      title: 'Tasks',
-      key: 'tasks',
-      width: 80,
-      render: (_, row) => {
-        const done = row.tasks_done || 0;
-        const total = row.tasks_total || 0;
-        const color = done === total && total > 0 ? '#059669' : total > 0 ? '#f59e0b' : '#94a3b8';
-        return (
-          <Tooltip title={`${done} done / ${total} total`}>
-            <Badge
-              count={`${done}/${total}`}
-              style={{ background: `${color}18`, color, border: 'none', fontWeight: 700, fontSize: '0.68rem' }}
-            />
-          </Tooltip>
-        );
-      },
-    },
-    colVisible.reminders && {
-      title: 'Reminders',
-      key: 'reminders',
-      width: 90,
-      render: (_, row) => {
-        const today = row.reminders_today || 0;
-        const total = row.reminders_total || 0;
-        return (
-          <Tooltip title={`${today} today / ${total} total`}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: today > 0 ? '#ef4444' : '#64748b' }}>
-              <BellOutlined style={{ fontSize: 12 }} />
-              {today}/{total}
-            </span>
-          </Tooltip>
-        );
-      },
-    },
-    colVisible.owner && {
-      title: 'Owner',
-      key: 'user_id',
-      render: (_, row) => row.owner_name !== '-' ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{
-            background: 'linear-gradient(135deg,#6366f1,#4f46e5)',
-            color: '#fff', borderRadius: 6, padding: '2px 8px',
-            fontSize: '0.72rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4
-          }}>
-            <UserOutlined style={{ fontSize: 10 }} />
-            {row.owner_name}
-          </div>
-        </div>
-      ) : <Text type="secondary" style={{ fontSize: '0.75rem' }}>—</Text>,
-    },
-    colVisible.created_at && {
-      title: 'Created',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      sorter: true,
-      width: 110,
-      render: v => (
-        <span style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <CalendarOutlined style={{ color: '#6366f1', fontSize: 11 }} />
-          {v}
-        </span>
-      ),
-    },
-    colVisible.updated_at && {
-      title: 'Modified',
-      dataIndex: 'updated_at',
-      key: 'updated_at',
-      sorter: true,
-      width: 110,
-      render: v => (
-        <span style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <CalendarOutlined style={{ color: '#f59e0b', fontSize: 11 }} />
-          {v}
-        </span>
-      ),
-    },
-    colVisible.follow_up && {
-      title: 'Follow Up',
-      dataIndex: 'follow_up_date',
-      key: 'follow_up_date',
-      sorter: true,
-      width: 110,
-      render: v => v ? (
-        <span style={{ fontSize: '0.72rem', color: '#ec4899', fontWeight: 700 }}>
-          <CalendarOutlined style={{ marginRight: 4 }} />{v}
-        </span>
-      ) : <Text type="secondary">—</Text>,
-    },
-    // Action column
-    (cfg.canEdit || cfg.canDelete) && {
-      title: '',
-      key: 'action',
-      fixed: 'right',
-      width: 110,
-      render: (_, row) => (
-        <Space size={4}>
-          <Tooltip title="View Details">
-            <Button
-              type="text" size="small" icon={<EyeOutlined />}
-              style={{ color: '#6366f1', borderRadius: 7 }}
-              onClick={() => openDetail(row.id)}
-            />
-          </Tooltip>
-          {row.can_show && (
-            <Tooltip title="Full Page">
-              <Button
-                type="text" size="small"
-                icon={<i className="ti ti-external-link" style={{ fontSize: 13 }} />}
-                style={{ color: '#059669', borderRadius: 7 }}
-                onClick={() => window.open(row.show_url, '_blank')}
-              />
-            </Tooltip>
-          )}
-          {cfg.canEdit && row.can_edit && (
-            <Tooltip title="Edit">
-              <Button
-                type="text" size="small" icon={<EditOutlined />}
-                style={{ color: '#f59e0b', borderRadius: 7 }}
-                onClick={() => window.location.href = row.edit_url}
-              />
-            </Tooltip>
-          )}
-          {cfg.canDelete && row.can_delete && (
-            <Popconfirm
-              title="Delete Lead"
-              description="This action cannot be undone."
-              onConfirm={() => handleDelete(row)}
-              okText="Delete"
-              cancelText="Cancel"
-              okButtonProps={{ danger: true }}
-            >
-              <Tooltip title="Delete">
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ borderRadius: 7 }} />
-              </Tooltip>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ].filter(Boolean);
-
   // ── Active filter pills ────────────────────────────────────────────────────
   const filterPills = [];
   if (filters.stage_id?.length) filterPills.push({ key: 'stage_id', label: `Stage (${filters.stage_id.length})` });
@@ -501,39 +286,60 @@ export default function LeadsList() {
     setPage(1);
   };
 
+  // Column vis meta
+  const columnMetadata = [
+    { key: 'subject',    label: 'Subject' },
+    { key: 'email',      label: 'Email' },
+    { key: 'phone',      label: 'Phone' },
+    { key: 'stage',      label: 'Stage' },
+    { key: 'tasks',      label: 'Tasks' },
+    { key: 'reminders',  label: 'Reminders' },
+    { key: 'owner',      label: 'Owner' },
+    { key: 'created_at', label: 'Created Date' },
+    { key: 'updated_at', label: 'Modified Date' },
+    { key: 'follow_up',  label: 'Follow Up Date' },
+  ];
+
+  const columnsCount = 3 +
+    (colVisible.subject ? 1 : 0) +
+    (colVisible.email ? 1 : 0) +
+    (colVisible.phone ? 1 : 0) +
+    (colVisible.stage ? 1 : 0) +
+    (colVisible.tasks ? 1 : 0) +
+    (colVisible.reminders ? 1 : 0) +
+    (colVisible.owner ? 1 : 0) +
+    (colVisible.created_at ? 1 : 0) +
+    (colVisible.updated_at ? 1 : 0) +
+    (colVisible.follow_up ? 1 : 0) +
+    ((cfg.canEdit || cfg.canDelete) ? 1 : 0);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <ConfigProvider theme={{
-      token: {
-        colorPrimary: '#059669',
-        borderRadius: 10,
-        fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif",
-        colorBgContainer: '#ffffff',
-      }
-    }}>
+    <MantineProvider theme={theme}>
       <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
         {/* ── KPI Stats ─────────────────────────────────────────────────── */}
-        <Row gutter={[14, 14]} style={{ marginBottom: 20 }}>
-          <Col xs={12} sm={6}>
-            <StatCard title="Total Leads" value={stats.total} icon={<DatabaseOutlined />} color="#6366f1" loading={statsLoading} />
-          </Col>
-          <Col xs={12} sm={6}>
-            <StatCard title="Active Leads" value={stats.active} icon={<CheckCircleOutlined />} color="#059669" loading={statsLoading} />
-          </Col>
-          <Col xs={12} sm={6}>
-            <StatCard title="Reminders Today" value={stats.reminders_today} icon={<BellOutlined />} color="#f59e0b" loading={statsLoading} />
-          </Col>
-          <Col xs={12} sm={6}>
+        <Flex gap="md" style={{ marginBottom: 20, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 200px', display: 'flex' }}>
+            <StatCard title="Total Leads" value={stats.total} icon={<Database size={20} />} color="#6366f1" loading={statsLoading} />
+          </div>
+          <div style={{ flex: '1 1 200px', display: 'flex' }}>
+            <StatCard title="Active Leads" value={stats.active} icon={<CheckCircle2 size={20} />} color="#059669" loading={statsLoading} />
+          </div>
+          <div style={{ flex: '1 1 200px', display: 'flex' }}>
+            <StatCard title="Reminders Today" value={stats.reminders_today} icon={<Bell size={20} />} color="#f59e0b" loading={statsLoading} />
+          </div>
+          <div style={{ flex: '1 1 200px', display: 'flex' }}>
             <StatCard
-              title="Filtered Results" value={total} icon={<TeamOutlined />} color="#ec4899" loading={loading}
+              title="Filtered Results" value={total} icon={<Users size={20} />} color="#ec4899" loading={loading}
               suffix={` / ${(stats.total || 0).toLocaleString()}`}
             />
-          </Col>
-        </Row>
+          </div>
+        </Flex>
 
         {/* ── Main Table Card ────────────────────────────────────────────── */}
         <div style={{
+          position: 'relative',
           background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04)',
           overflow: 'hidden'
@@ -549,100 +355,139 @@ export default function LeadsList() {
             {cfg.pipelineOpts.length > 1 && (
               <Select
                 value={pipelineId}
-                options={cfg.pipelineOpts}
+                data={cfg.pipelineOpts}
                 onChange={v => { setPipelineId(v); setPage(1); }}
-                style={{ minWidth: 160, height: 36 }}
-                size="middle"
+                style={{ minWidth: 160 }}
+                size="sm"
               />
             )}
 
             {/* Search */}
-            <Search
+            <TextInput
               placeholder="Search name, email, phone…"
-              allowClear
               value={searchInput}
               onChange={e => { setSearchInput(e.target.value); handleSearch(e.target.value); }}
-              style={{ width: 240, height: 36 }}
-              prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
+              style={{ width: 240 }}
+              leftSection={<Search size={16} style={{ color: '#94a3b8' }} />}
+              rightSection={
+                searchInput ? (
+                  <ActionIcon variant="transparent" color="gray" onClick={() => { setSearchInput(''); handleSearch(''); }}>
+                    <X size={14} />
+                  </ActionIcon>
+                ) : null
+              }
+              size="sm"
             />
 
             <div style={{ flex: 1 }} />
 
             {/* Active filter pills */}
             {filterPills.map(pill => (
-              <Tag
+              <Badge
                 key={pill.key}
-                closable
-                onClose={() => removeFilter(pill.key)}
+                variant="light"
+                color="teal"
+                size="md"
                 style={{
-                  borderRadius: 20, background: '#f0fdf4', color: '#059669',
-                  border: '1px solid #d1fae5', fontWeight: 700, fontSize: '0.72rem',
-                  padding: '3px 10px', cursor: 'default'
+                  borderRadius: 20, fontWeight: 700, fontSize: '0.72rem',
+                  textTransform: 'none', padding: '12px 10px', height: 'auto',
+                  cursor: 'default'
                 }}
+                rightSection={
+                  <X
+                    size={11}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => removeFilter(pill.key)}
+                  />
+                }
               >
                 {pill.label}
-              </Tag>
+              </Badge>
             ))}
 
             {/* Filter btn */}
-            <Badge count={activeFilterCount} size="small">
+            <div style={{ position: 'relative' }}>
               <Button
-                icon={<FilterOutlined />}
+                leftSection={<Filter size={15} />}
                 onClick={() => { setDraftFilters({ ...filters }); setFilterOpen(true); }}
+                variant={activeFilterCount > 0 ? 'light' : 'default'}
+                color="emerald"
+                size="sm"
                 style={{
-                  borderRadius: 9, height: 36, fontWeight: 700, fontSize: '0.78rem',
-                  borderColor: activeFilterCount > 0 ? '#059669' : '#e2e8f0',
-                  color: activeFilterCount > 0 ? '#059669' : '#475569',
-                  background: activeFilterCount > 0 ? '#f0fdf4' : '#fff'
+                  borderRadius: 9, fontWeight: 700, fontSize: '0.78rem',
+                  height: 36
                 }}
               >
                 Filters
+                {activeFilterCount > 0 && (
+                  <span style={{
+                    marginLeft: 6, background: '#10b981', color: '#fff',
+                    borderRadius: '50%', width: 18, height: 18,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.65rem', fontWeight: 800
+                  }}>
+                    {activeFilterCount}
+                  </span>
+                )}
               </Button>
-            </Badge>
+            </div>
 
             {/* Column visibility */}
             <Button
-              icon={<SettingOutlined />}
+              leftSection={<Settings size={15} />}
               onClick={() => setColDrawerOpen(true)}
-              style={{ borderRadius: 9, height: 36, fontWeight: 700, fontSize: '0.78rem', borderColor: '#e2e8f0', color: '#475569' }}
+              variant="default"
+              size="sm"
+              style={{ borderRadius: 9, height: 36, fontWeight: 700, fontSize: '0.78rem', color: '#475569' }}
             >
               Columns
             </Button>
 
             {/* Export */}
-            <Dropdown menu={{
-              items: [
-                { key: 'csv',   label: <span><FileTextOutlined style={{ marginRight: 8 }} />Export CSV</span>,   onClick: () => handleExport('csv') },
-                { key: 'excel', label: <span><FileExcelOutlined style={{ marginRight: 8 }} />Export Excel</span>, onClick: () => handleExport('excel') },
-              ]
-            }} trigger={['click']}>
-              <Button
-                icon={<ExportOutlined />}
-                style={{ borderRadius: 9, height: 36, fontWeight: 700, fontSize: '0.78rem', borderColor: '#e2e8f0', color: '#475569' }}
-              >
-                Export <DownOutlined style={{ fontSize: 10 }} />
-              </Button>
-            </Dropdown>
+            <Menu shadow="md" width={160} position="bottom-end">
+              <Menu.Target>
+                <Button
+                  leftSection={<Download size={15} />}
+                  rightSection={<ChevronDown size={12} />}
+                  variant="default"
+                  size="sm"
+                  style={{ borderRadius: 9, height: 36, fontWeight: 700, fontSize: '0.78rem', color: '#475569' }}
+                >
+                  Export
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<FileText size={14} />} onClick={() => handleExport('csv')}>
+                  Export CSV
+                </Menu.Item>
+                <Menu.Item leftSection={<FileSpreadsheet size={14} />} onClick={() => handleExport('excel')}>
+                  Export Excel
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
 
             {/* Refresh */}
-            <Tooltip title="Refresh">
-              <Button
-                icon={<ReloadOutlined spin={loading} />}
+            <Tooltip label="Refresh">
+              <ActionIcon
+                variant="default"
                 onClick={() => fetchData()}
-                style={{ borderRadius: 9, height: 36, color: '#475569', borderColor: '#e2e8f0' }}
-              />
+                style={{ borderRadius: 9, height: 36, width: 36, color: '#475569' }}
+              >
+                <RotateCw size={16} className={loading ? 'll-spin-refresh' : ''} />
+              </ActionIcon>
             </Tooltip>
 
             {/* Create */}
             {cfg.canCreate && (
               <Button
-                type="primary"
-                icon={<PlusOutlined />}
+                component="a"
+                leftSection={<Plus size={15} />}
                 href={cfg.createUrl}
+                color="emerald"
+                size="sm"
                 style={{
                   height: 36, borderRadius: 9, fontWeight: 700, fontSize: '0.78rem',
-                  background: 'linear-gradient(135deg, #059669, #047857)',
-                  border: 'none', boxShadow: '0 2px 8px rgba(5,150,105,0.3)'
+                  boxShadow: '0 2px 8px rgba(5,150,105,0.3)'
                 }}
               >
                 New Lead
@@ -659,215 +504,538 @@ export default function LeadsList() {
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#2563eb' }}>
                 {selectedRowKeys.length} lead{selectedRowKeys.length > 1 ? 's' : ''} selected
               </span>
-              <Button size="small" onClick={() => handleExport('csv')} icon={<FileTextOutlined />}>Export Selected</Button>
+              <Button size="xs" variant="default" onClick={() => handleExport('csv')} leftSection={<FileText size={12} />}>
+                Export Selected
+              </Button>
               {cfg.canDelete && (
-                <Popconfirm
-                  title={`Delete ${selectedRowKeys.length} leads?`}
-                  onConfirm={() => { /* bulk delete TODO */ setSelectedRowKeys([]); }}
-                  okText="Delete All" okButtonProps={{ danger: true }}
-                >
-                  <Button size="small" danger icon={<DeleteOutlined />}>Delete Selected</Button>
-                </Popconfirm>
+                <Popover width={240} position="bottom" withArrow shadow="md">
+                  <Popover.Target>
+                    <Button size="xs" color="red" variant="light" leftSection={<Trash2 size={12} />}>
+                      Delete Selected
+                    </Button>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Text size="xs" fw={700} mb={4}>Bulk Delete Leads</Text>
+                    <Text size="xs" c="dimmed" mb={8}>Delete {selectedRowKeys.length} leads? This action cannot be undone.</Text>
+                    <Group gap="xs" justify="flex-end">
+                      <Button size="xs" variant="default">Cancel</Button>
+                      <Button size="xs" color="red" onClick={() => { setSelectedRowKeys([]); }}>Delete All</Button>
+                    </Group>
+                  </Popover.Dropdown>
+                </Popover>
               )}
-              <Button size="small" type="text" onClick={() => setSelectedRowKeys([])}>
-                <CloseOutlined /> Clear
+              <Button size="xs" variant="transparent" onClick={() => setSelectedRowKeys([])} leftSection={<X size={12} />}>
+                Clear
               </Button>
             </div>
           )}
 
+          {/* ── Table Loading Overlay ────────────────────────────────────────── */}
+          {loading && (
+            <div style={{
+              position: 'absolute', inset: '60px 0 0 0', background: 'rgba(255,255,255,0.7)',
+              zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(1px)'
+            }}>
+              <Group gap="xs">
+                <Loader size="sm" color="emerald" />
+                <Text size="sm" fw={600} c="emerald.6">Loading leads…</Text>
+              </Group>
+            </div>
+          )}
+
           {/* ── Table ─────────────────────────────────────────────────────── */}
-          <Table
-            dataSource={data}
-            columns={columns}
-            rowKey="id"
-            loading={{ spinning: loading, tip: 'Loading leads…' }}
-            onChange={handleTableChange}
-            scroll={{ x: 900 }}
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-              type: 'checkbox',
-              columnWidth: 44,
-            }}
-            onRow={(row) => ({
-              style: { cursor: 'pointer' },
-              onClick: () => openDetail(row.id),
-            })}
-            pagination={{
-              current: page,
-              pageSize: perPage,
-              total,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '25', '50', '100'],
-              showTotal: (tot, range) => (
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                  {range[0]}–{range[1]} of {tot.toLocaleString()} leads
-                </span>
-              ),
-              style: { padding: '12px 18px' }
-            }}
-            locale={{
-              emptyText: (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={<span style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>No leads found</span>}
-                />
-              )
-            }}
-            rowClassName={(row) => !row.is_active ? 'll-row-inactive' : ''}
-            size="middle"
-          />
+          <div style={{ overflowX: 'auto' }}>
+            <Table verticalSpacing="sm" highlightOnHover style={{ minWidth: 900 }}>
+              <Table.Thead className="ll-table-thead">
+                <Table.Tr>
+                  <Table.Th style={{ width: 44 }}>
+                    <Checkbox
+                      checked={data.length > 0 && data.every(row => selectedRowKeys.includes(row.id))}
+                      indeterminate={data.some(row => selectedRowKeys.includes(row.id)) && !data.every(row => selectedRowKeys.includes(row.id))}
+                      onChange={(event) => {
+                        const checked = event.currentTarget.checked;
+                        if (checked) {
+                          setSelectedRowKeys(prev => {
+                            const newKeys = [...prev];
+                            data.forEach(row => {
+                              if (!newKeys.includes(row.id)) newKeys.push(row.id);
+                            });
+                            return newKeys;
+                          });
+                        } else {
+                          setSelectedRowKeys(prev => prev.filter(id => !data.some(row => row.id === id)));
+                        }
+                      }}
+                    />
+                  </Table.Th>
+                  <Table.Th style={{ width: 52 }}>#</Table.Th>
+                  <Table.Th onClick={() => handleHeaderClick('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Name {renderSortIcon('name')}
+                  </Table.Th>
+                  {colVisible.subject && (
+                    <Table.Th onClick={() => handleHeaderClick('subject')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                      Subject {renderSortIcon('subject')}
+                    </Table.Th>
+                  )}
+                  {colVisible.email && <Table.Th>Email</Table.Th>}
+                  {colVisible.phone && <Table.Th>Phone</Table.Th>}
+                  {colVisible.stage && <Table.Th>Stage</Table.Th>}
+                  {colVisible.tasks && <Table.Th>Tasks</Table.Th>}
+                  {colVisible.reminders && <Table.Th>Reminders</Table.Th>}
+                  {colVisible.owner && <Table.Th>Owner</Table.Th>}
+                  {colVisible.created_at && (
+                    <Table.Th onClick={() => handleHeaderClick('created_at')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                      Created {renderSortIcon('created_at')}
+                    </Table.Th>
+                  )}
+                  {colVisible.updated_at && (
+                    <Table.Th onClick={() => handleHeaderClick('updated_at')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                      Modified {renderSortIcon('updated_at')}
+                    </Table.Th>
+                  )}
+                  {colVisible.follow_up && (
+                    <Table.Th onClick={() => handleHeaderClick('follow_up_date')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                      Follow Up {renderSortIcon('follow_up_date')}
+                    </Table.Th>
+                  )}
+                  {(cfg.canEdit || cfg.canDelete) && <Table.Th style={{ width: 110 }} />}
+                </Table.Tr>
+              </Table.Thead>
+
+              <Table.Tbody>
+                {data.map((row, idx) => (
+                  <Table.Tr
+                    key={row.id}
+                    className={`ll-table-row ${!row.is_active ? 'll-row-inactive' : ''}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      // Avoid opening details if clicking interactive controls
+                      if (e.target.closest('input, button, a, .click-to-call, .mantine-Menu-target, .mantine-Popover-dropdown, .mantine-Popover-target')) {
+                        return;
+                      }
+                      openDetail(row.id);
+                    }}
+                  >
+                    <Table.Td onClick={e => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedRowKeys.includes(row.id)}
+                        onChange={(event) => {
+                          const checked = event.currentTarget.checked;
+                          setSelectedRowKeys(prev => checked ? [...prev, row.id] : prev.filter(id => id !== row.id));
+                        }}
+                      />
+                    </Table.Td>
+                    <Table.Td className="ll-table-cell">
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>
+                        {(page - 1) * perPage + idx + 1}
+                      </span>
+                    </Table.Td>
+                    <Table.Td className="ll-table-cell">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <NameAvatar name={row.name} />
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onClick={() => openDetail(row.id)}
+                          >
+                            {row.name}
+                          </div>
+                          {!row.is_active && (
+                            <Badge size="xs" color="gray" variant="light" style={{ fontSize: '0.6rem', height: 16, padding: '0 4px', borderRadius: 4 }}>
+                              Inactive
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </Table.Td>
+                    {colVisible.subject && (
+                      <Table.Td className="ll-table-cell">
+                        <Text size="xs" c="dimmed">{row.subject || '—'}</Text>
+                      </Table.Td>
+                    )}
+                    {colVisible.email && (
+                      <Table.Td className="ll-table-cell">
+                        {row.email ? (
+                          <a href={`mailto:${row.email}`} style={{ fontSize: '0.78rem', color: '#6366f1', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Mail size={12} />{row.email}
+                          </a>
+                        ) : <Text size="xs" c="dimmed">—</Text>}
+                      </Table.Td>
+                    )}
+                    {colVisible.phone && (
+                      <Table.Td className="ll-table-cell">
+                        {row.phone ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: '0.78rem' }}>{row.phone}</span>
+                            <Tooltip label="Call">
+                              <a href="javascript:void(0)" className="click-to-call" data-phone={row.phone}
+                                style={{ color: '#059669', fontSize: 13 }}>
+                                <Phone size={12} style={{ verticalAlign: 'middle' }} />
+                              </a>
+                            </Tooltip>
+                            <Tooltip label="WhatsApp">
+                              <a href={`/whatsapp-chats?lead_id=${row.id}`}
+                                style={{ color: '#25d366', fontSize: 13 }}>
+                                <i className="ti ti-brand-whatsapp" style={{ verticalAlign: 'middle' }} />
+                              </a>
+                            </Tooltip>
+                          </div>
+                        ) : <Text size="xs" c="dimmed">—</Text>}
+                      </Table.Td>
+                    )}
+                    {colVisible.stage && (
+                      <Table.Td className="ll-table-cell">
+                        <div style={{ minWidth: 130 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: row.stage_color, display: 'inline-block', flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>
+                              {row.stage_name}
+                            </span>
+                          </div>
+                          <Progress
+                            value={row.stage_progress}
+                            color={row.stage_color}
+                            size="xs"
+                            radius="xl"
+                          />
+                        </div>
+                      </Table.Td>
+                    )}
+                    {colVisible.tasks && (
+                      <Table.Td className="ll-table-cell">
+                        {(() => {
+                          const done = row.tasks_done || 0;
+                          const tot = row.tasks_total || 0;
+                          const color = done === tot && tot > 0 ? 'teal' : tot > 0 ? 'orange' : 'gray';
+                          return (
+                            <Tooltip label={`${done} done / ${tot} total`}>
+                              <Badge size="sm" color={color} variant="light" style={{ fontWeight: 700, fontSize: '0.68rem', textTransform: 'none' }}>
+                                {done}/{tot}
+                              </Badge>
+                            </Tooltip>
+                          );
+                        })()}
+                      </Table.Td>
+                    )}
+                    {colVisible.reminders && (
+                      <Table.Td className="ll-table-cell">
+                        {(() => {
+                          const today = row.reminders_today || 0;
+                          const tot = row.reminders_total || 0;
+                          return (
+                            <Tooltip label={`${today} today / ${tot} total`}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: today > 0 ? '#ef4444' : '#64748b' }}>
+                                <Bell size={12} />
+                                {today}/{tot}
+                              </span>
+                            </Tooltip>
+                          );
+                        })()}
+                      </Table.Td>
+                    )}
+                    {colVisible.owner && (
+                      <Table.Td className="ll-table-cell">
+                        {row.owner_name !== '-' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{
+                              background: 'linear-gradient(135deg,#6366f1,#4f46e5)',
+                              color: '#fff', borderRadius: 6, padding: '2px 8px',
+                              fontSize: '0.72rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4
+                            }}>
+                              <User size={10} />
+                              {row.owner_name}
+                            </div>
+                          </div>
+                        ) : <Text size="xs" c="dimmed">—</Text>}
+                      </Table.Td>
+                    )}
+                    {colVisible.created_at && (
+                      <Table.Td className="ll-table-cell">
+                        <span style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Calendar size={11} style={{ color: '#6366f1' }} />
+                          {row.created_at}
+                        </span>
+                      </Table.Td>
+                    )}
+                    {colVisible.updated_at && (
+                      <Table.Td className="ll-table-cell">
+                        <span style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Calendar size={11} style={{ color: '#f59e0b' }} />
+                          {row.updated_at}
+                        </span>
+                      </Table.Td>
+                    )}
+                    {colVisible.follow_up && (
+                      <Table.Td className="ll-table-cell">
+                        {row.follow_up_date ? (
+                          <span style={{ fontSize: '0.72rem', color: '#ec4899', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Calendar size={11} /> {row.follow_up_date}
+                          </span>
+                        ) : <Text size="xs" c="dimmed">—</Text>}
+                      </Table.Td>
+                    )}
+                    {(cfg.canEdit || cfg.canDelete) && (
+                      <Table.Td className="ll-table-cell" onClick={e => e.stopPropagation()}>
+                        <Group gap={4} wrap="nowrap">
+                          <Tooltip label="View Details">
+                            <ActionIcon
+                              variant="subtle" size="sm" color="indigo"
+                              onClick={() => openDetail(row.id)}
+                            >
+                              <Eye size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                          {row.can_show && (
+                            <Tooltip label="Full Page">
+                              <ActionIcon
+                                variant="subtle" size="sm" color="teal"
+                                onClick={() => window.open(row.show_url, '_blank')}
+                              >
+                                <ExternalLink size={14} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {cfg.canEdit && row.can_edit && (
+                            <Tooltip label="Edit">
+                              <ActionIcon
+                                variant="subtle" size="sm" color="orange"
+                                onClick={() => window.location.href = row.edit_url}
+                              >
+                                <Edit size={14} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {cfg.canDelete && row.can_delete && (
+                            <Popover opened={deletingRowId === row.id} onClose={() => setDeletingRowId(null)} width={220} position="bottom-end" withArrow shadow="md">
+                              <Popover.Target>
+                                <ActionIcon variant="subtle" size="sm" color="red" onClick={() => setDeletingRowId(row.id)}>
+                                  <Trash2 size={14} />
+                                </ActionIcon>
+                              </Popover.Target>
+                              <Popover.Dropdown onClick={e => e.stopPropagation()}>
+                                <Text size="xs" fw={700} mb={4}>Delete Lead</Text>
+                                <Text size="xs" c="dimmed" mb={8}>This action cannot be undone.</Text>
+                                <Group gap="xs" justify="flex-end">
+                                  <Button size="xs" variant="default" onClick={() => setDeletingRowId(null)}>Cancel</Button>
+                                  <Button size="xs" color="red" onClick={() => { handleDelete(row); setDeletingRowId(null); }}>Delete</Button>
+                                </Group>
+                              </Popover.Dropdown>
+                            </Popover>
+                          )}
+                        </Group>
+                      </Table.Td>
+                    )}
+                  </Table.Tr>
+                ))}
+
+                {data.length === 0 && !loading && (
+                  <Table.Tr>
+                    <Table.Td colSpan={columnsCount} style={{ textAlign: 'center', padding: '40px 20px' }}>
+                      <Stack align="center" gap="xs">
+                        <Database size={32} style={{ color: '#94a3b8' }} />
+                        <Text size="sm" fw={600} color="#94a3b8">No leads found</Text>
+                      </Stack>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div style={{
+            padding: '14px 18px', borderTop: '1px solid #f1f5f9',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: 10
+          }}>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+              Showing {total > 0 ? (page - 1) * perPage + 1 : 0}–{Math.min(page * perPage, total)} of {total.toLocaleString()} leads
+            </span>
+
+            <Group gap="xs">
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Per page:</span>
+              <Select
+                value={String(perPage)}
+                data={['10', '25', '50', '100']}
+                onChange={v => { setPerPage(Number(v)); setPage(1); }}
+                style={{ width: 80 }}
+                size="xs"
+              />
+
+              <Pagination
+                value={page}
+                onChange={setPage}
+                total={lastPage}
+                size="sm"
+                color="teal"
+              />
+            </Group>
+          </div>
         </div>
 
         {/* ── Filter Drawer ──────────────────────────────────────────────── */}
         <Drawer
           title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <FilterOutlined style={{ color: '#059669' }} />
-              <span>Filter Leads</span>
+            <Group gap={8}>
+              <Filter size={18} style={{ color: '#059669' }} />
+              <span style={{ fontWeight: 700 }}>Filter Leads</span>
               {activeFilterCount > 0 && (
-                <Tag style={{ background: '#f0fdf4', color: '#059669', border: '1px solid #d1fae5', borderRadius: 20, fontWeight: 700, fontSize: '0.68rem' }}>
-                  {activeFilterCount} active
-                </Tag>
+                <Badge color="teal" variant="light" size="sm" circle>
+                  {activeFilterCount}
+                </Badge>
               )}
-            </div>
+            </Group>
           }
-          open={filterOpen}
+          opened={filterOpen}
           onClose={() => setFilterOpen(false)}
-          width={400}
-          footer={
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <Button onClick={resetFilters} style={{ borderRadius: 9, fontWeight: 700 }}>Reset All</Button>
+          position="right"
+          size="md"
+        >
+          <Stack justify="space-between" style={{ height: 'calc(100vh - 100px)' }}>
+            <Stack gap="md" style={{ overflowY: 'auto', flex: 1, paddingRight: 4 }}>
+              <FilterSection label="Stage">
+                <MultiSelect
+                  placeholder="All stages"
+                  data={cfg.stageOpts}
+                  value={draftFilters.stage_id || []}
+                  onChange={v => setDraftFilters(p => ({ ...p, stage_id: v }))}
+                  clearable
+                  searchable
+                />
+              </FilterSection>
+
+              <FilterSection label="Source">
+                <MultiSelect
+                  placeholder="All sources"
+                  data={cfg.sourceOpts}
+                  value={draftFilters.source_id || []}
+                  onChange={v => setDraftFilters(p => ({ ...p, source_id: v }))}
+                  clearable
+                  searchable
+                />
+              </FilterSection>
+
+              <FilterSection label="Responsible Person">
+                <MultiSelect
+                  placeholder="All users"
+                  data={cfg.userOpts}
+                  value={draftFilters.responsible_person || []}
+                  onChange={v => setDraftFilters(p => ({ ...p, responsible_person: v }))}
+                  clearable
+                  searchable
+                />
+              </FilterSection>
+
+              <FilterSection label="Created By">
+                <MultiSelect
+                  placeholder="All creators"
+                  data={cfg.creatorOpts}
+                  value={draftFilters.created_by || []}
+                  onChange={v => setDraftFilters(p => ({ ...p, created_by: v }))}
+                  clearable
+                  searchable
+                />
+              </FilterSection>
+
+              <FilterSection label="Created Date Range">
+                <DatePickerInput
+                  type="range"
+                  placeholder="Pick date range"
+                  value={[
+                    draftFilters.start_date ? new Date(draftFilters.start_date) : null,
+                    draftFilters.end_date ? new Date(draftFilters.end_date) : null,
+                  ]}
+                  onChange={dates => setDraftFilters(p => ({
+                    ...p,
+                    start_date: dates?.[0] ? dayjs(dates[0]).format('YYYY-MM-DD') : null,
+                    end_date:   dates?.[1] ? dayjs(dates[1]).format('YYYY-MM-DD') : null,
+                  }))}
+                  clearable
+                />
+              </FilterSection>
+
+              <FilterSection label="Modified Date Range">
+                <DatePickerInput
+                  type="range"
+                  placeholder="Pick date range"
+                  value={[
+                    draftFilters.modified_start_date ? new Date(draftFilters.modified_start_date) : null,
+                    draftFilters.modified_end_date ? new Date(draftFilters.modified_end_date) : null,
+                  ]}
+                  onChange={dates => setDraftFilters(p => ({
+                    ...p,
+                    modified_start_date: dates?.[0] ? dayjs(dates[0]).format('YYYY-MM-DD') : null,
+                    modified_end_date:   dates?.[1] ? dayjs(dates[1]).format('YYYY-MM-DD') : null,
+                  }))}
+                  clearable
+                />
+              </FilterSection>
+
+              {cfg.deptOpts.length > 0 && (
+                <FilterSection label="Department">
+                  <MultiSelect
+                    placeholder="All departments"
+                    data={cfg.deptOpts}
+                    value={draftFilters.department_id || []}
+                    onChange={v => setDraftFilters(p => ({ ...p, department_id: v }))}
+                    clearable
+                    searchable
+                  />
+                </FilterSection>
+              )}
+
+              <FilterSection label="Show Duplicates Only">
+                <Switch
+                  checked={!!draftFilters.duplicates}
+                  onChange={event => setDraftFilters(p => ({ ...p, duplicates: event.currentTarget.checked ? 1 : 0 }))}
+                  label="Duplicates filter"
+                />
+              </FilterSection>
+            </Stack>
+
+            <Group justify="flex-end" pt="md" style={{ borderTop: '1px solid #e2e8f0' }}>
+              <Button variant="default" onClick={resetFilters} style={{ borderRadius: 9, fontWeight: 700 }}>
+                Reset All
+              </Button>
               <Button
-                type="primary" onClick={applyFilters}
-                style={{ borderRadius: 9, fontWeight: 700, background: 'linear-gradient(135deg,#059669,#047857)', border: 'none' }}
+                color="emerald" onClick={applyFilters}
+                style={{ borderRadius: 9, fontWeight: 700 }}
               >
                 Apply Filters
               </Button>
-            </div>
-          }
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <FilterSection label="Stage">
-              <Select
-                mode="multiple" allowClear placeholder="All stages"
-                options={cfg.stageOpts}
-                value={draftFilters.stage_id || []}
-                onChange={v => setDraftFilters(p => ({ ...p, stage_id: v }))}
-                style={{ width: '100%' }}
-              />
-            </FilterSection>
-            <FilterSection label="Source">
-              <Select
-                mode="multiple" allowClear placeholder="All sources"
-                options={cfg.sourceOpts}
-                value={draftFilters.source_id || []}
-                onChange={v => setDraftFilters(p => ({ ...p, source_id: v }))}
-                style={{ width: '100%' }}
-              />
-            </FilterSection>
-            <FilterSection label="Responsible Person">
-              <Select
-                mode="multiple" allowClear placeholder="All users"
-                options={cfg.userOpts}
-                value={draftFilters.responsible_person || []}
-                onChange={v => setDraftFilters(p => ({ ...p, responsible_person: v }))}
-                style={{ width: '100%' }}
-              />
-            </FilterSection>
-            <FilterSection label="Created By">
-              <Select
-                mode="multiple" allowClear placeholder="All creators"
-                options={cfg.creatorOpts}
-                value={draftFilters.created_by || []}
-                onChange={v => setDraftFilters(p => ({ ...p, created_by: v }))}
-                style={{ width: '100%' }}
-              />
-            </FilterSection>
-            <FilterSection label="Created Date Range">
-              <RangePicker
-                style={{ width: '100%' }}
-                value={[
-                  draftFilters.start_date ? dayjs(draftFilters.start_date) : null,
-                  draftFilters.end_date ? dayjs(draftFilters.end_date) : null,
-                ]}
-                onChange={dates => setDraftFilters(p => ({
-                  ...p,
-                  start_date: dates?.[0]?.format('YYYY-MM-DD') || null,
-                  end_date:   dates?.[1]?.format('YYYY-MM-DD') || null,
-                }))}
-                allowClear
-              />
-            </FilterSection>
-            <FilterSection label="Modified Date Range">
-              <RangePicker
-                style={{ width: '100%' }}
-                value={[
-                  draftFilters.modified_start_date ? dayjs(draftFilters.modified_start_date) : null,
-                  draftFilters.modified_end_date ? dayjs(draftFilters.modified_end_date) : null,
-                ]}
-                onChange={dates => setDraftFilters(p => ({
-                  ...p,
-                  modified_start_date: dates?.[0]?.format('YYYY-MM-DD') || null,
-                  modified_end_date:   dates?.[1]?.format('YYYY-MM-DD') || null,
-                }))}
-                allowClear
-              />
-            </FilterSection>
-            {cfg.deptOpts.length > 0 && (
-              <FilterSection label="Department">
-                <Select
-                  mode="multiple" allowClear placeholder="All departments"
-                  options={cfg.deptOpts}
-                  value={draftFilters.department_id || []}
-                  onChange={v => setDraftFilters(p => ({ ...p, department_id: v }))}
-                  style={{ width: '100%' }}
-                />
-              </FilterSection>
-            )}
-            <FilterSection label="Show Duplicates Only">
-              <Switch
-                checked={!!draftFilters.duplicates}
-                onChange={v => setDraftFilters(p => ({ ...p, duplicates: v ? 1 : 0 }))}
-                checkedChildren="Yes" unCheckedChildren="No"
-              />
-            </FilterSection>
-          </div>
+            </Group>
+          </Stack>
         </Drawer>
 
         {/* ── Column Visibility Drawer ───────────────────────────────────── */}
         <Drawer
-          title={<span><SettingOutlined style={{ marginRight: 8, color: '#059669' }} />Column Visibility</span>}
-          open={colDrawerOpen}
+          title={
+            <Group gap={8}>
+              <Settings size={18} style={{ color: '#059669' }} />
+              <span style={{ fontWeight: 700 }}>Column Visibility</span>
+            </Group>
+          }
+          opened={colDrawerOpen}
           onClose={() => setColDrawerOpen(false)}
-          width={280}
+          position="right"
+          size="xs"
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { key: 'subject',    label: 'Subject' },
-              { key: 'email',      label: 'Email' },
-              { key: 'phone',      label: 'Phone' },
-              { key: 'stage',      label: 'Stage' },
-              { key: 'tasks',      label: 'Tasks' },
-              { key: 'reminders',  label: 'Reminders' },
-              { key: 'owner',      label: 'Owner' },
-              { key: 'created_at', label: 'Created Date' },
-              { key: 'updated_at', label: 'Modified Date' },
-              { key: 'follow_up',  label: 'Follow Up Date' },
-            ].map(col => (
-              <div key={col.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, background: colVisible[col.key] ? '#f0fdf4' : '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#475569' }}>{col.label}</span>
+          <Stack gap="xs" style={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+            {columnMetadata.map(col => (
+              <Group key={col.key} justify="space-between" p="xs" style={{ borderRadius: 10, background: colVisible[col.key] ? '#f0fdf4' : '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <Text size="sm" fw={600} color="#475569">{col.label}</Text>
                 <Switch
-                  size="small"
+                  size="sm"
                   checked={colVisible[col.key]}
-                  onChange={v => setColVisible(p => ({ ...p, [col.key]: v }))}
+                  onChange={event => setColVisible(p => ({ ...p, [col.key]: event.currentTarget.checked }))}
                 />
-              </div>
+              </Group>
             ))}
-          </div>
+          </Stack>
         </Drawer>
 
-        {/* ── Lead Details Drawer ─────────────────────────────────────────── */}
+        {/* ── Lead Details Drawer Overlay ─────────────────────────────────── */}
         {detailOpen && detailLeadId && (
           <div
             style={{
@@ -895,19 +1063,20 @@ export default function LeadsList() {
                   Lead Details
                 </div>
                 <Button
-                  type="text" size="small"
-                  icon={<i className="ti ti-arrows-maximize" style={{ fontSize: 13 }} />}
-                  style={{ borderRadius: 8, color: '#059669', fontWeight: 700, fontSize: '0.72rem' }}
+                  variant="subtle" size="xs"
+                  leftSection={<ExternalLink size={13} />}
+                  style={{ borderRadius: 8, color: '#059669', fontWeight: 700 }}
                   onClick={() => window.open(`/leads/${detailLeadId}/details`, '_blank')}
                 >
                   Full Page
                 </Button>
-                <Button
-                  type="text" size="small" danger
-                  icon={<CloseOutlined />}
+                <ActionIcon
+                  variant="subtle" color="red" size="sm"
                   style={{ borderRadius: 8 }}
                   onClick={() => { setDetailOpen(false); fetchData(); }}
-                />
+                >
+                  <X size={16} />
+                </ActionIcon>
               </div>
               {/* React LeadDetails Component */}
               <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
@@ -931,8 +1100,8 @@ export default function LeadsList() {
             50%      { opacity: 1; }
           }
           .ll-row-inactive td { opacity: 0.55; }
-          .ant-table-row:hover td { background: #f0fdf4 !important; }
-          .ant-table-thead > tr > th {
+          
+          .ll-table-thead th {
             background: #fafafa !important;
             font-size: 0.7rem !important;
             font-weight: 800 !important;
@@ -940,16 +1109,29 @@ export default function LeadsList() {
             letter-spacing: 0.6px !important;
             color: #94a3b8 !important;
             border-bottom: 1px solid #f1f5f9 !important;
+            padding: 10px 14px !important;
           }
-          .ant-table-cell { font-size: 0.82rem !important; padding: 10px 14px !important; }
-          .ant-pagination-item-active { border-color: #059669 !important; }
-          .ant-pagination-item-active a { color: #059669 !important; }
-          .ant-btn-primary:hover { opacity: 0.9; }
-          .ant-select-selector { border-radius: 9px !important; }
-          .ant-input-affix-wrapper { border-radius: 9px !important; }
+          .ll-table-cell {
+            font-size: 0.82rem !important;
+            padding: 10px 14px !important;
+            vertical-align: middle !important;
+          }
+          .ll-table-row:hover td {
+            background: #f0fdf4 !important;
+          }
+          .ll-spin-refresh {
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          .mantine-Select-input, .mantine-MultiSelect-input, .mantine-TextInput-input {
+            border-radius: 9px !important;
+          }
         `}</style>
       </div>
-    </ConfigProvider>
+    </MantineProvider>
   );
 }
 
