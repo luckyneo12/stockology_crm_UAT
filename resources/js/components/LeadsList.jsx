@@ -58,6 +58,7 @@ function StatCard({ title, value, icon, color, suffix = '', loading }) {
   return (
     <Paper
       p="md"
+      className="ll-stat-card"
       style={{
         borderRadius: 14, border: 'none',
         boxShadow: `0 1px 3px rgba(0,0,0,0.06), 0 4px 16px ${color}18`,
@@ -636,6 +637,7 @@ export default function LeadsList() {
                         <NameAvatar name={row.name} />
                         <div style={{ minWidth: 0 }}>
                           <div
+                            className="ll-lead-name-link"
                             style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
                             onClick={() => openDetail(row.id)}
                           >
@@ -1126,8 +1128,41 @@ export default function LeadsList() {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
-          .mantine-Select-input, .mantine-MultiSelect-input, .mantine-TextInput-input {
+          .mantine-Select-input, .mantine-MultiSelect-input, .mantine-TextInput-input, .mantine-DatePickerInput-input {
             border-radius: 9px !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+          }
+          .mantine-Select-input:focus, .mantine-MultiSelect-input:focus, .mantine-TextInput-input:focus, .mantine-DatePickerInput-input:focus {
+            border-color: #059669 !important;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15) !important;
+          }
+          .ll-stat-card {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          }
+          .ll-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 16px -6px rgba(0,0,0,0.08) !important;
+          }
+          .ll-lead-name-link {
+            transition: color 0.15s ease;
+          }
+          .ll-lead-name-link:hover {
+            color: #059669 !important;
+            text-decoration: underline;
+          }
+          .ll-table-container::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+          }
+          .ll-table-container::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .ll-table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 99px;
+          }
+          .ll-table-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
           }
         `}</style>
       </div>
