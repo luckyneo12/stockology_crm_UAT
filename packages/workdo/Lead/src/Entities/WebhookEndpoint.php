@@ -16,6 +16,8 @@ class WebhookEndpoint extends Model
         'assign_to',
         'pipeline_id',
         'stage_id',
+        'source_id',
+        'auto_convert',
         'view_permissions',
         'edit_permissions',
         'field_mapping',
@@ -46,6 +48,11 @@ class WebhookEndpoint extends Model
     public function stage()
     {
         return $this->hasOne(LeadStage::class , 'id', 'stage_id');
+    }
+
+    public function source()
+    {
+        return $this->hasOne(Source::class , 'id', 'source_id');
     }
 
     public function webhookData()

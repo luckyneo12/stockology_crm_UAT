@@ -294,6 +294,11 @@ class TargetController extends Controller
         }
 
         $targets = $query->orderBy('id', 'desc')->get();
+        foreach ($targets as $t) {
+            if (in_array($t->target_type, ['lead_stage', 'account', 'ftd', 'revenue'])) {
+                $t->recalculateAchievedValue();
+            }
+        }
 
         $thirtyDaysAgo = date('Y-m-d', strtotime('-30 days'));
         $today = date('Y-m-d');
@@ -645,12 +650,310 @@ class TargetController extends Controller
             }
         }
 
+        $myAccountTarget = Target::where('workspace', getActiveWorkSpace())
+            ->where('assigned_to', $usr->id)
+            ->where('target_type', 'account')
+            ->whereMonth('start_date', date('m'))
+            ->whereYear('start_date', date('Y'))
+            ->latest()->first();
+        if (!$myAccountTarget && $myDept) {
+            $myAccountTarget = Target::where('workspace', getActiveWorkSpace())
+                ->where('department_id', $myDept->id)
+                ->where('target_type', 'account')
+                ->whereMonth('start_date', date('m'))
+                ->whereYear('start_date', date('Y'))
+                ->latest()->first();
+        }
+        if (!$myAccountTarget && $myTeam) {
+            $myAccountTarget = Target::where('workspace', getActiveWorkSpace())
+                ->where('team_id', $myTeam->id)
+                ->where('target_type', 'account')
+                ->whereMonth('start_date', date('m'))
+                ->whereYear('start_date', date('Y'))
+                ->latest()->first();
+        }
+
+        $myFtdTarget = Target::where('workspace', getActiveWorkSpace())
+            ->where('assigned_to', $usr->id)
+            ->where('target_type', 'ftd')
+            ->whereMonth('start_date', date('m'))
+            ->whereYear('start_date', date('Y'))
+            ->latest()->first();
+        if (!$myFtdTarget && $myDept) {
+            $myFtdTarget = Target::where('workspace', getActiveWorkSpace())
+                ->where('department_id', $myDept->id)
+                ->where('target_type', 'ftd')
+                ->whereMonth('start_date', date('m'))
+                ->whereYear('start_date', date('Y'))
+                ->latest()->first();
+        }
+        if (!$myFtdTarget && $myTeam) {
+            $myFtdTarget = Target::where('workspace', getActiveWorkSpace())
+                ->where('team_id', $myTeam->id)
+                ->where('target_type', 'ftd')
+                ->whereMonth('start_date', date('m'))
+                ->whereYear('start_date', date('Y'))
+                ->latest()->first();
+        }
+
+        $myRevenueTarget = Target::where('workspace', getActiveWorkSpace())
+            ->where('assigned_to', $usr->id)
+            ->where('target_type', 'revenue')
+            ->whereMonth('start_date', date('m'))
+            ->whereYear('start_date', date('Y'))
+            ->latest()->first();
+        if (!$myRevenueTarget && $myDept) {
+            $myRevenueTarget = Target::where('workspace', getActiveWorkSpace())
+                ->where('department_id', $myDept->id)
+                ->where('target_type', 'revenue')
+                ->whereMonth('start_date', date('m'))
+                ->whereYear('start_date', date('Y'))
+                ->latest()->first();
+        }
+        if (!$myRevenueTarget && $myTeam) {
+            $myRevenueTarget = Target::where('workspace', getActiveWorkSpace())
+                ->where('team_id', $myTeam->id)
+                ->where('target_type', 'revenue')
+                ->whereMonth('start_date', date('m'))
+                ->whereYear('start_date', date('Y'))
+                ->latest()->first();
+        }
+
+        // ── Summary Metrics Overhaul ──────────────────────────────────────────
+        $applyLeadFilters = function($query) use ($request, $usr, $isCompany, $isDeptHead, $isTeamLead, $deptUserIds, $teamUserIds) {
+            $query->where('workspace_id', getActiveWorkSpace());
+
+            // 1. Hierarchy visibility constraints
+            if (!$isCompany) {
+                $query->where(function($q) use ($usr, $isDeptHead, $isTeamLead, $deptUserIds, $teamUserIds) {
+                    if ($isDeptHead) {
+                        $q->where('user_id', $usr->id);
+                        if (!empty($deptUserIds)) {
+                            $q->orWhereIn('user_id', $deptUserIds);
+                        }
+                    } elseif ($isTeamLead) {
+                        $q->where('user_id', $usr->id);
+                        if (!empty($teamUserIds)) {
+                            $q->orWhereIn('user_id', $teamUserIds);
+                        }
+                    } else {
+                        $q->where('user_id', $usr->id);
+                    }
+                });
+            }
+
+            // 2. Request filters
+            if ($request->has('assigned_to') && !empty($request->assigned_to)) {
+                $query->whereIn('user_id', (array)$request->assigned_to);
+            }
+
+            if ($request->has('department_id') && !empty($request->department_id) && module_is_active('Hrm')) {
+                $deptIds = [];
+                foreach ((array)$request->department_id as $dId) {
+                    $dept = \Workdo\Hrm\Entities\Department::find($dId);
+                    if ($dept) {
+                        $deptIds = array_merge($deptIds, [$dId], $dept->allChildIds());
+                    }
+                }
+                $empUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', array_unique($deptIds))->pluck('user_id')->toArray();
+                $query->whereIn('user_id', $empUserIds);
+            }
+
+            if ($request->has('team_id') && !empty($request->team_id) && module_is_active('Hrm')) {
+                $teamIds = [];
+                foreach ((array)$request->team_id as $tId) {
+                    $dept = \Workdo\Hrm\Entities\Department::find($tId);
+                    if ($dept) {
+                        $teamIds = array_merge($teamIds, [$tId], $dept->allChildIds());
+                    }
+                }
+                $empUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', array_unique($teamIds))->pluck('user_id')->toArray();
+                $query->whereIn('user_id', $empUserIds);
+            }
+        };
+
+        $clientCodeFieldIds = \DB::table('lead_custom_fields')->where('workspace_id', getActiveWorkSpace())->where('name', 'like', '%CLIENT CODE%')->pluck('id')->toArray();
+        $ftdFieldIds = \DB::table('lead_custom_fields')->where('workspace_id', getActiveWorkSpace())->where('name', 'like', '%ftd%')->pluck('id')->toArray();
+        $activationFieldIds = \DB::table('lead_custom_fields')->where('workspace_id', getActiveWorkSpace())->where('name', 'like', '%ACTIVATION DATE%')->pluck('id')->toArray();
+        $lastTradeFieldIds = \DB::table('lead_custom_fields')->where('workspace_id', getActiveWorkSpace())->where('name', 'like', '%LAST TRADE DATE%')->pluck('id')->toArray();
+
+        $revenueFieldIds = \DB::table('lead_custom_fields')->where('workspace_id', getActiveWorkSpace())->where('name', 'like', '%revenue%')->pluck('id')->toArray();
+        if (empty($revenueFieldIds)) {
+            $revenueFieldIds = \DB::table('lead_custom_fields')->where('workspace_id', getActiveWorkSpace())->where('name', 'like', '%brokerage%')->pluck('id')->toArray();
+        }
+        if (empty($revenueFieldIds)) {
+            $revenueFieldIds = $ftdFieldIds;
+        }
+
+        // 1. Accounts open
+        $accountsThisMonth = 0;
+        $accountsToday = 0;
+        if (!empty($clientCodeFieldIds)) {
+            $accQueryMonth = \Workdo\Lead\Entities\Lead::query();
+            $applyLeadFilters($accQueryMonth);
+            $accountsThisMonth = $accQueryMonth->whereBetween('created_at', [date('Y-m-01 00:00:00'), date('Y-m-t 23:59:59')])
+                ->whereExists(function ($subQuery) use ($clientCodeFieldIds) {
+                    $subQuery->select(\DB::raw(1))
+                        ->from('lead_custom_field_values')
+                        ->whereColumn('lead_custom_field_values.lead_id', 'leads.id')
+                        ->whereIn('lead_custom_field_values.field_id', $clientCodeFieldIds)
+                        ->whereNotNull('lead_custom_field_values.value')
+                        ->where('lead_custom_field_values.value', '!=', '');
+                })->count();
+
+            $accQueryToday = \Workdo\Lead\Entities\Lead::query();
+            $applyLeadFilters($accQueryToday);
+            $accountsToday = $accQueryToday->whereBetween('created_at', [date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59')])
+                ->whereExists(function ($subQuery) use ($clientCodeFieldIds) {
+                    $subQuery->select(\DB::raw(1))
+                        ->from('lead_custom_field_values')
+                        ->whereColumn('lead_custom_field_values.lead_id', 'leads.id')
+                        ->whereIn('lead_custom_field_values.field_id', $clientCodeFieldIds)
+                        ->whereNotNull('lead_custom_field_values.value')
+                        ->where('lead_custom_field_values.value', '!=', '');
+                })->count();
+        }
+
+        // 2. FTD
+        $ftdThisMonth = 0;
+        $ftdToday = 0;
+        if (!empty($ftdFieldIds)) {
+            $ftdQueryMonth = \Workdo\Lead\Entities\Lead::query();
+            $applyLeadFilters($ftdQueryMonth);
+            $ftdThisMonth = $ftdQueryMonth->whereBetween('created_at', [date('Y-m-01 00:00:00'), date('Y-m-t 23:59:59')])
+                ->whereExists(function ($subQuery) use ($ftdFieldIds) {
+                    $subQuery->select(\DB::raw(1))
+                        ->from('lead_custom_field_values')
+                        ->whereColumn('lead_custom_field_values.lead_id', 'leads.id')
+                        ->whereIn('lead_custom_field_values.field_id', $ftdFieldIds)
+                        ->whereNotNull('lead_custom_field_values.value')
+                        ->where('lead_custom_field_values.value', '!=', '')
+                        ->where('lead_custom_field_values.value', '>', 0);
+                })->count();
+
+            $ftdQueryToday = \Workdo\Lead\Entities\Lead::query();
+            $applyLeadFilters($ftdQueryToday);
+            $ftdToday = $ftdQueryToday->whereBetween('created_at', [date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59')])
+                ->whereExists(function ($subQuery) use ($ftdFieldIds) {
+                    $subQuery->select(\DB::raw(1))
+                        ->from('lead_custom_field_values')
+                        ->whereColumn('lead_custom_field_values.lead_id', 'leads.id')
+                        ->whereIn('lead_custom_field_values.field_id', $ftdFieldIds)
+                        ->whereNotNull('lead_custom_field_values.value')
+                        ->where('lead_custom_field_values.value', '!=', '')
+                        ->where('lead_custom_field_values.value', '>', 0);
+                })->count();
+        }
+
+        // 3. Revenue
+        $revenueThisMonth = 0;
+        $revenueToday = 0;
+        if (!empty($revenueFieldIds)) {
+            $revQueryMonth = \Workdo\Lead\Entities\Lead::query();
+            $applyLeadFilters($revQueryMonth);
+            $leadIdsMonth = $revQueryMonth->whereBetween('created_at', [date('Y-m-01 00:00:00'), date('Y-m-t 23:59:59')])->pluck('id')->toArray();
+            if (!empty($leadIdsMonth)) {
+                $revenueThisMonth = \DB::table('lead_custom_field_values')
+                    ->whereIn('lead_id', $leadIdsMonth)
+                    ->whereIn('field_id', $revenueFieldIds)
+                    ->whereNotNull('value')
+                    ->where('value', '!=', '')
+                    ->sum(\DB::raw('CAST(value AS DECIMAL(15,2))'));
+            }
+
+            $revQueryToday = \Workdo\Lead\Entities\Lead::query();
+            $applyLeadFilters($revQueryToday);
+            $leadIdsToday = $revQueryToday->whereBetween('created_at', [date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59')])->pluck('id')->toArray();
+            if (!empty($leadIdsToday)) {
+                $revenueToday = \DB::table('lead_custom_field_values')
+                    ->whereIn('lead_id', $leadIdsToday)
+                    ->whereIn('field_id', $revenueFieldIds)
+                    ->whereNotNull('value')
+                    ->where('value', '!=', '')
+                    ->sum(\DB::raw('CAST(value AS DECIMAL(15,2))'));
+            }
+        }
+
+        // 4. Dormant accounts
+        $dormantCount = 0;
+        if (!empty($clientCodeFieldIds)) {
+            $dormantQuery = \Workdo\Lead\Entities\Lead::query();
+            $applyLeadFilters($dormantQuery);
+            $thirtyDaysAgo = date('Y-m-d', strtotime('-30 days'));
+
+            $dormantQuery->whereExists(function ($subQuery) use ($clientCodeFieldIds) {
+                $subQuery->select(\DB::raw(1))
+                    ->from('lead_custom_field_values')
+                    ->whereColumn('lead_custom_field_values.lead_id', 'leads.id')
+                    ->whereIn('lead_custom_field_values.field_id', $clientCodeFieldIds)
+                    ->whereNotNull('lead_custom_field_values.value')
+                    ->where('lead_custom_field_values.value', '!=', '');
+            })->where(function($q) use ($lastTradeFieldIds, $activationFieldIds, $thirtyDaysAgo) {
+                $hasCond = false;
+                if (!empty($lastTradeFieldIds)) {
+                    $q->whereExists(function($sub) use ($lastTradeFieldIds, $thirtyDaysAgo) {
+                        $sub->select(\DB::raw(1))
+                            ->from('lead_custom_field_values as ltd')
+                            ->whereColumn('ltd.lead_id', 'leads.id')
+                            ->whereIn('ltd.field_id', $lastTradeFieldIds)
+                            ->whereNotNull('ltd.value')
+                            ->where('ltd.value', '!=', '')
+                            ->where('ltd.value', '<', $thirtyDaysAgo);
+                    });
+                    $hasCond = true;
+                }
+                
+                if (!empty($activationFieldIds)) {
+                    $orClosure = function($subOr) use ($lastTradeFieldIds, $activationFieldIds, $thirtyDaysAgo) {
+                        if (!empty($lastTradeFieldIds)) {
+                            $subOr->whereNotExists(function($notExists) use ($lastTradeFieldIds) {
+                                $notExists->select(\DB::raw(1))
+                                    ->from('lead_custom_field_values as ltd')
+                                    ->whereColumn('ltd.lead_id', 'leads.id')
+                                    ->whereIn('ltd.field_id', $lastTradeFieldIds)
+                                    ->whereNotNull('ltd.value')
+                                    ->where('ltd.value', '!=', '');
+                            });
+                        }
+                        $subOr->whereExists(function($existsAct) use ($activationFieldIds, $thirtyDaysAgo) {
+                            $existsAct->select(\DB::raw(1))
+                                ->from('lead_custom_field_values as act')
+                                ->whereColumn('act.lead_id', 'leads.id')
+                                ->whereIn('act.field_id', $activationFieldIds)
+                                ->whereNotNull('act.value')
+                                ->where('act.value', '!=', '')
+                                ->where('act.value', '<', $thirtyDaysAgo);
+                        });
+                    };
+
+                    if ($hasCond) {
+                        $q->orWhere($orClosure);
+                    } else {
+                        $q->where($orClosure);
+                    }
+                }
+            });
+
+            $dormantCount = $dormantQuery->count();
+        }
+
+        $summaryMetrics = [
+            'accounts_this_month' => $accountsThisMonth,
+            'accounts_today' => $accountsToday,
+            'ftd_this_month' => $ftdThisMonth,
+            'ftd_today' => $ftdToday,
+            'revenue_this_month' => $revenueThisMonth,
+            'revenue_today' => $revenueToday,
+            'dormant_count' => $dormantCount,
+        ];
+
         $templates = TargetTemplate::where('workspace', getActiveWorkSpace())->get();
         return view('targets.index', compact(
             'targets', 'isManager', 'subordinateUsers', 'statuses', 'departments', 'teams',
             'stats', 'unitPerformance', 'teamPerformance', 'templates', 'employeePerformance',
             'isDeptHead', 'isTeamLead', 'myDeptTarget', 'myTeamTarget', 'myDept', 'myTeam',
-            'departmentLedger', 'teamLedger', 'memberLedger', 'monthlyTargetsList'
+            'departmentLedger', 'teamLedger', 'memberLedger', 'monthlyTargetsList',
+            'myAccountTarget', 'myFtdTarget', 'myRevenueTarget', 'summaryMetrics'
         ));
     }
 
@@ -865,6 +1168,8 @@ class TargetController extends Controller
                     $uniqueQuery->where('target_type', 'lead_stage')
                         ->where('pipeline_id', $pipelineId)
                         ->where('stage_id', $stageId);
+                } elseif (in_array($targetType, ['account', 'ftd', 'revenue'])) {
+                    $uniqueQuery->where('target_type', $targetType);
                 } else {
                     $uniqueQuery->where('target_type', 'manual')
                         ->where('target_name', $targetName);
@@ -913,11 +1218,15 @@ class TargetController extends Controller
                     $target->pipeline_id = $request->pipeline_id;
                     $target->stage_id = $request->stage_id;
                     $target->custom_date_field = $request->custom_date_field ?? 'created_at';
+                } elseif (in_array($target->target_type, ['account', 'ftd', 'revenue'])) {
+                    $target->pipeline_id = null;
+                    $target->stage_id = null;
+                    $target->custom_date_field = $request->custom_date_field ?? 'created_at';
                 }
                 
                 $target->save();
 
-                if ($target->target_type == 'lead_stage') {
+                if (in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue'])) {
                     $target->recalculateAchievedValue();
                 }
             }
@@ -1042,6 +1351,8 @@ class TargetController extends Controller
                 $uniqueQuery->where('target_type', 'lead_stage')
                     ->where('pipeline_id', $pipelineId)
                     ->where('stage_id', $stageId);
+            } elseif (in_array($targetType, ['account', 'ftd', 'revenue'])) {
+                $uniqueQuery->where('target_type', $targetType);
             } else {
                 $uniqueQuery->where('target_type', 'manual')
                     ->where('target_name', $targetName);
@@ -1095,6 +1406,10 @@ class TargetController extends Controller
                     $target->pipeline_id = $request->pipeline_id;
                     $target->stage_id = $request->stage_id;
                     $target->custom_date_field = $request->custom_date_field ?? 'created_at';
+                } elseif (in_array($target->target_type, ['account', 'ftd', 'revenue'])) {
+                    $target->pipeline_id = null;
+                    $target->stage_id = null;
+                    $target->custom_date_field = $request->custom_date_field ?? 'created_at';
                 } else {
                     $target->pipeline_id = null;
                     $target->stage_id = null;
@@ -1111,7 +1426,7 @@ class TargetController extends Controller
             $target->save();
 
             // Recalculate if automated
-            if ($target->target_type == 'lead_stage') {
+            if (in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue'])) {
                 $target->recalculateAchievedValue();
             }
 
@@ -1281,6 +1596,10 @@ class TargetController extends Controller
                 $template->pipeline_id = $request->pipeline_id;
                 $template->stage_id = $request->stage_id;
                 $template->custom_date_field = $request->custom_date_field ?? 'created_at';
+            } elseif (in_array($request->target_type, ['account', 'ftd', 'revenue'])) {
+                $template->pipeline_id = null;
+                $template->stage_id = null;
+                $template->custom_date_field = $request->custom_date_field ?? 'created_at';
             } else {
                 $template->pipeline_id = null;
                 $template->stage_id = null;
@@ -1346,6 +1665,10 @@ class TargetController extends Controller
             if ($request->target_type == 'lead_stage') {
                 $template->pipeline_id = $request->pipeline_id;
                 $template->stage_id = $request->stage_id;
+                $template->custom_date_field = $request->custom_date_field ?? 'created_at';
+            } elseif (in_array($request->target_type, ['account', 'ftd', 'revenue'])) {
+                $template->pipeline_id = null;
+                $template->stage_id = null;
                 $template->custom_date_field = $request->custom_date_field ?? 'created_at';
             } else {
                 $template->pipeline_id = null;
@@ -1483,6 +1806,8 @@ class TargetController extends Controller
                     $uniqueQuery->where('target_type', 'lead_stage')
                         ->where('pipeline_id', $template->pipeline_id)
                         ->where('stage_id', $template->stage_id);
+                } elseif (in_array($template->target_type, ['account', 'ftd', 'revenue'])) {
+                    $uniqueQuery->where('target_type', $template->target_type);
                 } else {
                     $uniqueQuery->where('target_type', 'manual')
                         ->where('target_name', $template->name);
@@ -1567,7 +1892,7 @@ class TargetController extends Controller
                 
                 $target->save();
 
-                if ($target->target_type == 'lead_stage') {
+                if (in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue'])) {
                     $target->recalculateAchievedValue();
                 }
             }

@@ -24,6 +24,12 @@ class LeadServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__ . '/../Resources/views', 'lead');
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
         $this->registerTranslations();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Workdo\Lead\Console\FacebookFetchLeadsCommand::class,
+            ]);
+        }
     }
 
     /**

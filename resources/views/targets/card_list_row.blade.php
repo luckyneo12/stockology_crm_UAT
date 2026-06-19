@@ -24,8 +24,8 @@
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <h6 class="mb-0 text-dark font-weight-bold" style="font-size: 0.95rem;">{{ $target->target_name }}</h6>
                     
-                    <span class="badge {{ $target->target_type == 'lead_stage' ? 'badge-type-automated' : 'badge-type-manual' }} text-xxs px-2 py-0.5 rounded-pill">
-                        {{ $target->target_type == 'lead_stage' ? __('Automated') : __('Manual') }}
+                    <span class="badge {{ in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? 'badge-type-automated' : 'badge-type-manual' }} text-xxs px-2 py-0.5 rounded-pill">
+                        {{ in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? __('Automated') : __('Manual') }}
                     </span>
                     
                     @if($target->status == 'Completed')
@@ -49,6 +49,21 @@
                         <i class="ti ti-git-branch text-primary text-xxs"></i>
                         {{ $target->pipeline ? $target->pipeline->name : __('Unknown Pipeline') }} &rarr; 
                         <span class="badge bg-light-info text-info py-0 px-1" style="font-size: 9px;">{{ $target->stage ? $target->stage->name : __('Unknown Stage') }}</span>
+                    </small>
+                @elseif($target->target_type == 'account')
+                    <small class="text-xxs text-muted mt-1 d-flex align-items-center gap-1">
+                        <i class="ti ti-plug text-primary text-xxs"></i>
+                        <span class="badge bg-light-info text-info py-0 px-1" style="font-size: 9px;">{{ __('Automated (Account Opening)') }}</span>
+                    </small>
+                @elseif($target->target_type == 'ftd')
+                    <small class="text-xxs text-muted mt-1 d-flex align-items-center gap-1">
+                        <i class="ti ti-coin text-primary text-xxs"></i>
+                        <span class="badge bg-light-info text-info py-0 px-1" style="font-size: 9px;">{{ __('Automated (FTD Count)') }}</span>
+                    </small>
+                @elseif($target->target_type == 'revenue')
+                    <small class="text-xxs text-muted mt-1 d-flex align-items-center gap-1">
+                        <i class="ti ti-currency-dollar text-primary text-xxs"></i>
+                        <span class="badge bg-light-info text-info py-0 px-1" style="font-size: 9px;">{{ __('Automated (Revenue Sum)') }}</span>
                     </small>
                 @endif
             </div>

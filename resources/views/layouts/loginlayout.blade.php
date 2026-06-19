@@ -175,22 +175,6 @@
                     </div>
                 </div>
             </main>
-            <footer>
-                <div class="auth-footer">
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-12">
-                                <span>
-                                    @if (!empty($company_settings['footer_text']))
-                                    {{ $company_settings['footer_text'] }} @else{{ __('Copyright') }} &copy;
-                                        {{ config('app.name', 'Stockology') }}
-                                    @endif{{ date('Y') }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </footer>
         </div>
     </div>
     @if ((isset($company_settings['enable_cookie']) ? $company_settings['enable_cookie'] : 'off') == 'on')

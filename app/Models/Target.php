@@ -101,7 +101,7 @@ class Target extends Model
 
     public function recalculateAchievedValue()
     {
-        if ($this->target_type !== 'lead_stage') {
+        if (!in_array($this->target_type, ['lead_stage', 'account', 'ftd', 'revenue'])) {
             return;
         }
 
@@ -109,9 +109,12 @@ class Target extends Model
             return;
         }
 
-        $query = \Workdo\Lead\Entities\Lead::where('workspace_id', $this->workspace)
-            ->where('pipeline_id', $this->pipeline_id)
-            ->where('stage_id', $this->stage_id);
+        $query = \Workdo\Lead\Entities\Lead::where('workspace_id', $this->workspace);
+
+        if ($this->target_type === 'lead_stage') {
+            $query->where('pipeline_id', $this->pipeline_id)
+                  ->where('stage_id', $this->stage_id);
+        }
 
         // Check if there is an selected custom date field for tracking
         $customDateFieldId = $this->custom_date_field;
@@ -158,12 +161,87 @@ class Target extends Model
             $allDeptIds = $dept ? $dept->allChildIds() : [$this->team_id];
             $empUserIds = \Workdo\Hrm\Entities\Employee::whereIn('department_id', $allDeptIds)->pluck('user_id')->toArray();
             $query->whereIn('user_id', $empUserIds);
-        } else {
-            return;
         }
 
-        $count = $query->count();
-        $this->achieved_value = $count;
+        if ($this->target_type === 'lead_stage') {
+            $count = $query->count();
+            $this->achieved_value = $count;
+        } elseif ($this->target_type === 'account') {
+            // Count leads with non-empty CLIENT CODE custom field
+            $clientCodeFieldIds = \DB::table('lead_custom_fields')
+                ->where('workspace_id', $this->workspace)
+                ->where('name', 'like', '%CLIENT CODE%')
+                ->pluck('id')
+                ->toArray();
+
+            $query->whereExists(function ($subQuery) use ($clientCodeFieldIds) {
+                $subQuery->select(\DB::raw(1))
+                    ->from('lead_custom_field_values')
+                    ->whereColumn('lead_custom_field_values.lead_id', 'leads.id')
+                    ->whereIn('lead_custom_field_values.field_id', $clientCodeFieldIds)
+                    ->whereNotNull('lead_custom_field_values.value')
+                    ->where('lead_custom_field_values.value', '!=', '');
+            });
+
+            $count = $query->count();
+            $this->achieved_value = $count;
+        } elseif ($this->target_type === 'ftd') {
+            // Count leads with FTD > 0
+            $ftdFieldIds = \DB::table('lead_custom_fields')
+                ->where('workspace_id', $this->workspace)
+                ->where('name', 'like', '%ftd%')
+                ->pluck('id')
+                ->toArray();
+
+            $query->whereExists(function ($subQuery) use ($ftdFieldIds) {
+                $subQuery->select(\DB::raw(1))
+                    ->from('lead_custom_field_values')
+                    ->whereColumn('lead_custom_field_values.lead_id', 'leads.id')
+                    ->whereIn('lead_custom_field_values.field_id', $ftdFieldIds)
+                    ->whereNotNull('lead_custom_field_values.value')
+                    ->where('lead_custom_field_values.value', '!=', '')
+                    ->where('lead_custom_field_values.value', '>', 0);
+            });
+
+            $count = $query->count();
+            $this->achieved_value = $count;
+        } elseif ($this->target_type === 'revenue') {
+            // Sum of FTD/Revenue values for matching leads
+            $revenueFieldIds = \DB::table('lead_custom_fields')
+                ->where('workspace_id', $this->workspace)
+                ->where('name', 'like', '%revenue%')
+                ->pluck('id')
+                ->toArray();
+
+            if (empty($revenueFieldIds)) {
+                $revenueFieldIds = \DB::table('lead_custom_fields')
+                    ->where('workspace_id', $this->workspace)
+                    ->where('name', 'like', '%brokerage%')
+                    ->pluck('id')
+                    ->toArray();
+            }
+
+            if (empty($revenueFieldIds)) {
+                $revenueFieldIds = \DB::table('lead_custom_fields')
+                    ->where('workspace_id', $this->workspace)
+                    ->where('name', 'like', '%ftd%')
+                    ->pluck('id')
+                    ->toArray();
+            }
+
+            $leadIds = $query->pluck('id')->toArray();
+            $sum = 0;
+            if (!empty($leadIds) && !empty($revenueFieldIds)) {
+                $sum = \DB::table('lead_custom_field_values')
+                    ->whereIn('lead_id', $leadIds)
+                    ->whereIn('field_id', $revenueFieldIds)
+                    ->whereNotNull('value')
+                    ->where('value', '!=', '')
+                    ->sum(\DB::raw('CAST(value AS DECIMAL(15,2))'));
+            }
+            $this->achieved_value = $sum;
+        }
+
         if ($this->achieved_value >= $this->target_value) {
             $this->status = 'Completed';
         } else {

@@ -131,9 +131,13 @@
                             $tName = $employeeDeptCache[$user->id];
                         } else {
                             $tName = '';
-                            if (function_exists('module_is_active') && module_is_active('Hrm') && class_exists('\Workdo\Hrm\Entities\Employee')) {
-                                $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
-                                $tName = $emp && $emp->department ? $emp->department->name : '';
+                            if (function_exists('module_is_active') && module_is_active('Hrm')) {
+                                if ($user->relationLoaded('employee')) {
+                                    $tName = ($user->employee && $user->employee->department) ? $user->employee->department->name : '';
+                                } else if (class_exists('\Workdo\Hrm\Entities\Employee')) {
+                                    $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
+                                    $tName = $emp && $emp->department ? $emp->department->name : '';
+                                }
                             }
                             $employeeDeptCache[$user->id] = $tName;
                         }

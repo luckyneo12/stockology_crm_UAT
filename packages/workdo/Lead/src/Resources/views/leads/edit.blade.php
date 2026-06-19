@@ -255,9 +255,42 @@
                     e.preventDefault();
                     e.stopPropagation();
 
-                    // Create alert HTML
+                    // Find all invalid fields for debugging
+                    var invalidFields = [];
+                    var debugDetails = [];
+                    $(form).find(':invalid').each(function() {
+                        var name = $(this).attr('name') || $(this).attr('id') || this.tagName;
+                        var labelText = '';
+                        var $formGroup = $(this).closest('.form-group');
+                        if ($formGroup.length) {
+                            var $label = $formGroup.find('label');
+                            if ($label.length) {
+                                var $clonedLabel = $label.clone();
+                                $clonedLabel.find('i, span, svg').remove();
+                                labelText = $clonedLabel.text().trim();
+                            }
+                        }
+                        if (!labelText) {
+                            labelText = name;
+                        }
+                        invalidFields.push(labelText);
+                        debugDetails.push({
+                            element: this,
+                            name: name,
+                            id: $(this).attr('id'),
+                            tagName: this.tagName,
+                            type: $(this).attr('type'),
+                            required: $(this).prop('required'),
+                            value: $(this).val(),
+                            validity: this.validity
+                        });
+                    });
+                    console.error("Form validation failed. Invalid fields details:", debugDetails);
+
+                    // Create alert HTML with invalid field names
                     var alertHtml = '<div class="alert alert-danger alert-dismissible fade show alert-client-side" role="alert">' +
                                     '<strong>{{__("Error!")}}</strong> {{__("Please fill in all required fields.")}}' +
+                                    '<br><small class="text-xs"><strong>Missing fields:</strong> ' + invalidFields.join(', ') + '</small>' +
                                     '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
                                     '</div>';
                     
@@ -359,11 +392,49 @@
                         
                         // Show/hide sections based on visible fields
                         $('.lead-section-group').each(function() {
+                            var secId = $(this).attr('data-section-id') ? $(this).attr('data-section-id').toString() : '';
                             var secPipelineId = $(this).attr('data-pipeline-id');
                             if (secPipelineId && secPipelineId != pipelineId) {
                                 $(this).hide();
                                 return;
                             }
+                            if (response.hidden_sections && response.hidden_sections.includes(secId)) {
+                                $(this).hide();
+                                $(this).find('.lead-custom-field-group input, .lead-custom-field-group select, .lead-custom-field-group textarea').prop('required', false);
+                                return;
+                            }
+                            
+                            // Apply secure reveal blur if section is in eye_toggle_sections
+                            if (response.eye_toggle_sections && response.eye_toggle_sections.includes(secId)) {
+                                $(this).addClass('secure-blur-section');
+                                $(this).find('.lead-custom-field-group').each(function() {
+                                    var $fieldGroup = $(this);
+                                    if ($fieldGroup.find('.secure-reveal-overlay').length === 0) {
+                                        $fieldGroup.css('position', 'relative');
+                                        var $inputContainer = $fieldGroup.find('input, select, textarea').first();
+                                        if ($inputContainer.length > 0) {
+                                            $inputContainer.css('filter', 'blur(6px)');
+                                            $inputContainer.css('pointer-events', 'none');
+                                            
+                                            var $choicesContainer = $fieldGroup.find('.choices');
+                                            if ($choicesContainer.length > 0) {
+                                                $choicesContainer.css('filter', 'blur(6px)');
+                                                $choicesContainer.css('pointer-events', 'none');
+                                            }
+                                            
+                                            var $overlay = $('<div class="secure-reveal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.45); cursor: pointer; border-radius: 8px;"><button type="button" class="btn btn-xs btn-primary d-flex align-items-center gap-1 shadow-sm" style="font-size: 0.72rem; padding: 3px 8px;"><i class="ti ti-eye"></i> Show</button></div>');
+                                            $fieldGroup.append($overlay);
+                                        }
+                                    }
+                                });
+                            } else {
+                                $(this).removeClass('secure-blur-section');
+                                $(this).find('.lead-custom-field-group').each(function() {
+                                    $(this).find('.secure-reveal-overlay').remove();
+                                    $(this).find('input, select, textarea, .choices').css('filter', '').css('pointer-events', '');
+                                });
+                            }
+
                             var visibleFields = $(this).find('.lead-custom-field-group').filter(function() {
                                 return this.style.display !== 'none';
                             }).length;
@@ -460,4 +531,18 @@
             height: 200,
         });
     }
+
+    // click-to-reveal overlay action
+    $(document).on('click', '.secure-reveal-overlay', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $overlay = $(this);
+        var $fieldGroup = $overlay.closest('.lead-custom-field-group');
+        var $input = $fieldGroup.find('input, select, textarea, .choices');
+        
+        $input.css('filter', '').css('pointer-events', '');
+        $overlay.fadeOut(150, function() {
+            $overlay.remove();
+        });
+    });
 </script>

@@ -67,6 +67,62 @@
 
         <!-- Tab 2: Stage Settings -->
         <div class="tab-pane fade" id="stage-panel" role="tabpanel" aria-labelledby="stage-tab">
+            <style>
+                .segmented-control {
+                    display: inline-flex;
+                    background-color: #f8fafc;
+                    border-radius: 50px;
+                    padding: 2px;
+                    border: 1px solid #cbd5e1;
+                    height: 30px;
+                    align-items: center;
+                    flex-shrink: 0;
+                }
+
+                .segmented-control .btn-segment {
+                    font-size: 0.7rem !important;
+                    font-weight: 600 !important;
+                    color: #64748b !important;
+                    background: transparent !important;
+                    transition: all 0.15s ease-in-out;
+                    border: none !important;
+                    box-shadow: none !important;
+                    height: 24px;
+                    padding: 2px 10px !important;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    line-height: 1;
+                }
+
+                .segmented-control .btn-segment:hover {
+                    color: #1e293b !important;
+                    background-color: rgba(0,0,0,0.04) !important;
+                    border-radius: 50px !important;
+                }
+
+                /* Active States */
+                .segmented-control[data-active-val="visible"] .btn-segment[data-value="visible"] {
+                    background-color: #d1e7dd !important;
+                    color: #0f5132 !important;
+                    box-shadow: 0 2px 4px rgba(15, 81, 50, 0.12) !important;
+                    border-radius: 50px !important;
+                }
+
+                .segmented-control[data-active-val="hidden"] .btn-segment[data-value="hidden"] {
+                    background-color: #f8d7da !important;
+                    color: #842029 !important;
+                    box-shadow: 0 2px 4px rgba(132, 32, 41, 0.12) !important;
+                    border-radius: 50px !important;
+                }
+
+                .segmented-control[data-active-val="required"] .btn-segment[data-value="required"] {
+                    background-color: #e0e6ff !important;
+                    color: #2b46b8 !important;
+                    box-shadow: 0 2px 4px rgba(43, 70, 184, 0.12) !important;
+                    border-radius: 50px !important;
+                }
+            </style>
             <div class="form-group mb-0">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <div>
@@ -75,57 +131,63 @@
                     </div>
                 </div>
                 
-                <div class="table-responsive rounded-3 border mb-3" style="max-height: 280px; overflow-y: auto;">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th class="py-2 px-3 border-0">{{ __('Pipeline / Stage') }}</th>
-                                <th class="py-2 px-3 border-0 text-end" style="width: 150px;">{{ __('Visibility') }}</th>
-                                <th class="py-2 px-3 border-0 text-end min-value-col {{ $customField->type == 'number' ? '' : 'd-none' }}" style="width: 150px;">{{ __('Min Value') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($pipelines as $pipeline)
-                                <tr class="bg-light">
-                                    <td colspan="3" class="py-2 px-3 fw-bold text-muted border-bottom">
-                                        <i class="ti ti-git-fork text-primary me-1"></i> {{ $pipeline->name }} {{ __('Pipeline') }}
-                                    </td>
-                                </tr>
-                                @foreach($pipeline->leadStages as $stage)
-                                    @php
-                                        // Determine current config for this stage
-                                        $currentConfig = 'visible'; // default
-                                        
-                                        $isInVisible = !empty($customField->visible_stages) && is_array($customField->visible_stages) && in_array($stage->id, $customField->visible_stages);
-                                        $isInRequired = !empty($customField->required_stages) && is_array($customField->required_stages) && in_array($stage->id, $customField->required_stages);
-                                        
-                                        if ($isInRequired) {
-                                            $currentConfig = 'required';
-                                        } elseif ($isInVisible) {
-                                            $currentConfig = 'visible';
-                                        } elseif (!empty($customField->visible_stages)) {
-                                            $currentConfig = 'hidden';
-                                        }
-                                    @endphp
-                                    <tr>
-                                        <td class="py-2 px-3 ps-4 border-bottom-0">
-                                            <span class="fw-semibold text-dark">{{ $stage->name }}</span>
-                                        </td>
-                                        <td class="py-2 px-3 text-end border-bottom-0">
-                                            <select name="stage_config[{{ $stage->id }}]" class="form-select form-select-sm d-inline-block w-auto py-1">
-                                                <option value="hidden" {{ $currentConfig == 'hidden' ? 'selected' : '' }}>{{ __('🚫 Hidden') }}</option>
-                                                <option value="visible" {{ $currentConfig == 'visible' ? 'selected' : '' }}>{{ __('👁️ Visible (Optional)') }}</option>
-                                                <option value="required" {{ $currentConfig == 'required' ? 'selected' : '' }}>{{ __('✅ Required') }}</option>
-                                            </select>
-                                        </td>
-                                        <td class="py-2 px-3 text-end border-bottom-0 min-value-col {{ $customField->type == 'number' ? '' : 'd-none' }}">
-                                            <input type="number" step="any" name="stage_min_values[{{ $stage->id }}]" value="{{ $customField->stage_min_values[$stage->id] ?? '' }}" class="form-control form-control-sm d-inline-block w-auto py-1" style="max-width: 120px;" placeholder="{{ __('Min value') }}">
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @endforeach
-                        </tbody>
-                    </table>
+                <div class="rounded-3 border mb-3 p-3 bg-white shadow-sm" style="max-height: 280px; overflow-y: auto;">
+                    @foreach($pipelines as $pipeline)
+                        <div class="d-flex align-items-center gap-2 mb-2 @if($loop->first) mt-0 @else mt-4 @endif">
+                            <span class="badge bg-light-primary text-primary px-3 py-2 rounded-pill fw-bold" style="font-size: 0.75rem; border: 1px solid rgba(24, 191, 107, 0.15); display: inline-flex; align-items: center;">
+                                <i class="ti ti-git-fork me-1"></i> {{ $pipeline->name }} {{ __('Pipeline') }}
+                            </span>
+                            <div class="flex-grow-1 border-bottom border-light" style="border-bottom-style: dashed !important;"></div>
+                        </div>
+                        @foreach($pipeline->leadStages as $stage)
+                            @php
+                                // Determine current config for this stage
+                                $currentConfig = 'visible'; // default
+                                
+                                $isInVisible = !empty($customField->visible_stages) && is_array($customField->visible_stages) && in_array($stage->id, $customField->visible_stages);
+                                $isInRequired = !empty($customField->required_stages) && is_array($customField->required_stages) && in_array($stage->id, $customField->required_stages);
+                                
+                                if ($isInRequired) {
+                                    $currentConfig = 'required';
+                                } elseif ($isInVisible) {
+                                    $currentConfig = 'visible';
+                                } elseif (!empty($customField->visible_stages)) {
+                                    $currentConfig = 'hidden';
+                                }
+                            @endphp
+                            <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-light" style="border-bottom-style: dashed !important; min-height: 48px;">
+                                <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 0; padding-right: 10px;">
+                                    <div class="icon-circle rounded-circle d-flex align-items-center justify-content-center bg-light text-primary" style="width: 24px; height: 24px; flex-shrink: 0;">
+                                        <i class="ti ti-git-commit fs-6"></i>
+                                    </div>
+                                    <span class="fw-semibold text-dark text-truncate" style="font-size: 0.82rem;" title="{{ $stage->name }}">{{ $stage->name }}</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                    <select name="stage_config[{{ $stage->id }}]" class="field-stage-select d-none" data-stage-id="{{ $stage->id }}">
+                                        <option value="hidden" {{ $currentConfig == 'hidden' ? 'selected' : '' }}>hidden</option>
+                                        <option value="visible" {{ $currentConfig == 'visible' ? 'selected' : '' }}>visible</option>
+                                        <option value="required" {{ $currentConfig == 'required' ? 'selected' : '' }}>required</option>
+                                    </select>
+                                    
+                                    <div class="segmented-control bg-light p-1 rounded-pill border d-flex gap-1" data-target-stage-id="{{ $stage->id }}" data-active-val="{{ $currentConfig }}">
+                                        <button type="button" class="btn btn-xs rounded-pill btn-segment d-flex align-items-center gap-1 border-0" data-value="visible">
+                                            <i class="ti ti-eye"></i> <span>{{ __('Visible') }}</span>
+                                        </button>
+                                        <button type="button" class="btn btn-xs rounded-pill btn-segment d-flex align-items-center gap-1 border-0" data-value="hidden">
+                                            <i class="ti ti-eye-off"></i> <span>{{ __('Hidden') }}</span>
+                                        </button>
+                                        <button type="button" class="btn btn-xs rounded-pill btn-segment d-flex align-items-center gap-1 border-0" data-value="required">
+                                            <i class="ti ti-lock"></i> <span>{{ __('Required') }}</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="min-value-col {{ $customField->type == 'number' ? '' : 'd-none' }}" style="width: 80px; flex-shrink: 0;">
+                                        <input type="number" step="any" name="stage_min_values[{{ $stage->id }}]" value="{{ $customField->stage_min_values[$stage->id] ?? '' }}" class="form-control" style="width: 100%; height: 30px; border-radius: 20px; font-size: 0.72rem; text-align: center; border: 1px solid #cbd5e1; padding: 2px 5px;" placeholder="{{ __('Min') }}">
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endforeach
                 </div>
             </div>
         </div>
@@ -217,6 +279,23 @@
 
         // Initial run
         toggleMinValCol();
+
+        // Click handler for segmented control buttons inside stage settings panel
+        $(document).off('click', '#stage-panel .btn-segment').on('click', '#stage-panel .btn-segment', function(e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var val = $btn.attr('data-value') || $btn.data('value');
+            var stageId = $btn.parent().attr('data-target-stage-id') || $btn.parent().data('target-stage-id');
+            
+            // Find and update hidden select
+            var $select = $('#stage-panel').find(`.field-stage-select[data-stage-id="${stageId}"]`);
+            if ($select.length) {
+                $select.val(val).trigger('change');
+            }
+            
+            // Update parent active attribute
+            $btn.parent().attr('data-active-val', val);
+        });
 
         // Init Choices.js
         var elements = document.querySelectorAll('.choices-js-modal');

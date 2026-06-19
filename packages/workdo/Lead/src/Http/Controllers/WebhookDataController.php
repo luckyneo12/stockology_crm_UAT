@@ -45,7 +45,7 @@ class WebhookDataController extends Controller
         return false;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -77,8 +77,28 @@ class WebhookDataController extends Controller
                 });
             }
 
+            // Apply filters
+            if ($request->filled('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->filled('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+            if ($request->filled('webhook_endpoint_id')) {
+                $query->where('webhook_endpoint_id', $request->webhook_endpoint_id);
+            }
+            if ($request->filled('assigned_user_id')) {
+                $query->where('assigned_user_id', $request->assigned_user_id);
+            }
+
             $webhookDataList = $query->orderBy('id', 'DESC')->get();
-            return view('lead::webhook_data.index', compact('webhookDataList'));
+            $endpoints = WebhookEndpoint::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
+            $users = User::where('workspace_id', getActiveWorkSpace())->where('type', '!=', 'client')->get()->pluck('name', 'id');
+
+            return view('lead::webhook_data.index', compact('webhookDataList', 'endpoints', 'users'));
         } else {
             return redirect()->route('dashboard')->with('error', __('Permission completely denied.'));
         }
@@ -161,6 +181,9 @@ class WebhookDataController extends Controller
 
             $lead->pipeline_id = $endpoint->pipeline_id;
             $lead->stage_id = $endpoint->stage_id;
+            if (!empty($endpoint->source_id)) {
+                $lead->sources = (string)$endpoint->source_id;
+            }
             $lead->created_by = Auth::user()->id;
             $lead->date = date('Y-m-d');
             $lead->workspace_id = getActiveWorkSpace();

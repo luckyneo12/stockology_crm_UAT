@@ -3,35 +3,23 @@
         Options -MultiViews -Indexes
     </IfModule>
 
-    <Files .env>
-        Order Allow,Deny
-        Deny from all
-    </Files>
-
     RewriteEngine On
 
-    # Handle Authorization Header
-    RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    # Prevent access to sensitive files and directories
+    RedirectMatch 404 /\.(git|env|bak|sql)$
+    RedirectMatch 404 /(composer\.(json|lock)|package(-lock)?\.json|artisan)$
 
-    # Redirect Trailing Slashes If Not A Folder...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
-
-    # Handle Front Controller...
-    RewriteCond %{REQUEST_URI} !(\.css|\.js|\.png|\.jpg|\.jpeg|\.gif|robots\.txt|\.ico|\.woff|\.woff2|.ttf|\.svg)$ [NC]
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [L]
-
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_URI} ^/packages/workdo/
-    RewriteRule ^packages/workdo/(.*)$ packages/workdo/$1 [L,NC]
-
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
+    # Case 1: If the file exists in the public directory, rewrite to it directly
     RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(css|assets|market_assets|images|landing|uploads|storage|installer|js|vendor)/(.*)$ public/$1/$2 [L,NC]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Case 2: Route /storage requests directly to storage/app/public (bypasses symlink requirement)
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^storage/(.*)$ storage/app/public/$1 [L]
+
+    # Case 3: If the file does NOT exist in the root, route directly to public/index.php (prevents double-rewrite)
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ public/index.php [L]
 </IfModule>

@@ -17,8 +17,14 @@ class LeadSection extends Model
         'api_method',
         'api_trigger_stage_id',
         'api_response_mapping',
-        'pipeline_id'
+        'pipeline_id',
+        'visible_stages'
     ];
+
+    protected $casts = [
+        'visible_stages' => 'array'
+    ];
+
 
     public static function ensurePipelineLayout($pipelineId, $workspaceId)
     {

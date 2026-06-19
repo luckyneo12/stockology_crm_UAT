@@ -244,6 +244,8 @@ if (!function_exists('getAdminAllSetting')) {
 if (!function_exists('getCompanyAllSetting')) {
     function getCompanyAllSetting($user_id = null, $workspace = null)
     {
+        static $companySettingsCache = [];
+
         if (!empty($user_id)) {
             $user = User::find($user_id);
         } else {
@@ -262,12 +264,13 @@ if (!function_exists('getCompanyAllSetting')) {
         }
 
         if (!empty($user)) {
-            // $key = 'company_settings_' . $workspace . '_' . $user->id;
-            // return Cache::rememberForever($key, function () use ($user, $workspace) {
-                $settings = [];
-                $settings = Setting::where('created_by', $user->id)->where('workspace', $workspace)->pluck('value', 'key')->toArray();
-                return $settings;
-            // });
+            $cacheKey = $workspace . '_' . $user->id;
+            if (array_key_exists($cacheKey, $companySettingsCache)) {
+                return $companySettingsCache[$cacheKey];
+            }
+            $settings = Setting::where('created_by', $user->id)->where('workspace', $workspace)->pluck('value', 'key')->toArray();
+            $companySettingsCache[$cacheKey] = $settings;
+            return $settings;
         }
 
         return [];
@@ -366,6 +369,8 @@ if (!function_exists('sideMenuCacheForget')) {
                 try {
                     $key = 'sidebar_menu_' . $id;
                     Cache::forget($key);
+                    $key_v2 = 'sidebar_menu_v2_' . $id;
+                    Cache::forget($key_v2);
                 } catch (\Exception $e) {
                     \Log::error('comapnySettingCacheForget :' . $e->getMessage());
                 }
@@ -373,6 +378,8 @@ if (!function_exists('sideMenuCacheForget')) {
             try {
                 $key = 'sidebar_menu_' . $user->id;
                 Cache::forget($key);
+                $key_v2 = 'sidebar_menu_v2_' . $user->id;
+                Cache::forget($key_v2);
             } catch (\Exception $e) {
                 \Log::error('comapnySettingCacheForget :' . $e->getMessage());
             }
@@ -382,6 +389,8 @@ if (!function_exists('sideMenuCacheForget')) {
         try {
             $key = 'sidebar_menu_' . $user->id;
             Cache::forget($key);
+            $key_v2 = 'sidebar_menu_v2_' . $user->id;
+            Cache::forget($key_v2);
         } catch (\Exception $e) {
             \Log::error('comapnySettingCacheForget :' . $e->getMessage());
         }
@@ -501,13 +510,32 @@ if (!function_exists('module_is_active')) {
 if (!function_exists('ActivatedModule')) {
     function ActivatedModule($user_id = null)
     {
+        static $activatedModulesCache = [];
+
+        // Identify cache key
+        $cacheKey = $user_id;
+        if ($cacheKey === null) {
+            if (Auth::check()) {
+                $cacheKey = 'auth_' . Auth::id();
+            } else {
+                $cacheKey = 'guest';
+            }
+        }
+
+        if (array_key_exists($cacheKey, $activatedModulesCache)) {
+            return $activatedModulesCache[$cacheKey];
+        }
+
         $activated_module = user::$superadmin_activated_module;
 
+        $user = null;
         if ($user_id != null) {
             $user = User::find($user_id);
         } elseif (Auth::check()) {
             $user = Auth::user();
         }
+
+        $user_active_module = [];
         if (!empty($user)) {
             $available_modules = array_values(Module::allEnabled());
 
@@ -516,7 +544,13 @@ if (!function_exists('ActivatedModule')) {
             } else {
                 $active_module = [];
                 if ($user->type != 'company') {
-                    $user_not_com = User::find($user->created_by);
+                    $parentKey = 'user_created_by_' . $user->created_by;
+                    if (array_key_exists($parentKey, $activatedModulesCache)) {
+                        $user_not_com = $activatedModulesCache[$parentKey];
+                    } else {
+                        $user_not_com = User::find($user->created_by);
+                        $activatedModulesCache[$parentKey] = $user_not_com;
+                    }
                     if (!empty($user_not_com)) {
                         $active_module = userActiveModule::where('user_id', $user_not_com->id)->pluck('module')->toArray();
                     }
@@ -529,6 +563,7 @@ if (!function_exists('ActivatedModule')) {
                 $user_active_module = array_unique(array_merge($commonModules, $activated_module));
             }
         }
+        $activatedModulesCache[$cacheKey] = $user_active_module;
         return $user_active_module;
     }
 }

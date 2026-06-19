@@ -1,4 +1,4 @@
-/node_modules
+node_modules/
 /public/build
 /public/hot
 /public/storage
@@ -22,3 +22,11 @@ yarn-error.log
 /.phpunit.cache
 /.vscode
 *.log
+/crm_backup.sql
+/cookies.txt
+/*.pdf
+/whatsapp-node-service/.wwebjs_auth/
+/whatsapp-node-service/.wwebjs_cache/
+/whatsapp-node-service/logs/
+/sheet-node-service/logs/
+

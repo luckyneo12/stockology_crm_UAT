@@ -39,8 +39,30 @@ class Lead extends Model
     }
     public function labels()
     {
+        static $labelsCache = null;
+        if ($labelsCache === null) {
+            $labelsCache = Label::where('workspace_id', getActiveWorkSpace())->get()->keyBy('id');
+        }
+
         if ($this->labels) {
-            return Label::whereIn('id', explode(',', $this->labels))->get();
+            $ids = explode(',', $this->labels);
+            $result = collect();
+            $missingIds = [];
+            foreach ($ids as $id) {
+                if ($labelsCache->has($id)) {
+                    $result->push($labelsCache->get($id));
+                } else {
+                    $missingIds[] = $id;
+                }
+            }
+            if (!empty($missingIds)) {
+                $missingLabels = Label::whereIn('id', $missingIds)->get();
+                foreach ($missingLabels as $lbl) {
+                    $labelsCache->put($lbl->id, $lbl);
+                    $result->push($lbl);
+                }
+            }
+            return $result;
         }
 
         return false;
@@ -64,8 +86,30 @@ class Lead extends Model
 
     public function sources()
     {
+        static $sourcesCache = null;
+        if ($sourcesCache === null) {
+            $sourcesCache = Source::where('workspace_id', getActiveWorkSpace())->get()->keyBy('id');
+        }
+
         if ($this->sources) {
-            return Source::whereIn('id', explode(',', $this->sources))->get();
+            $ids = explode(',', $this->sources);
+            $result = collect();
+            $missingIds = [];
+            foreach ($ids as $id) {
+                if ($sourcesCache->has($id)) {
+                    $result->push($sourcesCache->get($id));
+                } else {
+                    $missingIds[] = $id;
+                }
+            }
+            if (!empty($missingIds)) {
+                $missingSources = Source::whereIn('id', $missingIds)->get();
+                foreach ($missingSources as $src) {
+                    $sourcesCache->put($src->id, $src);
+                    $result->push($src);
+                }
+            }
+            return $result;
         }
 
         return [];
@@ -138,10 +182,26 @@ class Lead extends Model
 
     public function stagePermissions($user = null)
     {
-        if ($this->stage) {
-            return $this->stage->permissions($user);
+        $user = $user ?? Auth::user();
+        $userId = $user ? $user->id : 0;
+        
+        static $permissionsCache = [];
+        
+        $stageId = $this->stage_id;
+        if (!$stageId) {
+            return (object) ['can_view' => true, 'can_move' => true, 'can_edit' => true];
         }
-        return (object) ['can_view' => true, 'can_move' => true, 'can_edit' => true];
+        
+        $cacheKey = "{$stageId}_{$userId}";
+        if (!isset($permissionsCache[$cacheKey])) {
+            if ($this->stage) {
+                $permissionsCache[$cacheKey] = $this->stage->permissions($user);
+            } else {
+                $permissionsCache[$cacheKey] = (object) ['can_view' => true, 'can_move' => true, 'can_edit' => true];
+            }
+        }
+        
+        return $permissionsCache[$cacheKey];
     }
 
     public function isAccessible($user = null)

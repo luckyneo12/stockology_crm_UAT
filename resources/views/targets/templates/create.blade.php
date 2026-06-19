@@ -8,7 +8,13 @@
 
         <div class="col-md-12 form-group">
             {{ Form::label('target_type', __('Target Tracking Type'), ['class' => 'col-form-label']) }}
-            {{ Form::select('target_type', ['manual' => __('Manual (Self Reported)'), 'lead_stage' => __('Lead Stage Transition (Automated)')], 'manual', ['class' => 'form-control select2', 'id' => 'template_target_type']) }}
+            {{ Form::select('target_type', [
+                'manual' => __('Manual (Self Reported)'),
+                'lead_stage' => __('Lead Stage Transition (Automated)'),
+                'account' => __('Account Opening (Automated)'),
+                'ftd' => __('FTD Count (Automated)'),
+                'revenue' => __('Revenue Sum (Automated)'),
+            ], 'manual', ['class' => 'form-control select2', 'id' => 'template_target_type']) }}
         </div>
 
         <div class="col-md-6 form-group d-none" id="template_pipeline_field">
@@ -37,9 +43,12 @@
 
 <script>
     $(document).ready(function() {
-        if ($('#template_target_type').val() === 'lead_stage') {
+        var val = $('#template_target_type').val();
+        if (val === 'lead_stage') {
             $('#template_pipeline_field').removeClass('d-none');
             $('#template_stage_field').removeClass('d-none');
+            $('#template_custom_date_field_group').removeClass('d-none');
+        } else if (['account', 'ftd', 'revenue'].includes(val)) {
             $('#template_custom_date_field_group').removeClass('d-none');
         }
     });
@@ -52,6 +61,13 @@
             $('#template_custom_date_field_group').removeClass('d-none');
             $('#template_pipeline_id').attr('required', 'required');
             $('#template_stage_id').attr('required', 'required');
+            $('#template_custom_date_field').attr('required', 'required');
+        } else if (['account', 'ftd', 'revenue'].includes(type)) {
+            $('#template_pipeline_field').addClass('d-none');
+            $('#template_stage_field').addClass('d-none');
+            $('#template_custom_date_field_group').removeClass('d-none');
+            $('#template_pipeline_id').removeAttr('required');
+            $('#template_stage_id').removeAttr('required');
             $('#template_custom_date_field').attr('required', 'required');
         } else {
             $('#template_pipeline_field').addClass('d-none');

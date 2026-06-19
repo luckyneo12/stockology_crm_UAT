@@ -317,6 +317,9 @@ class LeadCustomFieldController extends Controller
             $section->api_trigger_stage_id = $request->api_trigger_stage_id;
             $section->api_response_mapping = $request->api_response_mapping;
 
+            // Stage Visibility
+            $section->visible_stages = !empty($request->visible_stages) ? $request->visible_stages : null;
+
             $section->save();
 
             return redirect()->back()->with('success', __('Section created successfully.'));
@@ -338,6 +341,9 @@ class LeadCustomFieldController extends Controller
             $section->api_method = $request->api_method ?? 'GET';
             $section->api_trigger_stage_id = $request->api_trigger_stage_id;
             $section->api_response_mapping = $request->api_response_mapping;
+
+            // Stage Visibility
+            $section->visible_stages = !empty($request->visible_stages) ? $request->visible_stages : null;
 
             $section->save();
 
@@ -391,6 +397,7 @@ class LeadCustomFieldController extends Controller
             $newSection->api_response_mapping = $section->api_response_mapping;
             $newSection->order = $section->order;
             $newSection->is_system = 0; // Copied sections are custom
+            $newSection->visible_stages = $section->visible_stages; // Copy stage visibility
             $newSection->save();
 
             // Copy all custom fields under this section using replicate()

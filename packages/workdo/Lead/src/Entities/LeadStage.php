@@ -28,9 +28,15 @@ class LeadStage extends Model
             return collect(); // Return empty collection if user is not authenticated or cannot view stage
         }
 
+        $relations = ['users', 'tasks', 'complete_tasks', 'stage', 'reminders', 'owner', 'discussions'];
+        if (module_is_active('Hrm') && class_exists('\Workdo\Hrm\Entities\Employee')) {
+            $relations[] = 'owner.employee.department';
+            $relations[] = 'users.employee.department';
+        }
+
         $query = Lead::where('leads.stage_id', '=', $this->id)
             ->where('leads.workspace_id', '=', getActiveWorkSpace())
-            ->with(['users', 'tasks', 'complete_tasks', 'stage', 'reminders']);
+            ->with($relations);
 
         if ($user->type == 'client') {
             $query->join('client_leads', 'client_leads.lead_id', '=', 'leads.id')

@@ -226,7 +226,40 @@
                                                 <div class="umh-user-actions-top">
                                                     @permission('user edit')
                                                         <a href="#!" data-url="{{ route('users.edit', $user->id) }}" data-ajax-popup="true" data-size="md" class="umh-icon-btn umh-icon-edit" data-title="{{ __('Edit User') }}" data-bs-toggle="tooltip" title="{{ __('Edit') }}"><i class="ti ti-pencil"></i></a>
+                                                        
+                                                        @if ($user->is_disable == 1)
+                                                            <a href="{{ route('users.status', $user->id) }}" class="umh-icon-btn umh-icon-status-inactive" data-bs-toggle="tooltip" title="{{ __('Click to Activate') }}">
+                                                                <i class="ti ti-lock-off"></i>
+                                                            </a>
+                                                        @else
+                                                            <a href="{{ route('users.status', $user->id) }}" class="umh-icon-btn umh-icon-status-active" data-bs-toggle="tooltip" title="{{ __('Click to Deactivate') }}">
+                                                                <i class="ti ti-lock"></i>
+                                                            </a>
+                                                        @endif
                                                     @endpermission
+
+                                                    @permission('user reset password')
+                                                        <a href="#!" data-url="{{ route('users.reset', \Crypt::encrypt($user->id)) }}" data-ajax-popup="true" data-size="md" class="umh-icon-btn umh-icon-password" data-title="{{ __('Reset Password') }}" data-bs-toggle="tooltip" title="{{ __('Reset Password') }}">
+                                                            <i class="ti ti-key"></i>
+                                                        </a>
+                                                    @endpermission
+
+                                                    @permission('user login manage')
+                                                        @if ($user->is_enable_login == 1)
+                                                            <a href="{{ route('users.login', \Crypt::encrypt($user->id)) }}" class="umh-icon-btn umh-icon-login-disable" data-bs-toggle="tooltip" title="{{ __('Login Disable') }}">
+                                                                <i class="ti ti-road-sign"></i>
+                                                            </a>
+                                                        @elseif ($user->is_enable_login == 0 && $user->password == null)
+                                                            <a href="#!" data-url="{{ route('users.reset', \Crypt::encrypt($user->id)) }}" data-ajax-popup="true" data-size="md" class="umh-icon-btn umh-icon-login-enable" data-title="{{ __('New Password') }}" data-bs-toggle="tooltip" title="{{ __('Login Enable') }}">
+                                                                <i class="ti ti-road-sign"></i>
+                                                            </a>
+                                                        @else
+                                                            <a href="{{ route('users.login', \Crypt::encrypt($user->id)) }}" class="umh-icon-btn umh-icon-login-enable" data-bs-toggle="tooltip" title="{{ __('Login Enable') }}">
+                                                                <i class="ti ti-road-sign"></i>
+                                                            </a>
+                                                        @endif
+                                                    @endpermission
+
                                                     @permission('user delete')
                                                         {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', $user->id], 'id' => 'delete-form-'.$user->id]) !!}
                                                             <a href="#!" class="umh-icon-btn umh-icon-del bs-pass-para show_confirm" data-confirm="{{ __('Are You Sure?') }}" data-text="{{ __('This action can not be undone. Do you want to continue?') }}" data-confirm-yes="delete-form-{{ $user->id }}" data-bs-toggle="tooltip" title="{{ __('Delete') }}"><i class="ti ti-trash"></i></a>
@@ -327,11 +360,44 @@
                                                 <td class="text-end">
                                                     <div class="d-flex justify-content-end gap-1">
                                                         @permission('user edit')
-                                                            <a href="#!" data-url="{{ route('users.edit', $user->id) }}" data-ajax-popup="true" data-size="md" class="umh-icon-btn umh-icon-edit" data-title="{{ __('Edit User') }}"><i class="ti ti-pencil"></i></a>
+                                                            <a href="#!" data-url="{{ route('users.edit', $user->id) }}" data-ajax-popup="true" data-size="md" class="umh-icon-btn umh-icon-edit" data-title="{{ __('Edit User') }}" data-bs-toggle="tooltip" title="{{ __('Edit') }}"><i class="ti ti-pencil"></i></a>
+                                                            
+                                                            @if ($user->is_disable == 1)
+                                                                <a href="{{ route('users.status', $user->id) }}" class="umh-icon-btn umh-icon-status-inactive" data-bs-toggle="tooltip" title="{{ __('Click to Activate') }}">
+                                                                    <i class="ti ti-lock-off"></i>
+                                                                </a>
+                                                            @else
+                                                                <a href="{{ route('users.status', $user->id) }}" class="umh-icon-btn umh-icon-status-active" data-bs-toggle="tooltip" title="{{ __('Click to Deactivate') }}">
+                                                                    <i class="ti ti-lock"></i>
+                                                                </a>
+                                                            @endif
                                                         @endpermission
+
+                                                        @permission('user reset password')
+                                                            <a href="#!" data-url="{{ route('users.reset', \Crypt::encrypt($user->id)) }}" data-ajax-popup="true" data-size="md" class="umh-icon-btn umh-icon-password" data-title="{{ __('Reset Password') }}" data-bs-toggle="tooltip" title="{{ __('Reset Password') }}">
+                                                                <i class="ti ti-key"></i>
+                                                            </a>
+                                                        @endpermission
+
+                                                        @permission('user login manage')
+                                                            @if ($user->is_enable_login == 1)
+                                                                <a href="{{ route('users.login', \Crypt::encrypt($user->id)) }}" class="umh-icon-btn umh-icon-login-disable" data-bs-toggle="tooltip" title="{{ __('Login Disable') }}">
+                                                                    <i class="ti ti-road-sign"></i>
+                                                                </a>
+                                                            @elseif ($user->is_enable_login == 0 && $user->password == null)
+                                                                <a href="#!" data-url="{{ route('users.reset', \Crypt::encrypt($user->id)) }}" data-ajax-popup="true" data-size="md" class="umh-icon-btn umh-icon-login-enable" data-title="{{ __('New Password') }}" data-bs-toggle="tooltip" title="{{ __('Login Enable') }}">
+                                                                    <i class="ti ti-road-sign"></i>
+                                                                </a>
+                                                            @else
+                                                                <a href="{{ route('users.login', \Crypt::encrypt($user->id)) }}" class="umh-icon-btn umh-icon-login-enable" data-bs-toggle="tooltip" title="{{ __('Login Enable') }}">
+                                                                    <i class="ti ti-road-sign"></i>
+                                                                </a>
+                                                            @endif
+                                                        @endpermission
+
                                                         @permission('user delete')
                                                             {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', $user->id], 'id' => 'delete-form-tbl-'.$user->id]) !!}
-                                                                <a href="#!" class="umh-icon-btn umh-icon-del bs-pass-para show_confirm" data-confirm="{{ __('Are You Sure?') }}" data-text="{{ __('This action can not be undone. Do you want to continue?') }}" data-confirm-yes="delete-form-tbl-{{ $user->id }}"><i class="ti ti-trash"></i></a>
+                                                                <a href="#!" class="umh-icon-btn umh-icon-del bs-pass-para show_confirm" data-confirm="{{ __('Are You Sure?') }}" data-text="{{ __('This action can not be undone. Do you want to continue?') }}" data-confirm-yes="delete-form-tbl-{{ $user->id }}" data-bs-toggle="tooltip" title="{{ __('Delete') }}"><i class="ti ti-trash"></i></a>
                                                             {!! Form::close() !!}
                                                         @endpermission
                                                     </div>
@@ -968,6 +1034,42 @@
     border-color: rgba(245,158,11,0.15);
 }
 .umh-icon-convert:hover { background: rgba(245,158,11,0.18); color: #b45309; }
+
+.umh-icon-password {
+    background: rgba(14,116,144,0.08);
+    color: #0e7490;
+    border-color: rgba(14,116,144,0.15);
+}
+.umh-icon-password:hover { background: rgba(14,116,144,0.18); color: #0891b2; }
+
+.umh-icon-login-enable {
+    background: rgba(34,197,94,0.08);
+    color: #22c55e;
+    border-color: rgba(34,197,94,0.15);
+}
+.umh-icon-login-enable:hover { background: rgba(34,197,94,0.18); color: #16a34a; }
+
+.umh-icon-login-disable {
+    background: rgba(239,68,68,0.08);
+    color: #ef4444;
+    border-color: rgba(239,68,68,0.15);
+}
+.umh-icon-login-disable:hover { background: rgba(239,68,68,0.18); color: #dc2626; }
+
+.umh-icon-status-active {
+    background: rgba(59,130,246,0.08);
+    color: #3b82f6;
+    border-color: rgba(59,130,246,0.15);
+}
+.umh-icon-status-active:hover { background: rgba(59,130,246,0.18); color: #2563eb; }
+
+.umh-icon-status-inactive {
+    background: rgba(107,114,128,0.08);
+    color: #6b7280;
+    border-color: rgba(107,114,128,0.15);
+}
+.umh-icon-status-inactive:hover { background: rgba(107,114,128,0.18); color: #4b5563; }
+
 
 .umh-user-name {
     font-size: 0.92rem;

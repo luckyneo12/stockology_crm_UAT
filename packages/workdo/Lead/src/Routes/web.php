@@ -23,6 +23,39 @@ use Workdo\Lead\Http\Controllers\Company\SettingsController; // Imported Setting
 Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
     Route::post('lead/company/settings', [SettingsController::class, 'store'])->name('lead.setting.store');
 
+    // WhatsApp Configuration Routes
+    Route::get('whatsapp-config', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'index'])->name('whatsapp-config.index');
+    Route::get('whatsapp-config/create', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'create'])->name('whatsapp-config.create');
+    Route::post('whatsapp-config', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'store'])->name('whatsapp-config.store');
+    Route::get('whatsapp-config/{id}/edit', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'edit'])->name('whatsapp-config.edit');
+    Route::put('whatsapp-config/{id}', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'update'])->name('whatsapp-config.update');
+    Route::delete('whatsapp-config/{id}', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'destroy'])->name('whatsapp-config.destroy');
+    Route::post('whatsapp-config/stages', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'getStages'])->name('whatsapp-config.stages');
+
+    // WhatsApp QR Session Routes
+    Route::get('whatsapp-config/{id}/qr', [\Workdo\Lead\Http\Controllers\WhatsAppSessionController::class, 'initiateQr'])->name('whatsapp.session.qr');
+    Route::get('whatsapp-config/{id}/status', [\Workdo\Lead\Http\Controllers\WhatsAppSessionController::class, 'getStatus'])->name('whatsapp.session.status');
+    Route::post('whatsapp-config/{id}/disconnect', [\Workdo\Lead\Http\Controllers\WhatsAppSessionController::class, 'disconnect'])->name('whatsapp.session.disconnect');
+
+    // WhatsApp Teams Routes
+    Route::get('whatsapp-teams', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'index'])->name('whatsapp-teams.index');
+    Route::post('whatsapp-teams', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'store'])->name('whatsapp-teams.store');
+    Route::get('whatsapp-teams/{id}', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'show'])->name('whatsapp-teams.show');
+    Route::put('whatsapp-teams/{id}', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'update'])->name('whatsapp-teams.update');
+    Route::delete('whatsapp-teams/{id}', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'destroy'])->name('whatsapp-teams.destroy');
+    Route::post('whatsapp-teams/{id}/assign-config', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'assignConfig'])->name('whatsapp-teams.assign-config');
+    Route::post('whatsapp-teams/{id}/members', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'addMember'])->name('whatsapp-teams.members.add');
+    Route::delete('whatsapp-teams/{id}/members/{userId}', [\Workdo\Lead\Http\Controllers\WhatsAppTeamController::class, 'removeMember'])->name('whatsapp-teams.members.remove');
+
+    // WhatsApp Chat Routes
+    Route::get('whatsapp-chats', [\Workdo\Lead\Http\Controllers\WhatsAppChatController::class, 'index'])->name('whatsapp.chat.index');
+    Route::get('whatsapp-chats/{id}/messages', [\Workdo\Lead\Http\Controllers\WhatsAppChatController::class, 'getMessages'])->name('whatsapp.chat.messages');
+    Route::post('whatsapp-chats/send', [\Workdo\Lead\Http\Controllers\WhatsAppChatController::class, 'sendMessage'])->name('whatsapp.chat.send');
+    Route::post('whatsapp-chats/{id}/update-lead-stage', [\Workdo\Lead\Http\Controllers\WhatsAppChatController::class, 'updateLeadStage'])->name('whatsapp.chat.update-lead-stage');
+
+    // WhatsApp Chat Backup Route
+    Route::post('whatsapp-chats/{id}/backup', [\Workdo\Lead\Http\Controllers\WhatsAppSessionController::class, 'backupChat'])->name('whatsapp.chat.backup');
+
     // Click to Call routes
     Route::post('lead/call/make', [\Workdo\Lead\Http\Controllers\CallController::class, 'makeCall'])->name('lead.call.make');
 
@@ -235,6 +268,11 @@ Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
     Route::post('crm/settings/save', [LeadController::class, 'saveCrmSettings'])->name('crm.settings.save');
     Route::get('crm/automations', [LeadController::class, 'automationsIndex'])->name('crm.automations.index');
     Route::post('crm/automations/save', [LeadController::class, 'saveAutomations'])->name('crm.automations.save');
+    Route::post('crm/automations/facebook/save', [LeadController::class, 'facebookAutomationsSave'])->name('crm.automations.facebook.save');
+    Route::post('crm/automations/facebook/delete', [LeadController::class, 'facebookAutomationsDelete'])->name('crm.automations.facebook.delete');
+    Route::post('crm/automations/facebook/test', [LeadController::class, 'facebookAutomationsTest'])->name('crm.automations.facebook.test');
+    Route::post('crm/automations/webhook-endpoints/update-stage', [LeadController::class, 'webhookEndpointUpdateStage'])->name('crm.automations.webhook-endpoints.update-stage');
+    Route::post('crm/automations/whatsapp/update-stage', [\Workdo\Lead\Http\Controllers\WhatsAppConfigController::class, 'updateStage'])->name('crm.automations.whatsapp.update-stage');
     Route::post('leads/check-duplicate', [LeadController::class, 'checkDuplicate'])->name('leads.check.duplicate');
     Route::get('crm/leads/get-stage-requirements', [LeadController::class, 'getStageRequirements'])->name('leads.get.stage.requirements');
 
@@ -258,4 +296,197 @@ Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
     // Lead Custom Fields
     Route::post('lead-custom-fields/{id}/duplicate', [\Workdo\Lead\Http\Controllers\LeadCustomFieldController::class, 'duplicate'])->name('lead-custom-fields.duplicate');
     Route::resource('lead-custom-fields', \Workdo\Lead\Http\Controllers\LeadCustomFieldController::class);
+
+    // Facebook Lead Integration Data Logs
+    Route::get('facebook-lead-data', [\Workdo\Lead\Http\Controllers\FacebookLeadDataController::class, 'index'])->name('facebook-lead-data.index');
+    Route::get('facebook-lead-data/{id}/payload', [\Workdo\Lead\Http\Controllers\FacebookLeadDataController::class, 'payload'])->name('facebook-lead-data.payload');
+    Route::post('facebook-lead-data/{id}/convert', [\Workdo\Lead\Http\Controllers\FacebookLeadDataController::class, 'convertToLead'])->name('facebook-lead-data.convert');
+    Route::post('facebook-lead-data/{rule_id}/sync', [\Workdo\Lead\Http\Controllers\FacebookLeadDataController::class, 'syncHistorical'])->name('facebook-lead-data.sync');
+
+    // Facebook fields and forms retrieval (for UI dropdown & mapping)
+    Route::get('crm/automations/facebook/fetch-forms', [LeadController::class, 'facebookFetchForms'])->name('crm.automations.facebook.fetch-forms');
+    Route::get('crm/automations/facebook/fetch-questions', [LeadController::class, 'facebookFetchQuestions'])->name('crm.automations.facebook.fetch-questions');
+
+    // Orion / FinKORP integration routes
+    Route::get('orion-lead-logs', [\Workdo\Lead\Http\Controllers\OrionIntegrationController::class, 'index'])->name('orion-lead-logs.index');
+    Route::get('orion-lead-logs/{id}/payload', [\Workdo\Lead\Http\Controllers\OrionIntegrationController::class, 'payload'])->name('orion-lead-logs.payload');
+    Route::post('crm/automations/orion/save', [\Workdo\Lead\Http\Controllers\OrionIntegrationController::class, 'saveOrionRules'])->name('crm.automations.orion.save');
+    Route::post('crm/automations/orion/delete', [\Workdo\Lead\Http\Controllers\OrionIntegrationController::class, 'deleteOrionRule'])->name('crm.automations.orion.delete');
+    Route::post('crm/automations/orion/test', [\Workdo\Lead\Http\Controllers\OrionIntegrationController::class, 'testOrionConnection'])->name('crm.automations.orion.test');
+    Route::post('leads/{id}/orion-fetch', [\Workdo\Lead\Http\Controllers\OrionIntegrationController::class, 'manualFetch'])->name('leads.orion-fetch');
+
+    // CRM Diagnostics Route
+    Route::get('/check-crm-diagnostics', function () {
+        $user = Auth::user();
+
+        // 1. Handle Workspace Switching Request
+        if (request()->has('switch_workspace')) {
+            $targetWorkspaceId = (int) request('switch_workspace');
+            $targetWorkspace = \App\Models\WorkSpace::find($targetWorkspaceId);
+            if ($targetWorkspace) {
+                $user->workspace_id = $targetWorkspaceId;
+                $user->active_workspace = $targetWorkspaceId;
+                $user->save();
+
+                // Sync HRM Employee workspace if active
+                if (module_is_active('Hrm') && class_exists('\Workdo\Hrm\Entities\Employee')) {
+                    $employee = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
+                    if ($employee) {
+                        $employee->workspace = $targetWorkspaceId;
+                        $employee->save();
+                    }
+                }
+
+                // Clear sidebar menu cache
+                \Illuminate\Support\Facades\Cache::forget('sidebar_menu_v2_' . $user->id);
+
+                return redirect('/check-crm-diagnostics?switched=1');
+            }
+        }
+
+        $workspace = getActiveWorkSpace();
+        $creatorId = creatorId();
+
+        $output = "<div style='font-family: Arial, sans-serif; padding: 25px; max-width: 900px; margin: 30px auto; background: #fdfdfd; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>";
+        $output .= "<h2 style='color: #2c3e50; margin-top: 0;'>CRM Diagnostics & Workspace Switcher</h2>";
+        $output .= "<hr style='border: 0; border-top: 1px solid #eee; margin-bottom: 20px;'>";
+
+        if (request()->has('switched')) {
+            $output .= "<div style='background: #d4edda; color: #155724; padding: 12px 15px; border-radius: 5px; margin-bottom: 20px; font-weight: bold; border-left: 5px solid #28a745;'>";
+            $output .= "Success: Workspace switched successfully! Please go back to the leads dashboard to check if leads are visible now.";
+            $output .= "</div>";
+        }
+
+        $output .= "<div style='background: #eaf2f8; border-left: 5px solid #2980b9; padding: 15px; border-radius: 4px; margin-bottom: 25px;'>";
+        $output .= "<p style='margin: 0 0 8px 0;'><strong>Logged-in User:</strong> " . e($user->name) . " (ID: " . $user->id . ", Email: " . e($user->email) . ", Type: " . e($user->type) . ", Visibility: " . e($user->visibility_level) . ")</p>";
+        $output .= "<p style='margin: 0 0 8px 0;'><strong>Current User Workspace ID:</strong> " . $user->workspace_id . "</p>";
+        $output .= "<p style='margin: 0 0 8px 0;'><strong>Current User Active Workspace:</strong> " . $user->active_workspace . "</p>";
+        $output .= "<p style='margin: 0;'><strong>Creator ID (creatorId()):</strong> " . $creatorId . "</p>";
+        $output .= "</div>";
+
+        // List All Workspaces in the Database
+        try {
+            $allWorkspaces = \App\Models\WorkSpace::all();
+            $output .= "<h3>Available Workspaces in Database (" . $allWorkspaces->count() . "):</h3>";
+            $output .= "<table style='width: 100%; border-collapse: collapse; margin-bottom: 25px;'>";
+            $output .= "<tr style='background: #f2f2f2; text-align: left;'><th style='padding: 8px; border: 1px solid #ddd;'>ID</th><th style='padding: 8px; border: 1px solid #ddd;'>Workspace Name</th><th style='padding: 8px; border: 1px solid #ddd;'>Created By (ID)</th><th style='padding: 8px; border: 1px solid #ddd;'>Actions</th></tr>";
+            foreach ($allWorkspaces as $ws) {
+                $isCurrent = ($ws->id == $workspace);
+                $rowStyle = $isCurrent ? "style='background: #e8f8f5; font-weight: bold;'" : "";
+                
+                $output .= "<tr {$rowStyle}>";
+                $output .= "<td style='padding: 8px; border: 1px solid #ddd;'>" . $ws->id . "</td>";
+                $output .= "<td style='padding: 8px; border: 1px solid #ddd;'>" . e($ws->name) . " " . ($isCurrent ? " <span style='color: #27ae60; font-size: 0.8em;'>(Active)</span>" : "") . "</td>";
+                $output .= "<td style='padding: 8px; border: 1px solid #ddd;'>" . $ws->created_by . "</td>";
+                $output .= "<td style='padding: 8px; border: 1px solid #ddd;'>";
+                if (!$isCurrent) {
+                    $output .= "<a href='/check-crm-diagnostics?switch_workspace=" . $ws->id . "' style='background: #3498db; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.85em;'>Switch to this Workspace</a>";
+                } else {
+                    $output .= "<span style='color: #7f8c8d; font-size: 0.9em;'>Current Active</span>";
+                }
+                $output .= "</td>";
+                $output .= "</tr>";
+            }
+            $output .= "</table>";
+        } catch (\Exception $e) {
+            $output .= "<p style='color: red;'><strong>Workspace Fetch Error:</strong> " . e($e->getMessage()) . "</p>";
+        }
+
+        // Active Workspace details
+        try {
+            $workspaceObj = \App\Models\WorkSpace::find($workspace);
+            $output .= "<p><strong>Active Workspace Name:</strong> " . ($workspaceObj ? e($workspaceObj->name) : "<span style='color:red;'>Not Found</span>") . "</p>";
+        } catch (\Exception $e) {
+            $output .= "<p style='color: red;'><strong>Active Workspace Name Error:</strong> " . e($e->getMessage()) . "</p>";
+        }
+
+        // Check Pipelines
+        try {
+            $pipelines = \Workdo\Lead\Entities\Pipeline::where('workspace_id', $workspace)->get();
+            $output .= "<h3>Pipelines in Current Workspace (" . $pipelines->count() . "):</h3>";
+            if ($pipelines->isEmpty()) {
+                $output .= "<p style='color: orange;'>No pipelines found for this workspace in the database.</p>";
+            } else {
+                $output .= "<ul>";
+                foreach ($pipelines as $p) {
+                    $output .= "<li>Pipeline ID: " . $p->id . " - <strong>" . e($p->name) . "</strong> (Created By: " . $p->created_by . ")</li>";
+                }
+                $output .= "</ul>";
+            }
+        } catch (\Exception $e) {
+            $output .= "<p style='color: red;'><strong>Pipeline Query Error:</strong> " . e($e->getMessage()) . "</p>";
+        }
+
+        // Check Active Pipeline Loaded by index() Method
+        try {
+            if ($user->default_pipeline) {
+                $pipeline = \Workdo\Lead\Entities\Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $workspace)->where('id', '=', $user->default_pipeline)->first();
+                if (!$pipeline) {
+                    $pipeline = \Workdo\Lead\Entities\Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $workspace)->first();
+                }
+            } else {
+                $pipeline = \Workdo\Lead\Entities\Pipeline::where('created_by', '=', $creatorId)->where('workspace_id', $workspace)->first();
+            }
+
+            $output .= "<p><strong>Loaded Active Pipeline:</strong> " . ($pipeline ? "ID: " . $pipeline->id . " - <strong>" . e($pipeline->name) . "</strong>" : "<span style='color: red; font-weight: bold;'>None (Null)</span>") . "</p>";
+        } catch (\Exception $e) {
+            $output .= "<p style='color: red;'><strong>Active Pipeline Loading Error:</strong> " . e($e->getMessage()) . "</p>";
+        }
+
+        // Check Stages
+        try {
+            $stages = \Workdo\Lead\Entities\LeadStage::where('workspace_id', $workspace)->get();
+            $output .= "<h3>Lead Stages in Current Workspace (" . $stages->count() . "):</h3>";
+            if ($stages->isEmpty()) {
+                $output .= "<p style='color: orange;'>No lead stages found for this workspace in the database.</p>";
+            } else {
+                $output .= "<ul>";
+                foreach ($stages as $s) {
+                    $output .= "<li>Stage ID: " . $s->id . " - <strong>" . e($s->name) . "</strong> (Pipeline ID: " . $s->pipeline_id . ", Order: " . $s->order . ")</li>";
+                }
+                $output .= "</ul>";
+            }
+        } catch (\Exception $e) {
+            $output .= "<p style='color: red;'><strong>Lead Stage Query Error:</strong> " . e($e->getMessage()) . "</p>";
+        }
+
+        // Check Leads
+        try {
+            $leadsCount = \Workdo\Lead\Entities\Lead::where('workspace_id', $workspace)->count();
+            $output .= "<p><strong>Total Leads in Workspace:</strong> " . $leadsCount . "</p>";
+        } catch (\Exception $e) {
+            $output .= "<p style='color: red;'><strong>Leads Query Error:</strong> " . e($e->getMessage()) . "</p>";
+        }
+
+        // Check Table Schema / Missing Columns
+        try {
+            $columns = \DB::getSchemaBuilder()->getColumnListing('leads');
+            $output .= "<h3>Leads Table Columns:</h3>";
+            $output .= "<p style='font-size: 0.9em; color: #555;'>" . implode(', ', $columns) . "</p>";
+        } catch (\Exception $e) {
+            $output .= "<p style='color: red;'><strong>Schema Error:</strong> " . e($e->getMessage()) . "</p>";
+        }
+
+        $output .= "</div>";
+        return $output;
+    });
+
+    // Collaborative Sheets Module
+    Route::get('crm/sheets', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'index'])->name('crm.sheets.index');
+    Route::get('crm/sheets/create', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'create'])->name('crm.sheets.create');
+    Route::post('crm/sheets', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'store'])->name('crm.sheets.store');
+    Route::get('crm/sheets/{id}', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'view'])->name('crm.sheets.view');
+    Route::post('crm/sheets/{id}/update-data', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'updateData'])->name('crm.sheets.update-data');
+    Route::delete('crm/sheets/{id}', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'destroy'])->name('crm.sheets.destroy');
+    Route::get('crm/sheets/{id}/share', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'share'])->name('crm.sheets.share');
+    Route::post('crm/sheets/{id}/share', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'storeShare'])->name('crm.sheets.store-share');
+    Route::post('crm/sheets/collaborator/{id}/accept', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'acceptShare'])->name('crm.sheets.accept-share');
+    Route::delete('crm/sheets/collaborator/{id}/decline', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'declineShare'])->name('crm.sheets.decline-share');
+    Route::get('crm/sheets/{id}/export', [\Workdo\Lead\Http\Controllers\CrmSheetController::class, 'export'])->name('crm.sheets.export');
 });
+
+
+
+
+
+

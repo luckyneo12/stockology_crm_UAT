@@ -490,9 +490,9 @@ class UserController extends Controller
                 $user->kyc_portal_stages = $request->has('kyc_portal_stages') ? json_encode($request->kyc_portal_stages) : null;
 
                 // Active/Inactive Logic
-                $wasActive = $user->is_disable == 0;
-                if ($request->has('is_active')) {
-                    $newDisableState = $request->input('is_active') == 'on' ? 0 : 1;
+                if ($request->has('name')) {
+                    $wasActive = $user->is_disable == 0;
+                    $newDisableState = ($request->has('is_active') && $request->input('is_active') == 'on') ? 0 : 1;
                     $user->is_disable = $newDisableState;
 
                     // If user is being SET to inactive (was active before), reassign leads
@@ -987,7 +987,7 @@ class UserController extends Controller
                         ])->save();
                     }
 
-                    return redirect()->route('users.index')->with(
+                    return redirect()->back()->with(
                         'success',
                         __('The user password updated successfully')
                     );
@@ -1009,15 +1009,15 @@ class UserController extends Controller
             if ($user->is_enable_login == 1) {
                 $user->is_enable_login = 0;
                 $user->save();
-                return redirect()->route('users.index')->with('success', __('User login disable successfully.'));
+                return redirect()->back()->with('success', __('User login disable successfully.'));
             } else {
                 $user->is_enable_login = 1;
                 $user->save();
-                return redirect()->route('users.index')->with('success', __('User login enable successfully.'));
+                return redirect()->back()->with('success', __('User login enable successfully.'));
             }
 
         } else {
-            return redirect()->route('users.index')->with('error', __('Permission denied.'));
+            return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
     public function fileImportExport()

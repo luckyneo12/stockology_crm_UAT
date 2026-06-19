@@ -9,6 +9,10 @@
             {{ Form::label('assign_to', __('Default Assignee'),['class'=>'form-label']) }}
             {{ Form::select('assign_to', $users, null, array('class' => 'form-control', 'placeholder' => __('Select Default Assignee'))) }}
         </div>
+        <div class="form-group col-12">
+            {{ Form::label('auto_convert', __('Processing Mode'),['class'=>'form-label']) }}
+            {{ Form::select('auto_convert', [1 => __('Direct Lead (Auto Convert)'), 0 => __('Webhook Logs Only (Manual Review)')], 1, array('class' => 'form-control', 'id' => 'auto_convert')) }}
+        </div>
         <div class="form-group col-6">
             {{ Form::label('pipeline_id', __('Default Pipeline'),['class'=>'form-label']) }}
             {{ Form::select('pipeline_id', $pipelines, null, array('class' => 'form-control', 'id' => 'pipeline_id', 'required' => 'required', 'placeholder' => __('Select Pipeline'))) }}
@@ -16,6 +20,10 @@
         <div class="form-group col-6">
             {{ Form::label('stage_id', __('Default Stage'),['class'=>'form-label']) }}
             {{ Form::select('stage_id', $stages, null, array('class' => 'form-control', 'id' => 'stage_id', 'required' => 'required', 'placeholder' => __('Select Stage'))) }}
+        </div>
+        <div class="form-group col-12">
+            {{ Form::label('source_id', __('Default Source'),['class'=>'form-label']) }}
+            {{ Form::select('source_id', $sources, null, array('class' => 'form-control', 'id' => 'source_id', 'placeholder' => __('Select Source'))) }}
         </div>
 
         <div class="form-group col-12">

@@ -5,83 +5,120 @@
 @endsection
 @push('css')
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        /* Apply premium typography system */
+        #general, #useradd-sidenav, .hero-gradient, .page-title, .card-modern, .premium-card, .bento-card, .standard-card, .section-title, .alert, .badge, .list-group-item, table {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+
+        :root {
+            --primary-emerald: #059669;
+            --primary-emerald-hover: #047857;
+            --primary-emerald-light: rgba(5, 150, 105, 0.07);
+            --primary-emerald-glow: rgba(5, 150, 105, 0.2);
+            
+            --theme-emerald: #059669;
+            --theme-mint: #10b981;
+            --theme-slate-dark: #0f172a;
+            --theme-slate-muted: #64748b;
+            --theme-slate-light: #f8fafc;
+            
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --glass-bg: rgba(255, 255, 255, 0.12);
+            --glass-bg-dark: rgba(15, 23, 42, 0.03);
+            
+            --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.03);
+            --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.08);
+            --shadow-glow-emerald: 0 12px 30px rgba(5, 150, 105, 0.15);
+            
+            --border-light: rgba(15, 23, 42, 0.06);
+            --border-emerald-glow: rgba(5, 150, 105, 0.15);
+            --border-blue-glow: rgba(59, 130, 246, 0.15);
+            
+            --gradient-emerald: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%);
+            --gradient-card-bento: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(244, 252, 246, 0.95) 100%);
+            --gradient-card-premium: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 247, 255, 0.95) 100%);
+        }
+
         .nav-tabs .nav-link-tabs.active {
             background: none;
         }
+
         /* Bento Grid Layout Styles */
         .bento-card {
-            border: 1px solid rgba(24, 191, 107, 0.12) !important;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 253, 249, 0.9) 100%) !important;
-            backdrop-filter: blur(10px);
-            border-radius: 12px !important;
-            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            border: 1px solid var(--border-emerald-glow) !important;
+            background: var(--gradient-card-bento) !important;
+            backdrop-filter: blur(12px);
+            border-radius: 16px !important;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
             position: relative;
             overflow: hidden;
-            border-left: 4px solid #18bf6b !important;
+            border-left: 4px solid var(--theme-emerald) !important;
             min-height: 90px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+            box-shadow: var(--shadow-sm) !important;
         }
         .bento-card:hover {
-            transform: translateY(-4px) scale(1.01) !important;
-            border-left-color: #20c997 !important;
-            box-shadow: 0 10px 25px rgba(24, 191, 107, 0.1) !important;
-            border-color: rgba(24, 191, 107, 0.25) !important;
+            transform: translateY(-5px) scale(1.01) !important;
+            border-left-color: var(--theme-mint) !important;
+            box-shadow: var(--shadow-glow-emerald) !important;
+            border-color: rgba(16, 185, 129, 0.28) !important;
         }
         .bento-card-large {
-            background: linear-gradient(135deg, rgba(240, 249, 244, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%) !important;
-            border-left: 4px solid #157e3f !important;
+            background: linear-gradient(135deg, rgba(236, 253, 245, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%) !important;
+            border-left: 4px solid #047857 !important;
         }
         .bento-card-large:hover {
-            box-shadow: 0 12px 30px rgba(21, 126, 63, 0.12) !important;
+            box-shadow: 0 16px 36px rgba(4, 120, 87, 0.16) !important;
         }
         .bento-icon-container {
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
-            background: rgba(24, 191, 107, 0.08);
-            color: #18bf6b;
-            transition: all 0.3s ease;
+            border-radius: 10px;
+            background: var(--primary-emerald-light);
+            color: var(--theme-emerald);
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
         .bento-card:hover .bento-icon-container {
-            transform: scale(1.15) rotate(8deg);
-            background: #18bf6b;
+            transform: scale(1.18) rotate(8deg);
+            background: var(--theme-emerald);
             color: #fff;
         }
+
         .editable-field {
             cursor: pointer;
-            border-bottom: 1px dashed rgba(24, 191, 107, 0.4);
+            border-bottom: 1.5px dashed rgba(5, 150, 105, 0.35) !important;
             padding-bottom: 2px;
             display: inline-block;
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         }
         .editable-field:hover {
-            color: #18bf6b !important;
-            border-bottom-color: #18bf6b;
+            color: var(--theme-emerald) !important;
+            border-bottom-color: var(--theme-emerald) !important;
         }
         .editable-field::after {
             content: " ✎";
-            font-size: 0.75rem;
-            opacity: 0.3;
-            transition: opacity 0.2s ease;
-            color: #18bf6b;
+            font-size: 0.72rem;
+            opacity: 0.25;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            color: var(--theme-emerald);
             margin-left: 4px;
+            display: inline-block;
         }
         .editable-field:hover::after {
             opacity: 1;
+            transform: scale(1.15) rotate(5deg);
         }
+
         /* Modern UI Enhancements */
-        :root {
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --glass-bg: rgba(255, 255, 255, 0.1);
-        }
-        
         .fade-in-up {
-            animation: fadeInUp 0.5s ease-out forwards;
+            animation: fadeInUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(24px);
         }
         
         @keyframes fadeInUp {
@@ -91,73 +128,101 @@
             }
         }
         
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-200 { animation-delay: 0.2s; }
-        .delay-300 { animation-delay: 0.3s; }
+        .delay-100 { animation-delay: 0.08s; }
+        .delay-200 { animation-delay: 0.16s; }
+        .delay-300 { animation-delay: 0.24s; }
 
         .hero-gradient {
-            background: linear-gradient(135deg, #054734 0%, #157e3f 100%) !important; /* Deep Green Gradient */
+            background: var(--gradient-emerald) !important;
             position: relative;
             overflow: hidden;
+            border-radius: 20px !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: var(--shadow-lg) !important;
         }
         
         /* Modern Green Theme Overrides */
-        .text-primary, .text-info { color: #198754 !important; }
-        .bg-primary, .bg-info { background-color: #198754 !important; }
-        .btn-primary { background-color: #198754 !important; border-color: #198754 !important; }
-        .btn-info { background-color: #0d6efd !important; border-color: #0d6efd !important; } /* Keep info distinct or make teal? Let's make it Teal */
-        .bg-info-subtle { background-color: rgba(32, 201, 151, 0.1) !important; color: #20c997 !important; }
-        .text-info { color: #20c997 !important; }
+        .text-primary, .text-success { color: var(--theme-emerald) !important; }
+        .bg-primary, .bg-success { background-color: var(--theme-emerald) !important; }
+        .btn-primary { 
+            background-color: var(--theme-emerald) !important; 
+            border-color: var(--theme-emerald) !important;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15) !important;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-emerald-hover) !important;
+            border-color: var(--primary-emerald-hover) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 16px rgba(5, 150, 105, 0.25) !important;
+        }
+        .btn-info { 
+            background-color: #0ea5e9 !important; 
+            border-color: #0ea5e9 !important;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15) !important;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+        .btn-info:hover {
+            background-color: #0284c7 !important;
+            border-color: #0284c7 !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 16px rgba(14, 165, 233, 0.25) !important;
+        }
+        .bg-info-subtle { background-color: rgba(16, 185, 129, 0.08) !important; color: #10b981 !important; }
+        .text-info { color: #10b981 !important; }
         
-        .badge.bg-primary { background-color: #198754 !important; }
-        .badge.bg-info { background-color: #20c997 !important; }
+        .badge.bg-primary { background-color: var(--theme-emerald) !important; }
+        .badge.bg-info { background-color: #10b981 !important; }
 
         .form-check-input:checked {
-            background-color: #198754;
-            border-color: #198754;
+            background-color: var(--theme-emerald);
+            border-color: var(--theme-emerald);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
         }
         
         /* Task & Section Styles */
         .section-title {
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #198754;
+            font-size: 0.85rem !important;
+            font-weight: 800 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1.5px !important;
+            color: var(--theme-emerald) !important;
         }
         
         .task-item {
-            transition: all 0.2s;
-            border-left: 3px solid transparent;
+            transition: all 0.25s ease;
+            border-left: 4px solid transparent;
         }
         .task-item:hover {
-            background-color: #f8fdf9;
-            border-left-color: #198754;
+            background-color: rgba(5, 150, 105, 0.03) !important;
+            border-left-color: var(--theme-emerald) !important;
         }
         .task-checkbox {
             width: 1.25em;
             height: 1.25em;
-            border-radius: 50%; /* Rounded checkbox */
+            border-radius: 50%;
+            cursor: pointer;
         }
         
         .hero-pattern::before {
             content: '';
             position: absolute;
             top: 0; right: 0; bottom: 0; left: 0;
-            background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+            background-image: radial-gradient(circle at 15% 25%, rgba(255,255,255,0.06) 0%, transparent 60%);
             pointer-events: none;
         }
 
         .card-modern {
-            border: 1px solid rgba(0,0,0,0.05);
-            background: #fff;
-            border-radius: 16px;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid var(--border-light) !important;
+            background: #ffffff;
+            border-radius: 18px !important;
+            box-shadow: var(--shadow-sm) !important;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         }
         .card-modern:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
-            border-color: rgba(var(--bs-primary-rgb), 0.2);
+            transform: translateY(-4px) !important;
+            box-shadow: var(--shadow-md) !important;
+            border-color: rgba(5, 150, 105, 0.08) !important;
         }
 
         .icon-shape-lg {
@@ -168,41 +233,42 @@
             justify-content: center;
             border-radius: 16px;
             font-size: 28px;
-            transition: all 0.3s ease;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
         
         .card-modern:hover .icon-shape-lg {
-            transform: scale(1.1) rotate(5deg);
-            filter: brightness(1.1);
+            transform: scale(1.12) rotate(6deg);
+            filter: brightness(1.06);
         }
 
         .stat-label {
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             text-transform: uppercase;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            opacity: 0.6;
+            opacity: 0.55;
         }
         
         .progress-modern {
-            height: 12px;
+            height: 10px;
             background-color: #edf2f7;
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+            margin-top: 8px;
         }
         .progress-bar-modern {
             height: 100%;
-            background: linear-gradient(90deg, #198754 0%, #20c997 100%);
+            background: linear-gradient(90deg, var(--theme-emerald) 0%, var(--theme-mint) 100%);
             border-radius: 10px;
             position: relative;
-            box-shadow: 0 2px 5px rgba(25, 135, 84, 0.2);
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2);
         }
         .progress-bar-modern::after {
             content: '';
             position: absolute;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent);
+            background: linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent);
             background-size: 1rem 1rem;
             animation: progress-bar-stripes 2s linear infinite;
             opacity: 0.3;
@@ -214,34 +280,38 @@
         }
 
         .hover-glow:hover {
-            box-shadow: 0 10px 40px rgba(25, 135, 84, 0.15) !important;
+            box-shadow: 0 12px 35px rgba(5, 150, 105, 0.16) !important;
         }
 
         .responsible-glow {
-            animation: border-glow 4s ease-in-out infinite;
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-radius: 16px !important;
+            border: 1px solid rgba(255, 193, 7, 0.25) !important;
+            box-shadow: 0 8px 20px rgba(255, 193, 7, 0.08) !important;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         }
-
-        @keyframes border-glow {
-            0%, 100% { border-color: #ffc107; box-shadow: 0 5px 15px rgba(255, 193, 7, 0.1); }
-            50% { border-color: #ffeb3b; box-shadow: 0 8px 25px rgba(255, 235, 59, 0.2); }
+        .responsible-glow:hover {
+            transform: translateY(-4px) scale(1.02) !important;
+            box-shadow: 0 15px 30px rgba(255, 193, 7, 0.18) !important;
+            border-color: rgba(255, 193, 7, 0.5) !important;
         }
         
         .list-group-item-action {
-            border-radius: 8px !important;
+            border-radius: 10px !important;
             margin-bottom: 4px;
             border: 1px solid transparent;
         }
         .list-group-item-action.active {
-            background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.1), transparent) !important;
-            border-left: 4px solid var(--bs-primary) !important;
-            color: var(--bs-primary) !important;
+            background: linear-gradient(90deg, rgba(5, 150, 105, 0.08), transparent) !important;
+            border-left: 4px solid var(--theme-emerald) !important;
+            color: var(--theme-emerald) !important;
             font-weight: 700;
         }
         /* Timeline CSS */
         .timeline-vertical {
             position: relative;
             padding-left: 2rem;
-            border-left: 2px solid #e9ecef;
+            border-left: 2px solid #e2e8f0;
             margin-left: 10px;
         }
         .timeline-item {
@@ -249,7 +319,6 @@
             margin-bottom: 2rem;
         }
         .timeline-dot {
-            position: relative; /* Fixed from absolute to relative if needed, but absolute is correct for timeline. Keeping absolute as per previous */
             position: absolute;
             left: -33px;
             top: 2px;
@@ -257,52 +326,55 @@
             height: 20px;
             border-radius: 50%;
             background: #fff;
-            border: 4px solid #198754;
-            box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.2);
+            border: 4px solid var(--theme-emerald);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
         }
         
         /* Sidebar Styling */
         #useradd-sidenav {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(25, 135, 84, 0.05);
-            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.85) !important;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(15, 23, 42, 0.05);
+            border-radius: 18px;
+            padding: 16px !important;
+            box-shadow: var(--shadow-sm);
         }
         #useradd-sidenav .list-group-item {
-            border-radius: 10px !important;
+            border-radius: 12px !important;
             margin-bottom: 0.5rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: #526477;
+            padding: 12px 16px !important;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            color: #475569;
             font-weight: 600;
             border: 1px solid transparent;
             background: transparent;
         }
         #useradd-sidenav .list-group-item:hover {
-            background-color: rgba(25, 135, 84, 0.08);
-            color: #198754;
-            transform: translateX(8px);
-            border-color: rgba(25, 135, 84, 0.1);
+            background-color: var(--primary-emerald-light);
+            color: var(--theme-emerald);
+            transform: translateX(6px);
+            border-color: rgba(5, 150, 105, 0.08);
         }
         #useradd-sidenav .list-group-item.active {
-            background: linear-gradient(135deg, #198754 0%, #11663e 100%) !important;
+            background: linear-gradient(135deg, var(--theme-emerald) 0%, #047857 100%) !important;
             color: #fff !important;
             border-color: transparent;
-            box-shadow: 0 8px 15px rgba(25, 135, 84, 0.25);
-            transform: translateX(5px);
+            box-shadow: var(--shadow-glow-emerald);
+            transform: translateX(4px);
         }
         #useradd-sidenav .list-group-item.active .ti {
             color: #fff !important;
         }
         #useradd-sidenav .list-group-item .ti {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             transition: all 0.3s ease;
         }
         #useradd-sidenav .list-group-item:hover .ti {
-            transform: scale(1.2);
+            transform: scale(1.18) rotate(4deg);
         }
-        .bg-success { background-color: #198754 !important; }
-        .bg-danger { background-color: #dc3545 !important; }
-        .bg-warning { background-color: #ffc107 !important; }
+        .bg-success { background-color: var(--theme-emerald) !important; }
+        .bg-danger { background-color: #ef4444 !important; }
+        .bg-warning { background-color: #f59e0b !important; }
         
         .stat-card-accent {
             position: absolute;
@@ -315,98 +387,457 @@
 
         /* Section Layout Enhancements */
         .section-layout-standard {
-            border-left: 4px solid #94a3b8 !important;
+            border-left: 4px solid var(--theme-slate-muted) !important;
         }
         .section-layout-card {
             border-left: 4px solid #3b82f6 !important;
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.08) !important;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.06) !important;
         }
         .section-layout-bento {
-            border-left: 4px solid #18bf6b !important;
-            background: radial-gradient(circle, rgba(24, 191, 107, 0.03) 1px, transparent 1px) #fff;
+            border-left: 4px solid var(--theme-emerald) !important;
+            background: radial-gradient(circle, rgba(5, 150, 105, 0.02) 1px, transparent 1px) #fff;
             background-size: 24px 24px;
-            box-shadow: 0 10px 25px rgba(24, 191, 107, 0.08) !important;
+            box-shadow: 0 10px 25px rgba(5, 150, 105, 0.06) !important;
         }
 
         /* Premium Card Styles (for fields) */
         .premium-card {
-            border: 1px solid rgba(59, 130, 246, 0.15) !important;
-            background: linear-gradient(135deg, #ffffff 0%, #f4f7fe 100%) !important;
-            border-radius: 14px !important;
+            border: 1px solid var(--border-blue-glow) !important;
+            background: var(--gradient-card-premium) !important;
+            border-radius: 16px !important;
             border-top: 4px solid #3b82f6 !important;
             min-height: 90px;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.04) !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: var(--shadow-sm) !important;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
             position: relative;
             overflow: hidden;
         }
         .premium-card:hover {
             transform: translateY(-5px) !important;
-            box-shadow: 0 12px 30px rgba(59, 130, 246, 0.12) !important;
+            box-shadow: 0 15px 35px rgba(59, 130, 246, 0.12) !important;
             border-color: rgba(59, 130, 246, 0.3) !important;
         }
         .premium-card-large {
-            background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%) !important;
+            background: linear-gradient(135deg, rgba(239, 246, 255, 0.95) 0%, #ffffff 100%) !important;
             border-top: 4px solid #1d4ed8 !important;
         }
         .premium-card-large:hover {
-            box-shadow: 0 15px 35px rgba(29, 78, 216, 0.15) !important;
+            box-shadow: 0 16px 36px rgba(29, 78, 216, 0.16) !important;
         }
         .premium-icon-container {
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 10px;
             background: rgba(59, 130, 246, 0.08);
             color: #3b82f6;
-            transition: all 0.3s ease;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
         .premium-card:hover .premium-icon-container {
-            transform: scale(1.15) rotate(-8deg);
+            transform: scale(1.18) rotate(-8deg);
             background: #3b82f6;
             color: #fff;
         }
 
         /* Standard Card Styles (for fields) */
         .standard-card {
-            border: 1px solid #e2e8f0 !important;
-            background: #f8fafc !important;
-            border-radius: 8px !important;
+            border: 1px solid var(--border-light) !important;
+            background: var(--theme-slate-light) !important;
+            border-radius: 12px !important;
             min-height: 80px;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
             position: relative;
             overflow: hidden;
         }
         .standard-card:hover {
             border-color: #cbd5e1 !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+            box-shadow: var(--shadow-sm) !important;
             background: #f1f5f9 !important;
+            transform: translateY(-2px) !important;
         }
         .standard-card-large {
             background: #f1f5f9 !important;
-            border-left: 3px solid #64748b !important;
+            border-left: 4px solid #64748b !important;
         }
         .standard-icon-container {
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
-            background: rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            background: rgba(148, 163, 184, 0.12);
             color: #64748b;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         }
         .standard-card:hover .standard-icon-container {
-            background: rgba(148, 163, 184, 0.2);
+            background: rgba(148, 163, 184, 0.25);
+            color: #0f172a;
+        }
+
+        /* ===== COMPREHENSIVE UI/UX POLISH ===== */
+
+        /* File / Document Upload Card */
+        .file-upload-card {
+            border: 2px dashed rgba(5, 150, 105, 0.2) !important;
+            background: rgba(248, 252, 250, 0.9) !important;
+            border-radius: 14px !important;
+            min-height: 85px;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .file-upload-card:hover {
+            border-color: var(--theme-emerald) !important;
+            background: rgba(5, 150, 105, 0.03) !important;
+            transform: translateY(-3px) scale(1.005) !important;
+            box-shadow: 0 8px 24px rgba(5, 150, 105, 0.10) !important;
+        }
+        .file-upload-card:hover .file-icon-container {
+            background: var(--theme-emerald) !important;
+            color: #fff !important;
+            transform: scale(1.1) rotate(5deg);
+        }
+        .file-icon-container {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: rgba(5, 150, 105, 0.08);
+            color: var(--theme-emerald);
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+            flex-shrink: 0;
+        }
+        .file-has-value {
+            border: 1.5px solid rgba(5, 150, 105, 0.15) !important;
+            background: rgba(240, 253, 244, 0.8) !important;
+            border-style: solid !important;
+        }
+        .file-has-value:hover {
+            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.12) !important;
+        }
+
+        /* Section title pills & badges */
+        .section-badge-percentage {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, var(--theme-emerald), #047857) !important;
+            color: #fff !important;
+            border-radius: 20px !important;
+            font-size: 0.7rem !important;
+            font-weight: 700 !important;
+            padding: 3px 10px !important;
+            letter-spacing: 0.3px;
+            box-shadow: 0 3px 8px rgba(5, 150, 105, 0.25);
+        }
+
+        /* Stats grid card enhancements */
+        .stat-quick-number {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--theme-slate-dark), #334155);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .stat-divider-v {
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, #e2e8f0, transparent);
+            height: 60%;
+            align-self: center;
+        }
+
+        /* Contact info card enhancements */
+        .contact-info-row {
+            border-radius: 12px;
+            padding: 12px 14px;
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+        }
+        .contact-info-row:hover {
+            background: rgba(5, 150, 105, 0.03);
+            border-color: rgba(5, 150, 105, 0.1);
+        }
+
+        /* Lead Name display tweak */
+        .lead-hero-name {
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        /* Field label row in card layout */
+        .field-label-col {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+            min-width: 130px;
+            flex-shrink: 0;
+        }
+        .field-value-col {
+            font-size: 0.9rem;
+            font-weight: 600;
             color: #1e293b;
+        }
+
+        /* Activity & Task feed item */
+        .feed-item {
+            border-left: 3px solid #e2e8f0;
+            padding-left: 16px;
+            position: relative;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+        .feed-item:hover {
+            border-left-color: var(--theme-emerald);
+        }
+        .feed-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        .feed-item:hover::before {
+            background: var(--theme-emerald);
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+        }
+
+        /* Section card border-left accent colors per layout */
+        .section-layout-card { border-left: 4px solid #3b82f6 !important; }
+        .section-layout-bento { border-left: 4px solid var(--theme-emerald) !important; }
+        .section-layout-standard { border-left: 4px solid #94a3b8 !important; }
+
+        /* Card modern: remove hover lift on mobile */
+        @media (max-width: 768px) {
+            .card-modern:hover { transform: none !important; }
+            .bento-card:hover { transform: none !important; }
+        }
+
+        /* Overall smooth page transitions */
+        * { scroll-behavior: smooth; }
+        a, button { transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease; }
+
+        /* Premium Dropdown Stage Changer Styles */
+        .dropdown-stage-changer {
+            position: relative;
+            user-select: none;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+        .dropdown-stage-changer:hover {
+            transform: translateY(-2px) scale(1.02);
+            background: rgba(255, 255, 255, 0.12) !important;
+            border-color: rgba(255, 255, 255, 0.22) !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18) !important;
+        }
+        .dropdown-stage-changer:active {
+            transform: translateY(0) scale(1.0);
+        }
+        .dropdown-stage-changer:hover .rounded-circle {
+            transform: scale(1.1) rotate(15deg);
+            filter: brightness(1.1);
+        }
+        .fade-in-dropdown {
+            animation: fadeInDropdown 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+            transform-origin: top right;
+        }
+        @keyframes fadeInDropdown {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        .dropdown-menu.border-emerald-light {
+            border: 1px solid rgba(5, 150, 105, 0.12) !important;
+            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12) !important;
+        }
+        .dropdown-item.btn-change-stage:hover {
+            background-color: var(--primary-emerald-light) !important;
+            color: var(--theme-emerald) !important;
+            transform: translateX(4px);
+            font-weight: 600;
+        }
+        .dropdown-item.btn-change-stage:hover .hover-slide-icon {
+            transform: translateX(4px);
+            opacity: 1 !important;
+            color: var(--theme-emerald) !important;
+        }
+        .dropdown-item.btn-change-stage {
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+
+        /* Style "Not Provided" placeholders as beautiful, clean, dashed pill badges */
+        span.text-muted.fw-normal[style*="opacity: 0.55"], 
+        span.text-muted.fw-normal.fst-italic {
+            background: rgba(15, 23, 42, 0.03) !important;
+            padding: 3px 10px !important;
+            border-radius: 20px !important;
+            border: 1.5px dashed rgba(15, 23, 42, 0.12) !important;
+            font-size: 0.72rem !important;
+            color: #64748b !important;
+            font-style: normal !important;
+            opacity: 0.75 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            letter-spacing: 0.2px;
+            font-weight: 600 !important;
+            transition: all 0.3s ease;
+        }
+        span.text-muted.fw-normal:hover {
+            background: rgba(5, 150, 105, 0.03) !important;
+            border-color: rgba(5, 150, 105, 0.25) !important;
+            color: var(--theme-emerald) !important;
+        }
+
+        /* Dashed connectors for clean card fields key-value rows */
+        .py-3.px-2.border-bottom {
+            border-bottom: 1.5px dashed #edf2f7 !important;
+            transition: all 0.25s ease;
+        }
+        .py-3.px-2.border-bottom:hover {
+            border-bottom-color: rgba(5, 150, 105, 0.15) !important;
+            background-color: rgba(5, 150, 105, 0.01) !important;
+        }
+
+        /* ===== STAGE PROGRESSION STEPPER ===== */
+        .stepper-track {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow: hidden;
+            gap: 0;
+            width: 100%;
+        }
+        .stepper-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            flex: 1;
+            min-width: 0;
+        }
+        .stepper-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 13px;
+            left: calc(50% + 13px);
+            right: calc(-50% + 13px);
+            height: 2px;
+            background: linear-gradient(90deg, #e2e8f0 0%, #e2e8f0 100%);
+            z-index: 0;
+            transition: background 0.4s ease;
+        }
+        .stepper-item.completed:not(:last-child)::after {
+            background: linear-gradient(90deg, var(--theme-emerald), rgba(5,150,105,0.3));
+        }
+        .stepper-node {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            position: relative;
+            z-index: 1;
+            border: 2px solid #e2e8f0;
+            background: #fff;
+            color: #94a3b8;
+            cursor: default;
+            transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1);
+            flex-shrink: 0;
+        }
+        .stepper-node.active {
+            background: linear-gradient(135deg, var(--theme-emerald), #047857);
+            border-color: var(--theme-emerald);
+            color: #fff;
+            box-shadow: 0 0 0 4px rgba(5,150,105,0.18), 0 4px 12px rgba(5,150,105,0.25);
+        }
+        .stepper-node.completed {
+            background: var(--theme-emerald);
+            border-color: var(--theme-emerald);
+            color: #fff;
+        }
+        .stepper-node.can-move {
+            cursor: pointer;
+        }
+        .stepper-node.can-move:hover {
+            transform: scale(1.22);
+            box-shadow: 0 6px 20px rgba(5,150,105,0.28);
+            background: linear-gradient(135deg, var(--theme-emerald), #047857);
+            border-color: var(--theme-emerald);
+            color: #fff;
+        }
+        .stepper-node.locked {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .stepper-node.locked:hover .lock-overlay { opacity: 1; }
+        .lock-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(239,246,255,0.85);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            font-size: 9px;
+            color: #64748b;
+        }
+        .stepper-label {
+            font-size: 8px;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 5px;
+            line-height: 1.1;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #94a3b8;
+            transition: color 0.3s ease;
+            letter-spacing: 0.1px;
+        }
+        .stepper-item.active .stepper-label { color: var(--theme-emerald); font-weight: 800; }
+        .stepper-item.completed .stepper-label { color: var(--theme-emerald); }
+        .stepper-card {
+            border-radius: 14px !important;
+            border: 1px solid rgba(5,150,105,0.08) !important;
+            background: #fff !important;
+            box-shadow: 0 4px 16px rgba(5,150,105,0.05), 0 1px 4px rgba(15,23,42,0.04) !important;
         }
     </style>
     <link rel="stylesheet" href="{{ asset('assets/js/plugins/summernote-0.8.18-dist/summernote-lite.min.css') }}">
     <link rel="stylesheet" href="{{ asset('packages/workdo/Lead/src/Resources/assets/css/dropzone.min.css') }}">
 @endpush
+
+@include('lead::layouts.anti_screenshot')
 
 @php
     $lead->activities = $lead->activities->load('user');
@@ -680,6 +1111,79 @@
                 }
             });
         });
+
+        // ===== STEPPER: Move Stage =====
+        $(document).on('click', '.btn-move-stage', function() {
+            var btn       = $(this);
+            var leadId    = btn.data('lead-id');
+            var stageId   = btn.data('stage-id');
+            var stageName = btn.data('stage-name');
+
+            Swal.fire({
+                title: '{{ __("Move to stage?") }}',
+                html: '<div style="font-size:0.9rem;color:#64748b;">{{ __("Move this lead to stage:") }}<br><strong style="color:#059669;">' + stageName + '</strong></div>',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '{{ __("Yes, Move") }}',
+                cancelButtonText: '{{ __("Cancel") }}',
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#e2e8f0',
+                buttonsStyling: true,
+                reverseButtons: true,
+                backdrop: 'rgba(15,23,42,0.35)',
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '{{ route("leads.order") }}',
+                        method: 'POST',
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content'),
+                            id: leadId,
+                            lead_order: stageId,
+                        },
+                        beforeSend: function() {
+                            btn.css('opacity', '0.6');
+                            btn.prop('disabled', true);
+                        },
+                        success: function(res) {
+                            if (res.is_success || res.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '{{ __("Stage Updated!") }}',
+                                    text: '{{ __("Lead moved to") }} ' + stageName,
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                    backdrop: 'rgba(15,23,42,0.25)',
+                                }).then(function() {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('{{ __("Error") }}', res.error || '{{ __("Could not update stage") }}', 'error');
+                                btn.css('opacity', '1').prop('disabled', false);
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('{{ __("Error") }}', '{{ __("Server error while updating stage.") }}', 'error');
+                            btn.css('opacity', '1').prop('disabled', false);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Activate sidebar scroll-spy highlighting
+        var stepperScrollSpy = document.getElementById('useradd-sidenav');
+        if (stepperScrollSpy) {
+            document.querySelectorAll('#useradd-sidenav .list-group-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('#useradd-sidenav .list-group-item').forEach(function(i) {
+                        i.classList.remove('active');
+                        i.querySelector('.ti-chevron-right') && i.querySelector('.ti-chevron-right').classList.remove('text-white');
+                    });
+                    this.classList.add('active');
+                });
+            });
+        }
     </script>
 
 @endpush
@@ -696,6 +1200,81 @@
             <i class="ti ti-arrow-left text-white"></i>
         </a>
         @stack('addButtonHook')
+        @php
+            $orionSettings = \Workdo\Lead\Http\Controllers\OrionIntegrationController::getOrionSettings();
+            $orionRules = $orionSettings['rules'] ?? [];
+            $activeOrionRule = collect($orionRules)->first(function($r) use ($lead) {
+                return ($r['stage_id'] ?? null) == $lead->stage_id;
+            });
+            $clientCodeValue = '';
+            if ($activeOrionRule) {
+                // 1. Try to get value mapped to ClientCode first
+                $mapping = $activeOrionRule['field_mapping'] ?? [];
+                $clientCodeKey = $mapping['ClientCode'] ?? null;
+                if ($clientCodeKey) {
+                    if ($clientCodeKey === 'dp_id') {
+                        $clientCodeValue = $lead->dp_id;
+                    } elseif (strpos($clientCodeKey, 'custom_') === 0) {
+                        $cfId = substr($clientCodeKey, 7);
+                        $clientCodeValue = $leadCustomFieldValues[$cfId] ?? '';
+                    }
+                }
+
+                // 2. If empty, search custom field named 'CLIENT CODE' or 'CLIENT_CODE'
+                if (empty($clientCodeValue)) {
+                    $customFieldsList = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', getActiveWorkSpace())->get();
+                    $cfClientCode = $customFieldsList->first(function($f) {
+                        $name = strtoupper(trim($f->name));
+                        return $name === 'CLIENT CODE' || $name === 'CLIENT_CODE';
+                    });
+                    if ($cfClientCode && !empty($leadCustomFieldValues[$cfClientCode->id])) {
+                        $clientCodeValue = $leadCustomFieldValues[$cfClientCode->id];
+                    }
+                }
+
+                // 3. If empty, try to get value mapped to PanNo
+                if (empty($clientCodeValue)) {
+                    $panNoKey = $mapping['PanNo'] ?? null;
+                    if ($panNoKey) {
+                        if ($panNoKey === 'pan_number') {
+                            $clientCodeValue = $lead->pan_number;
+                        } elseif (strpos($panNoKey, 'custom_') === 0) {
+                            $cfId = substr($panNoKey, 7);
+                            $clientCodeValue = $leadCustomFieldValues[$cfId] ?? '';
+                        }
+                    }
+                }
+
+                // 4. If empty, search custom field named 'PANCARD NUMBER' / 'PAN CARD' / 'PAN NUMBER'
+                if (empty($clientCodeValue)) {
+                    if (!isset($customFieldsList)) {
+                        $customFieldsList = \Workdo\Lead\Entities\LeadCustomField::where('workspace_id', getActiveWorkSpace())->get();
+                    }
+                    $cfPan = $customFieldsList->first(function($f) {
+                        $name = strtoupper(trim($f->name));
+                        return $name === 'PANCARD NUMBER' || $name === 'PAN CARD' || $name === 'PAN NUMBER' || $name === 'PAN_NUMBER';
+                    });
+                    if ($cfPan && !empty($leadCustomFieldValues[$cfPan->id])) {
+                        $clientCodeValue = $leadCustomFieldValues[$cfPan->id];
+                    }
+                }
+
+                // 5. If empty, try lead attributes (dp_id, pan_number)
+                if (empty($clientCodeValue)) {
+                    $clientCodeValue = $lead->dp_id ?? $lead->pan_number ?? '';
+                }
+
+                // 6. Ultimate fallback to phone/mobile number
+                if (empty($clientCodeValue)) {
+                    $clientCodeValue = !empty($lead->phone) ? preg_replace('/[^0-9]/', '', $lead->phone) : '';
+                }
+            }
+        @endphp
+        @if($activeOrionRule)
+            <a href="javascript:void(0)" class="btn btn-sm btn-icon orion-pulse-btn me-2" id="btn-orion-ekyc-fetch" data-client-code="{{ $clientCodeValue }}" data-rule-id="{{ $activeOrionRule['id'] }}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{__('Fetch Orion EKYC')}}">
+                <i class="ti ti-cloud-download text-white"></i>
+            </a>
+        @endif
         @permission('lead edit')
             <a class="btn btn-sm btn-primary btn-icon me-2" data-bs-toggle="tooltip" data-bs-placement="top"
                 title="{{ __('Labels') }}" data-ajax-popup="true" data-size="md" data-title="{{ __('Label') }}"
@@ -721,6 +1300,80 @@
 @endsection
 
 @section('content')
+    {{-- ===== STAGE PROGRESSION STEPPER ===== --}}
+    @php
+        $user          = Auth::user();
+        $allStages     = \Workdo\Lead\Entities\LeadStage::where('pipeline_id', $lead->pipeline_id)
+                            ->orderBy('order')
+                            ->get();
+        $visibleStages = $allStages->filter(fn($s) => $s->permissions($user)->can_view);
+        $currentOrder  = $lead->stage ? $lead->stage->order : 0;
+        $canMoveCurrent = $lead->stage ? $lead->stage->permissions($user)->can_move : false;
+    @endphp
+    @if($visibleStages->count() > 0)
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card stepper-card p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--theme-emerald),#047857);display:flex;align-items:center;justify-content:center;">
+                            <i class="ti ti-route text-white" style="font-size:14px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">{{ __('Lead Journey') }}</div>
+                            <div style="font-size:0.78rem;font-weight:700;color:#1e293b;line-height:1.1;">{{ $lead->pipeline->name ?? 'Pipeline' }}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size:0.68rem;color:#94a3b8;font-weight:600;">{{ $lead->stage->name ?? '—' }}</span>
+                        <span class="badge rounded-pill text-white" style="background:linear-gradient(135deg,var(--theme-emerald),#047857);font-size:0.65rem;padding:3px 10px;">{{ $visibleStages->count() }} {{ __('stages') }}</span>
+                    </div>
+                </div>
+                <div class="stepper-track px-1">
+                    @foreach($visibleStages as $stage)
+                        @php
+                            $perm     = $stage->permissions($user);
+                            $isActive = ($stage->id == $lead->stage_id);
+                            $isDone   = ($stage->order < $currentOrder);
+                            $canMove  = ($perm->can_move && $canMoveCurrent && !$isActive);
+                            $stageClass = $isActive ? 'active' : ($isDone ? 'completed' : '');
+                            $nodeClass  = $isActive ? 'active' : ($isDone ? 'completed' : ($canMove ? 'can-move' : 'locked'));
+                        @endphp
+                        <div class="stepper-item {{ $stageClass }}">
+                            @if($canMove)
+                                <div class="stepper-node {{ $nodeClass }} btn-move-stage"
+                                     data-lead-id="{{ $lead->id }}"
+                                     data-stage-id="{{ $stage->id }}"
+                                     data-stage-name="{{ $stage->name }}"
+                                     data-bs-toggle="tooltip"
+                                     title="{{ __('Move to: ') }}{{ $stage->name }}">
+                                    <i class="ti ti-{{ $isDone ? 'check' : 'arrow-right' }}"></i>
+                                </div>
+                            @elseif($isActive)
+                                <div class="stepper-node active" data-bs-toggle="tooltip" title="{{ __('Current Stage') }}">
+                                    <i class="ti ti-map-pin"></i>
+                                </div>
+                            @else
+                                <div class="stepper-node {{ $nodeClass }}" data-bs-toggle="tooltip" title="{{ $perm->can_move ? $stage->name : __('No permission to move here') }}">
+                                    {{ $isDone ? '' : '' }}
+                                    @if(!$perm->can_move)
+                                        <i class="ti ti-lock"></i>
+                                        <div class="lock-overlay"><i class="ti ti-lock"></i></div>
+                                    @elseif($isDone)
+                                        <i class="ti ti-check"></i>
+                                    @else
+                                        <i class="ti ti-circle"></i>
+                                    @endif
+                                </div>
+                            @endif
+                            <div class="stepper-label" title="{{ $stage->name }}">{{ $stage->name }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
     <div class="row">
         <div class="col-12 mb-3">
             <div class="row">
@@ -734,11 +1387,16 @@
 
                             @if(isset($leadSections))
                                 @foreach($leadSections as $section)
-                                    <a class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between px-3 py-2"
-                                        href="#section-{{ $section->id }}">
-                                        <span class="d-flex align-items-center"><i class="ti ti-folder me-2"></i> {{ $section->name }}</span>
-                                        <div class="float-end"><i class="ti ti-chevron-right" style="font-size: 0.8rem;"></i></div>
-                                    </a>
+                                    @php
+                                        $secVisibility = !empty($section->visible_stages) ? ($section->visible_stages[$lead->stage_id] ?? 'visible') : 'visible';
+                                    @endphp
+                                    @if($secVisibility !== 'hidden')
+                                        <a class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between px-3 py-2"
+                                            href="#section-{{ $section->id }}">
+                                            <span class="d-flex align-items-center"><i class="ti ti-folder me-2"></i> {{ $section->name }}</span>
+                                            <div class="float-end"><i class="ti ti-chevron-right" style="font-size: 0.8rem;"></i></div>
+                                        </a>
+                                    @endif
                                 @endforeach
                             @endif
 
@@ -764,6 +1422,18 @@
                                     <div class="float-end"><i class="ti ti-chevron-right" style="font-size: 0.8rem;"></i></div>
                                 </a>
 
+                            @endif
+                             @if(isset($activeOrionRule) && $activeOrionRule && Auth::user()->type == 'company')
+                                <a class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between px-3 py-2"
+                                    href="#orion-sync-logs">
+                                    <span class="d-flex align-items-center"><i class="ti ti-refresh me-2"></i> {{ __('Sync Logs') }}</span>
+                                    <div class="d-flex align-items-center">
+                                        @if(isset($orionLogs) && $orionLogs->count() > 0)
+                                            <span class="badge bg-warning text-dark rounded-pill me-1" style="font-size: 0.65rem;">{{ $orionLogs->count() }}</span>
+                                        @endif
+                                        <i class="ti ti-chevron-right" style="font-size: 0.8rem;"></i>
+                                    </div>
+                                </a>
                             @endif
                             @stack('indiamart_tab')
 
@@ -843,9 +1513,21 @@
                         $sources = $lead->sources();
                         $calls = $lead->calls;
                         $emails = $lead->emails;
-                        ?>
+
+                        $user = Auth::user();
+                        $pipelineStages = \Workdo\Lead\Entities\LeadStage::where('pipeline_id', $lead->pipeline_id)
+                            ->where('created_by', $lead->created_by)
+                            ->orderBy('order')
+                            ->get();
                         
-                        {{-- Lead Summary Header --}}
+                        $visibleStages = $pipelineStages->filter(function($st) use ($user) {
+                            return $st->permissions($user)->can_view;
+                        });
+
+                        $currentStage = $lead->stage;
+                        $canMoveFromCurrent = $currentStage ? $currentStage->permissions($user)->can_move : true;
+                        ?>
+
                         <!-- Hero Header -->
                         <div class="card hero-gradient text-white mb-4 shadow-lg border-0 fade-in-up">
                             <div class="card-body hero-pattern p-4">
@@ -861,7 +1543,7 @@
                                                 <i class="ti ti-timeline me-1"></i> {{ $lead->pipeline->name ?? __('Pipeline') }}
                                             </div>
                                         </div>
-                                        <h1 class="text-white mb-2 fw-800 display-5" style="letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">{{ $lead->name }}</h1>
+                                        <h1 class="text-white mb-2 fw-800 display-5" style="letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: 800;">{{ $lead->name }}</h1>
                                         <div class="d-flex align-items-center text-white-50">
                                             <div class="d-flex align-items-center me-4">
                                                 <i class="ti ti-calendar-event me-2 opacity-50"></i>
@@ -875,24 +1557,67 @@
                                             @endif
                                         </div>
                                     </div>
-                                    <div class="col-md-6 mt-4 mt-md-0 d-flex justify-content-md-end align-items-center gap-3">
-                                         <!-- Stage Badge -->
-                                         <div class="p-3 rounded-4 bg-white-10 backdrop-blur border border-white-10 shadow-sm text-start" style="min-width: 140px;">
-                                            <label class="text-white-50 text-uppercase fw-800 d-block mb-2" style="font-size: 0.65rem; letter-spacing: 1px;">{{ __('Current Stage') }}</label>
+                                    <div class="col-md-6 mt-4 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
+                                         <!-- Stage Dropdown Selector -->
+                                         <div class="dropdown p-3 rounded-4 bg-white-10 backdrop-blur border border-white-10 shadow-sm text-start position-relative dropdown-stage-changer" style="min-width: 170px; background: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; cursor: pointer; transition: all 0.3s ease;" data-bs-toggle="dropdown" aria-expanded="false" data-bs-offset="0,8">
+                                            <label class="text-white-50 text-uppercase fw-800 d-block mb-1.5" style="font-size: 0.62rem; letter-spacing: 1px; cursor: pointer; font-weight: 800;">
+                                                {{ __('Current Stage') }} <i class="ti ti-chevron-down ms-1 fs-10 text-white-50" style="vertical-align: middle;"></i>
+                                            </label>
                                             <div class="d-flex align-items-center">
-                                                <div class="flex-shrink-0 bg-warning text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                <div class="flex-shrink-0 bg-warning text-white rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; transition: all 0.3s ease;">
                                                     <i class="ti ti-target f-16"></i>
                                                 </div>
-                                                <h5 class="text-white mb-0 ms-2 fw-bold">{{ $lead->stage?->name ?? '-' }}</h5>
+                                                <h5 class="text-white mb-0 ms-2 fw-bold text-truncate" style="font-size: 0.95rem; max-width: 120px;" data-bs-toggle="tooltip" title="{{ $lead->stage?->name ?? '-' }}">{{ $lead->stage?->name ?? '-' }}</h5>
                                             </div>
+                                            
+                                            <!-- Dropdown Menu -->
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 py-2 border-emerald-light fade-in-dropdown" style="min-width: 260px; max-height: 380px; overflow-y: auto; background: #ffffff; border: 1px solid rgba(5, 150, 105, 0.1) !important; z-index: 1050;">
+                                                <li class="px-3 py-2 border-bottom mb-1 bg-light d-flex align-items-center">
+                                                    <i class="ti ti-route text-success me-2 fs-5"></i>
+                                                    <span class="text-uppercase fw-800 text-dark" style="font-size: 0.72rem; letter-spacing: 0.5px;">{{ __('Change Lead Stage') }}</span>
+                                                </li>
+                                                @foreach($visibleStages as $st)
+                                                    @php
+                                                        $isCurrent = ($st->id == $lead->stage_id);
+                                                        $canMoveTo = ($canMoveFromCurrent && $st->permissions($user)->can_move && !$isCurrent);
+                                                    @endphp
+                                                    <li class="px-1">
+                                                        @if($canMoveTo)
+                                                            <a class="dropdown-item d-flex align-items-center justify-content-between px-3 py-2 rounded-3 btn-change-stage" href="javascript:void(0);" data-stage-id="{{ $st->id }}" data-stage-name="{{ $st->name }}" style="transition: all 0.2s ease;">
+                                                                <span class="d-flex align-items-center">
+                                                                    <span class="rounded-circle me-2 d-inline-block bg-primary-subtle" style="width: 6px; height: 6px;"></span>
+                                                                    <span class="text-dark fw-500" style="font-size: 0.85rem;">{{ $st->name }}</span>
+                                                                </span>
+                                                                <i class="ti ti-arrow-right text-primary opacity-50 fs-6 hover-slide-icon"></i>
+                                                            </a>
+                                                        @elseif($isCurrent)
+                                                            <a class="dropdown-item d-flex align-items-center justify-content-between px-3 py-2 active bg-success-subtle text-success disabled rounded-3" href="javascript:void(0);" style="cursor: default; pointer-events: none;">
+                                                                <span class="d-flex align-items-center">
+                                                                    <i class="ti ti-circle-check-filled text-success me-2 fs-5"></i>
+                                                                    <span class="fw-bold" style="font-size: 0.85rem;">{{ $st->name }}</span>
+                                                                </span>
+                                                                <span class="badge bg-success text-white px-2 py-0.5 rounded-pill" style="font-size: 0.65rem;">{{ __('Current') }}</span>
+                                                            </a>
+                                                        @else
+                                                            <a class="dropdown-item d-flex align-items-center justify-content-between px-3 py-2 text-muted disabled rounded-3" href="javascript:void(0);" style="opacity: 0.55; cursor: not-allowed; pointer-events: none;">
+                                                                <span class="d-flex align-items-center">
+                                                                    <i class="ti ti-lock me-2 text-muted fs-6"></i>
+                                                                    <span style="font-size: 0.85rem;">{{ $st->name }}</span>
+                                                                </span>
+                                                                <span class="text-danger fw-bold" style="font-size: 0.68rem;"><i class="ti ti-circle-x me-0.5"></i>{{ __('Locked') }}</span>
+                                                            </a>
+                                                        @endif
+                                                    </li>
+                                                @endforeach
+                                            </ul>
                                          </div>
 
                                          <!-- Responsible Person Highlight -->
-                                         <div class="p-3 rounded-4 bg-white shadow-2xl text-start position-relative overflow-hidden responsible-glow" style="min-width: 220px; border: 2px solid #ffc107; transition: all 0.3s ease;">
+                                         <div class="p-3 rounded-4 bg-white shadow-lg text-start position-relative overflow-hidden responsible-glow" style="min-width: 220px; transition: all 0.35s ease;">
                                             <div class="position-absolute top-0 end-0 p-1 opacity-5">
-                                                <i class="ti ti-crown fs-1" style="transform: rotate(15deg);"></i>
+                                                <i class="ti ti-crown fs-1" style="transform: rotate(15deg); color: #ffc107;"></i>
                                             </div>
-                                            <label class="text-success text-uppercase fw-800 d-block mb-2" style="font-size: 0.65rem; letter-spacing: 1px; opacity: 0.8;">{{ __('Responsible Person') }}</label>
+                                            <label class="text-success text-uppercase fw-800 d-block mb-2" style="font-size: 0.65rem; letter-spacing: 1px; opacity: 0.85; color: var(--theme-emerald) !important;">{{ __('Responsible Person') }}</label>
                                             <div class="d-flex align-items-center">
                                                 <div class="avatar-group d-flex align-items-center me-2">
                                                     @if($lead->owner)
@@ -909,7 +1634,7 @@
                                                 
                                                 @if($lead->owner)
                                                     <div class="ms-1 overflow-hidden">
-                                                        <span class="text-dark fw-800 d-block text-truncate" style="font-size: 11px; max-width: 80px;">{{ explode(' ', $lead->owner->name)[0] }}</span>
+                                                        <span class="text-dark fw-800 d-block text-truncate" style="font-size: 11px; max-width: 120px; font-weight: 700;">{{ explode(' ', $lead->owner->name)[0] }}</span>
                                                         <span class="text-muted d-block" style="font-size: 9px;">{{ __('Lead Owner') }}</span>
                                                     </div>
                                                 @else
@@ -923,34 +1648,37 @@
                         </div>
 
                         <!-- Stats Grid -->
-                        <div class="row mb-5">
+                        <div class="row mb-4 g-3">
                             <!-- Contact Card -->
-                            <div class="col-md-6 col-lg-4 mb-4 mb-lg-0 fade-in-up delay-100">
-                                <div class="card card-modern h-100 border-0 shadow-sm">
-                                    <div class="card-body p-4 position-relative overflow-hidden">
+                            <div class="col-md-6 col-lg-4 fade-in-up delay-100">
+                                <div class="card card-modern h-100 border-0" style="box-shadow: 0 4px 20px rgba(15,23,42,0.05);">
+                                    <div class="card-body p-3 position-relative overflow-hidden">
                                         <div class="stat-card-accent bg-success"></div>
-                                        <div class="d-flex align-items-center mb-4">
-                                            <div class="icon-shape-lg bg-success-subtle text-success shadow-sm">
-                                                <i class="ti ti-mail-forward"></i>
+                                        <div class="d-flex align-items-start mb-3 ms-2">
+                                            <h6 class="mb-0 fw-800 text-uppercase" style="font-size: 0.68rem; letter-spacing: 1px; color: #94a3b8;">{{ __('Contact Info') }}</h6>
+                                        </div>
+                                        <div class="contact-info-row d-flex align-items-center mb-2">
+                                            <div class="flex-shrink-0 icon-shape-lg bg-success-subtle text-success me-3" style="width:42px;height:42px;font-size:18px;border-radius:12px;">
+                                                <i class="ti ti-mail"></i>
                                             </div>
-                                            <div class="ms-3">
-                                                <label class="stat-label text-success d-block mb-1">{{ __('Email Address') }}</label>
-                                                <span class="h6 mb-0 text-break text-dark fw-bold">{!! \Workdo\Lead\Entities\LeadUtility::getFieldDisplay($lead, 'email', $lead->email) !!}</span>
+                                            <div class="overflow-hidden">
+                                                <div class="stat-label text-success mb-0.5">{{ __('Email') }}</div>
+                                                <div class="fw-700 text-dark text-truncate" style="font-size:0.85rem;max-width:180px;">{!! \Workdo\Lead\Entities\LeadUtility::getFieldDisplay($lead, 'email', $lead->email) !!}</div>
                                             </div>
                                         </div>
-                                        <div class="d-flex align-items-center">
-                                            <div class="icon-shape-lg bg-danger-subtle text-danger shadow-sm">
-                                                <i class="ti ti-phone-call"></i>
+                                        <div class="contact-info-row d-flex align-items-center">
+                                            <div class="flex-shrink-0 icon-shape-lg bg-danger-subtle text-danger me-3" style="width:42px;height:42px;font-size:18px;border-radius:12px;">
+                                                <i class="ti ti-phone"></i>
                                             </div>
-                                            <div class="ms-3">
-                                                <label class="stat-label text-danger d-block mb-1">{{ __('Phone Number') }}</label>
-                                                <span class="h6 mb-0 text-dark fw-bold">{!! \Workdo\Lead\Entities\LeadUtility::getFieldDisplay($lead, 'phone', $lead->phone) !!}
+                                            <div class="overflow-hidden">
+                                                <div class="stat-label text-danger mb-0.5">{{ __('Phone') }}</div>
+                                                <div class="fw-700 text-dark d-flex align-items-center gap-2" style="font-size:0.85rem;">
+                                                    {{ $lead->phone ?: __('—') }}
                                                     @if($lead->phone)
-                                                        <a href="javascript:void(0)" class="ms-2 text-primary hover-scale click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
-                                                            <i class="ti ti-phone-call"></i>
-                                                        </a>
+                                                        <a href="javascript:void(0)" class="text-primary click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}"><i class="ti ti-phone-call"></i></a>
+                                                        <a href="{{ route('whatsapp.chat.index', ['lead_id' => $lead->id]) }}" class="text-success" data-bs-toggle="tooltip" title="{{ __('WhatsApp') }}"><i class="ti ti-brand-whatsapp"></i></a>
                                                     @endif
-                                                </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -958,54 +1686,66 @@
                             </div>
                             
                             <!-- Progress Card -->
-                            <div class="col-md-6 col-lg-4 mb-4 mb-lg-0 fade-in-up delay-200">
-                                <div class="card card-modern h-100 border-0 shadow-sm">
-                                    <div class="card-body p-4 d-flex flex-column justify-content-center">
-                                        <div class="d-flex align-items-center justify-content-between mb-3">
-                                            <div class="d-flex align-items-center">
-                                                <div class="icon-shape-lg bg-primary-subtle text-primary me-3">
-                                                    <i class="ti ti-chart-pie"></i>
-                                                </div>
-                                                <h6 class="mb-0 fw-bold">{{ __('Conversion Probability') }}</h6>
+                            <div class="col-md-6 col-lg-4 fade-in-up delay-200">
+                                <div class="card card-modern h-100 border-0" style="box-shadow: 0 4px 20px rgba(15,23,42,0.05);">
+                                    <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="mb-0 fw-800 text-uppercase" style="font-size: 0.68rem; letter-spacing: 1px; color: #94a3b8;">{{ __('Conversion Probability') }}</h6>
+                                            <div class="icon-shape-lg bg-primary-subtle text-primary" style="width:36px;height:36px;font-size:16px;border-radius:10px;">
+                                                <i class="ti ti-chart-pie"></i>
                                             </div>
                                         </div>
-                                        <span class="h4 mb-0 text-primary fw-bolder">{{ $percentage }}%</span>
-                                        <div class="progress-modern w-100">
-                                             <div class="progress-bar-modern" role="progressbar" style="width: {{ $percentage }}%" aria-valuenow="{{ $percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="d-flex align-items-end justify-content-between mt-1 mb-2">
+                                            <span class="stat-quick-number" style="font-size:2.5rem;">{{ $percentage }}<span style="font-size:1rem;font-weight:600;color:#64748b;">%</span></span>
+                                            <span class="badge rounded-pill text-white" style="background: linear-gradient(135deg,var(--theme-emerald),#047857);font-size:0.7rem;padding:5px 12px;">
+                                                @if($percentage >= 70) 🔥 High
+                                                @elseif($percentage >= 40) ⚡ Medium
+                                                @else 🧊 Low
+                                                @endif
+                                            </span>
                                         </div>
-                                        <div class="mt-3 text-end">
-                                            <small class="text-muted">{{ __('Based on completed tasks and stage') }}</small>
+                                        <div class="progress-modern w-100 mb-1">
+                                            <div class="progress-bar-modern" role="progressbar" style="width: {{ $percentage }}%;"></div>
                                         </div>
+                                        <small class="text-muted" style="font-size:0.68rem;">{{ __('Based on completed tasks and stage') }}</small>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Quick Stats -->
-                             <div class="col-md-12 col-lg-4 fade-in-up delay-300">
-                                <div class="card card-modern h-100 border-0 shadow-sm">
-                                     <div class="card-body p-4">
-                                        <div class="row h-100 align-items-center">
-                                            <div class="col-6 text-center border-end">
-                                                <div class="icon-shape-lg bg-info-subtle text-info mb-3 mx-auto">
-                                                    <i class="ti ti-package"></i>
-                                                </div>
-                                                <h3 class="mb-1 fw-bolder text-dark">{{ count($products) }}</h3>
-                                                <span class="stat-label text-muted">{{ __('Products Attached') }}</span>
-                                            </div>
-                                            <div class="col-6 text-center">
-                                                <div class="icon-shape-lg bg-warning-subtle text-warning mb-3 mx-auto">
+                            <div class="col-md-12 col-lg-4 fade-in-up delay-300">
+                                <div class="card card-modern h-100 border-0" style="box-shadow: 0 4px 20px rgba(15,23,42,0.05);">
+                                    <div class="card-body p-3">
+                                        <h6 class="mb-3 fw-800 text-uppercase" style="font-size: 0.68rem; letter-spacing: 1px; color: #94a3b8;">{{ __('Quick Stats') }}</h6>
+                                        <div class="d-flex align-items-stretch justify-content-around h-100" style="min-height: 100px;">
+                                            <div class="text-center flex-fill">
+                                                <div class="icon-shape-lg bg-warning-subtle text-warning mx-auto mb-2" style="width:44px;height:44px;font-size:20px;border-radius:12px;">
                                                     <i class="ti ti-social"></i>
                                                 </div>
-                                                <h3 class="mb-1 fw-bolder text-dark">{{ count($sources) }}</h3>
-                                                <span class="stat-label text-muted">{{ __('Source Channels') }}</span>
+                                                <span class="stat-quick-number">{{ count($sources) }}</span>
+                                                <span class="stat-label text-muted d-block" style="font-size:0.7rem;">{{ __('Sources') }}</span>
+                                            </div>
+                                            <div class="stat-divider-v mx-3"></div>
+                                            <div class="text-center flex-fill">
+                                                <div class="icon-shape-lg bg-success-subtle text-success mx-auto mb-2" style="width:44px;height:44px;font-size:20px;border-radius:12px;">
+                                                    <i class="ti ti-phone"></i>
+                                                </div>
+                                                <span class="stat-quick-number">{{ count($calls ?? []) }}</span>
+                                                <span class="stat-label text-muted d-block" style="font-size:0.7rem;">{{ __('Calls') }}</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                             </div>
+                            </div>
                         </div>
                                                @if(isset($leadSections) && $leadSections->count() > 0)
                             @foreach($leadSections as $section)
+                                @php
+                                    $secVisibility = !empty($section->visible_stages) ? ($section->visible_stages[$lead->stage_id] ?? 'visible') : 'visible';
+                                @endphp
+                                @if($secVisibility === 'hidden')
+                                    @continue
+                                @endif
                                 @php
                                     $layoutType = $section->layout_type ?? 'section';
                                     $sectionClass = 'section-layout-standard';
@@ -1059,6 +1799,17 @@
                                                     <i class="ti ti-refresh text-success fs-5"></i>
                                                 </a>
                                             @endif
+                                            @if(stripos($section->name, 'client summary') !== false && $activeOrionRule)
+                                                <button type="button" class="btn btn-xs btn-light-primary ms-auto d-inline-flex align-items-center btn-orion-ekyc-fetch-trigger me-2" 
+                                                   data-client-code="{{ $clientCodeValue }}" 
+                                                   data-rule-id="{{ $activeOrionRule['id'] }}"
+                                                   data-bs-toggle="tooltip" 
+                                                   title="{{ __('Fetch Orion EKYC Data') }}"
+                                                   style="border-radius: 6px; font-size: 0.72rem; font-weight: 600; padding: 4px 10px;">
+                                                    <i class="ti ti-cloud-download me-1.5 fs-6 text-primary"></i>
+                                                    <span class="text-primary">{{ __('Fetch') }}</span>
+                                                </button>
+                                            @endif
                                             @if($layoutType === 'card')
                                                 <i class="ti ti-circle-check-filled text-primary fs-4 ms-2" data-bs-toggle="tooltip" title="Verified"></i>
                                                 @if(stripos($section->name, 'basic') !== false)
@@ -1066,7 +1817,7 @@
                                                 @elseif(stripos($section->name, 'address') !== false)
                                                     <span class="badge bg-light-primary text-primary ms-3 border border-primary border-opacity-25 rounded-pill px-3 py-1 text-capitalize" style="font-size: 0.75rem; font-weight: 500;">Address Verification is Successful.</span>
                                                 @endif
-                                                <span class="badge bg-success ms-auto rounded-pill px-3 py-1" style="font-size: 0.75rem; font-weight: 600;">{{ $sectionPercentage }}%</span>
+                                                <span class="badge bg-success {{ stripos($section->name, 'client summary') !== false ? 'ms-2' : 'ms-auto' }} rounded-pill px-3 py-1" style="font-size: 0.75rem; font-weight: 600;">{{ $sectionPercentage }}%</span>
                                             @endif
                                         </h5>
                                         <div class="row g-3">
@@ -1117,6 +1868,16 @@
                                                                     }
                                                                 @endphp
                                                                 
+                                                                @php
+                                                                    $isEyeToggle = ($secVisibility === 'eye_toggle');
+                                                                    $hasRealValue = ($rawVal !== null && $rawVal !== '' && $rawVal !== '-' && strtolower($rawVal) !== 'not provided');
+                                                                @endphp
+                                                                
+                                                                @if($isEyeToggle && $hasRealValue)
+                                                                    <span class="secure-reveal-wrapper d-inline-flex align-items-center justify-content-end w-100">
+                                                                        <span class="revealed-value d-none w-100 text-end">
+                                                                @endif
+                                                                
                                                                 @if($canEditInline)
                                                                     <span class="fs-6 fw-bold {{ $textClass }} text-break editable-field w-100"
                                                                           data-name="{{ $field->is_system ? $field->system_field_id : $field->id }}"
@@ -1142,6 +1903,9 @@
                                                                                     {{ $lead->phone }}
                                                                                     <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
                                                                                         <i class="ti ti-phone-call"></i>
+                                                                                    </a>
+                                                                                    <a href="{{ route('whatsapp.chat.index', ['lead_id' => $lead->id]) }}" class="ms-1 text-success" data-bs-toggle="tooltip" title="{{ __('WhatsApp Chat') }}">
+                                                                                        <i class="ti ti-brand-whatsapp"></i>
                                                                                     </a>
                                                                                 @else
                                                                                     <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
@@ -1184,17 +1948,33 @@
                                                                         @endif
                                                                     @endif
                                                                 </span>
+                                                                @if($isEyeToggle && $hasRealValue)
+                                                                        </span>
+                                                                        <span class="masked-value text-muted fw-bold">••••••••</span>
+                                                                        <button type="button" class="btn btn-xs btn-link p-0 ms-2 toggle-secure-reveal-btn text-primary" title="{{ __('Reveal') }}">
+                                                                            <i class="ti ti-eye fs-5"></i>
+                                                                        </button>
+                                                                    </span>
+                                                                @endif
                                                             </div>
                                                         </div>
                                                     @else
                                                         {{-- Original Card layouts (Bento/Standard) --}}
-                                                        <div class="p-3 {{ $cardClass }} d-flex flex-column justify-content-between">
+                                                        @php
+                                                            $isFileCard = ($field->type == 'file' || $field->type == 'attachment');
+                                                            $fileCardClass = $isFileCard ? 'file-upload-card' : $cardClass;
+                                                            $rawValForFile = $field->is_system ? $lead->{$field->system_field_id} : ($leadCustomFieldValues[$field->id] ?? '');
+                                                            if ($isFileCard && !empty($rawValForFile) && $rawValForFile !== '-') {
+                                                                $fileCardClass .= ' file-has-value';
+                                                            }
+                                                        @endphp
+                                                        <div class="p-3 {{ $isFileCard ? $fileCardClass : $cardClass }} d-flex flex-column justify-content-between">
                                                             <div>
                                                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                                                     <small class="text-muted fw-bold text-xs text-uppercase" style="letter-spacing: 0.5px;">{{ $field->name }}</small>
-                                                                    <div class="{{ $iconContainerClass }}">
-                                                                        @if($field->type == 'file' || $field->type == 'attachment')
-                                                                            <i class="ti ti-file fs-6"></i>
+                                                                    <div class="{{ $isFileCard ? 'file-icon-container' : $iconContainerClass }}">
+                                                                        @if($isFileCard)
+                                                                            <i class="ti ti-file-upload fs-6"></i>
                                                                         @else
                                                                             <i class="ti ti-{{ $field->icon ?? 'circle-dot' }} fs-6"></i>
                                                                         @endif
@@ -1204,7 +1984,14 @@
                                                                     @php
                                                                         $canEditInline = (!$field->is_system || in_array($field->system_field_id, ['email', 'phone', 'pan_number', 'aadhar_number'])) && Auth::user()->isAbleTo('lead edit');
                                                                         $rawVal = $field->is_system ? $lead->{$field->system_field_id} : ($leadCustomFieldValues[$field->id] ?? '');
+                                                                        $isEyeToggle = ($secVisibility === 'eye_toggle');
+                                                                        $hasRealValue = ($rawVal !== null && $rawVal !== '' && $rawVal !== '-' && strtolower($rawVal) !== 'not provided');
                                                                     @endphp
+                                                                    
+                                                                    @if($isEyeToggle && $hasRealValue)
+                                                                        <span class="secure-reveal-wrapper d-inline-flex align-items-center justify-content-end w-100">
+                                                                            <span class="revealed-value d-none w-100 text-end">
+                                                                    @endif
                                                                     
                                                                     @if($canEditInline)
                                                                         <span class="{{ $isLargeCard ? 'fs-5' : 'fs-6' }} fw-bold text-dark text-break editable-field w-100"
@@ -1231,6 +2018,9 @@
                                                                                         {{ $lead->phone }}
                                                                                         <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="{{$lead->phone}}" data-bs-toggle="tooltip" title="{{ __('Call') }}">
                                                                                             <i class="ti ti-phone-call"></i>
+                                                                                        </a>
+                                                                                        <a href="{{ route('whatsapp.chat.index', ['lead_id' => $lead->id]) }}" class="ms-1 text-success" data-bs-toggle="tooltip" title="{{ __('WhatsApp Chat') }}">
+                                                                                            <i class="ti ti-brand-whatsapp"></i>
                                                                                         </a>
                                                                                     @else
                                                                                         <span class="text-muted fw-normal fst-italic" style="opacity: 0.55;">{{ __('Not Provided') }}</span>
@@ -1273,6 +2063,14 @@
                                                                             @endif
                                                                         @endif
                                                                     </span>
+                                                                    @if($isEyeToggle && $hasRealValue)
+                                                                        </span>
+                                                                        <span class="masked-value text-muted fw-bold">••••••••</span>
+                                                                        <button type="button" class="btn btn-xs btn-link p-0 ms-2 toggle-secure-reveal-btn text-primary" title="{{ __('Reveal') }}">
+                                                                            <i class="ti ti-eye fs-5"></i>
+                                                                        </button>
+                                                                    </span>
+                                                                    @endif
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1339,6 +2137,8 @@
                         @endif
                     <div class="row">
                         @if (!Auth::user()->hasRole('client'))
+
+
                             <div id="tasks">
                                 <div class="card card-modern border-0 shadow-sm mb-4">
                                     <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center pt-4 px-4">
@@ -1617,6 +2417,191 @@
                             </div>
 
 
+                            {{-- Orion EKYC Sync Logs Section - Only visible to company owner --}}
+                            @if(isset($activeOrionRule) && $activeOrionRule && Auth::user()->type == 'company')
+                            <div id="orion-sync-logs">
+                                <div class="card card-modern border-0 shadow-sm mb-4">
+                                    <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center pt-4 px-4">
+                                        <h5 class="mb-0 section-title d-flex align-items-center">
+                                            <i class="ti ti-refresh me-2"></i> {{ __('Orion Sync Logs') }}
+                                        </h5>
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if(isset($orionLogs) && $orionLogs->count() > 0)
+                                                @php
+                                                    $successCount = $orionLogs->where('status', 'success')->count();
+                                                    $failedCount = $orionLogs->where('status', 'failed')->count();
+                                                    $pendingCount = $orionLogs->where('status', 'pending')->count();
+                                                @endphp
+                                                @if($successCount > 0)
+                                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill" style="font-size: 0.68rem;">
+                                                        <i class="ti ti-check me-1"></i>{{ $successCount }}
+                                                    </span>
+                                                @endif
+                                                @if($failedCount > 0)
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill" style="font-size: 0.68rem;">
+                                                        <i class="ti ti-x me-1"></i>{{ $failedCount }}
+                                                    </span>
+                                                @endif
+                                                @if($pendingCount > 0)
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning border-opacity-25 rounded-pill" style="font-size: 0.68rem;">
+                                                        <i class="ti ti-clock me-1"></i>{{ $pendingCount }}
+                                                    </span>
+                                                @endif
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill" style="font-size: 0.65rem;">
+                                                    {{ $orionLogs->count() }} {{ __('total') }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="list-group list-group-flush">
+                                            @forelse($orionLogs ?? collect() as $log)
+                                                @php
+                                                    $logStatusColor = match($log->status) {
+                                                        'success' => ['bg' => 'bg-success', 'text' => 'text-success', 'subtle' => 'bg-success-subtle', 'icon' => 'ti-circle-check', 'border' => 'border-success', 'glow' => 'rgba(25,135,84,0.15)'],
+                                                        'failed'  => ['bg' => 'bg-danger',  'text' => 'text-danger',  'subtle' => 'bg-danger-subtle',  'icon' => 'ti-circle-x',     'border' => 'border-danger',  'glow' => 'rgba(220,53,69,0.15)'],
+                                                        default   => ['bg' => 'bg-warning', 'text' => 'text-warning', 'subtle' => 'bg-warning-subtle', 'icon' => 'ti-clock',         'border' => 'border-warning', 'glow' => 'rgba(255,193,7,0.15)'],
+                                                    };
+                                                    $apiLabel = match($log->api_type) {
+                                                        'fetch_details' => 'Fetch Details',
+                                                        'post_ekyc'     => 'Post EKYC',
+                                                        'post_modify'   => 'Post Modify',
+                                                        default         => ucfirst(str_replace('_', ' ', $log->api_type)),
+                                                    };
+                                                    $apiIcon = match($log->api_type) {
+                                                        'fetch_details' => 'ti-download',
+                                                        'post_ekyc'     => 'ti-upload',
+                                                        'post_modify'   => 'ti-edit',
+                                                        default         => 'ti-refresh',
+                                                    };
+                                                @endphp
+                                                <div class="list-group-item orion-log-row px-4 py-3 border-0 border-bottom" style="border-left: 3px solid {{ $logStatusColor['glow'] }} !important; transition: all 0.3s ease;">
+                                                    <div class="d-flex align-items-start justify-content-between">
+                                                        {{-- Left: Icon + Details --}}
+                                                        <div class="d-flex align-items-start flex-grow-1">
+                                                            <div class="flex-shrink-0 me-3 d-flex align-items-center justify-content-center rounded-circle shadow-sm"
+                                                                 style="width: 40px; height: 40px; background: {{ $logStatusColor['glow'] }}; border: 2px solid var(--bs-{{ str_replace('border-', '', $logStatusColor['border']) }});">
+                                                                <i class="ti {{ $logStatusColor['icon'] }} {{ $logStatusColor['text'] }}" style="font-size: 16px;"></i>
+                                                            </div>
+                                                            <div class="flex-grow-1 overflow-hidden">
+                                                                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                                                    {{-- API Type Badge --}}
+                                                                    <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary border-opacity-25" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.3px;">
+                                                                        <i class="ti {{ $apiIcon }} me-1"></i>{{ __($apiLabel) }}
+                                                                    </span>
+                                                                    {{-- Status Badge --}}
+                                                                    <span class="badge rounded-pill {{ $logStatusColor['subtle'] }} {{ $logStatusColor['text'] }} {{ $logStatusColor['border'] }} border border-opacity-25" style="font-size: 0.65rem; font-weight: 700;">
+                                                                        {{ __(ucfirst($log->status)) }}
+                                                                    </span>
+                                                                    {{-- Client Code --}}
+                                                                    @if($log->client_code)
+                                                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="font-size: 0.6rem;">
+                                                                            <i class="ti ti-id me-1"></i>{{ $log->client_code }}
+                                                                        </span>
+                                                                    @endif
+                                                                </div>
+
+                                                                {{-- Error Reason --}}
+                                                                @if($log->status === 'failed' && $log->error_reason)
+                                                                    <div class="d-flex align-items-start rounded-3 py-2 px-3 mb-2 mt-1" style="font-size: 0.78rem; background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); color: #dc2626;">
+                                                                        <i class="ti ti-alert-triangle me-2 mt-0.5" style="font-size: 1rem; flex-shrink: 0; color: #dc2626;"></i>
+                                                                        <div class="flex-grow-1">
+                                                                            <strong style="color: #dc2626;">{{ __('Error:') }}</strong>
+                                                                            <span style="color: #4b5563;">{{ Str::limit($log->error_reason, 200) }}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+
+                                                                {{-- Timestamp + Creator --}}
+                                                                <div class="d-flex align-items-center gap-3 mt-1">
+                                                                    <small class="text-muted" style="font-size: 0.7rem;">
+                                                                        <i class="ti ti-clock me-1"></i>{{ $log->created_at->diffForHumans() }}
+                                                                    </small>
+                                                                    <small class="text-muted opacity-50" style="font-size: 0.65rem;">
+                                                                        · {{ $log->created_at->format('d M Y, h:i A') }}
+                                                                    </small>
+                                                                    @if($log->creator)
+                                                                        <small class="text-muted" style="font-size: 0.7rem;">
+                                                                            <i class="ti ti-user me-1"></i>{{ $log->creator->name }}
+                                                                        </small>
+                                                                    @endif
+                                                                </div>
+
+                                                                {{-- Payload Toggle Buttons --}}
+                                                                <div class="d-flex align-items-center gap-2 mt-2">
+                                                                    @if($log->request_payload)
+                                                                        <button class="btn btn-xs rounded-pill px-3 py-1 orion-log-toggle-btn" type="button"
+                                                                                data-bs-toggle="collapse" data-bs-target="#orion-req-{{ $log->id }}"
+                                                                                style="font-size: 0.68rem; font-weight: 600; background: rgba(13,110,253,0.08); color: #0d6efd; border: 1px solid rgba(13,110,253,0.2); transition: all 0.2s;">
+                                                                            <i class="ti ti-code me-1"></i>{{ __('Request') }}
+                                                                        </button>
+                                                                    @endif
+                                                                    @if($log->response_payload)
+                                                                        <button class="btn btn-xs rounded-pill px-3 py-1 orion-log-toggle-btn" type="button"
+                                                                                data-bs-toggle="collapse" data-bs-target="#orion-res-{{ $log->id }}"
+                                                                                style="font-size: 0.68rem; font-weight: 600; background: rgba(25,135,84,0.08); color: #198754; border: 1px solid rgba(25,135,84,0.2); transition: all 0.2s;">
+                                                                            <i class="ti ti-code me-1"></i>{{ __('Response') }}
+                                                                        </button>
+                                                                    @endif
+                                                                </div>
+
+                                                                {{-- Collapsible Request Payload --}}
+                                                                @if($log->request_payload)
+                                                                    <div class="collapse mt-2" id="orion-req-{{ $log->id }}">
+                                                                        <div class="position-relative rounded-3 border" style="background: #1e293b;">
+                                                                            <div class="d-flex align-items-center justify-content-between px-3 py-2" style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                                                                <span class="text-white-50" style="font-size: 0.68rem; font-weight: 600; letter-spacing: 0.5px;">
+                                                                                    <i class="ti ti-arrow-up-right me-1"></i>REQUEST PAYLOAD
+                                                                                </span>
+                                                                                <button class="btn btn-xs text-white-50 orion-copy-btn p-0 border-0 bg-transparent" type="button"
+                                                                                        data-payload="{{ htmlspecialchars(json_encode($log->request_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), ENT_QUOTES) }}"
+                                                                                        title="{{ __('Copy to Clipboard') }}" style="font-size: 0.7rem;">
+                                                                                    <i class="ti ti-copy me-1"></i>{{ __('Copy') }}
+                                                                                </button>
+                                                                            </div>
+                                                                            <pre class="mb-0 p-3 text-white" style="font-size: 0.72rem; max-height: 250px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-family: 'JetBrains Mono', 'Fira Code', monospace;">{{ json_encode($log->request_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+
+                                                                {{-- Collapsible Response Payload --}}
+                                                                @if($log->response_payload)
+                                                                    <div class="collapse mt-2" id="orion-res-{{ $log->id }}">
+                                                                        <div class="position-relative rounded-3 border" style="background: #1e293b;">
+                                                                            <div class="d-flex align-items-center justify-content-between px-3 py-2" style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                                                                <span class="text-white-50" style="font-size: 0.68rem; font-weight: 600; letter-spacing: 0.5px;">
+                                                                                    <i class="ti ti-arrow-down-left me-1"></i>RESPONSE PAYLOAD
+                                                                                </span>
+                                                                                <button class="btn btn-xs text-white-50 orion-copy-btn p-0 border-0 bg-transparent" type="button"
+                                                                                        data-payload="{{ htmlspecialchars(json_encode($log->response_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), ENT_QUOTES) }}"
+                                                                                        title="{{ __('Copy to Clipboard') }}" style="font-size: 0.7rem;">
+                                                                                    <i class="ti ti-copy me-1"></i>{{ __('Copy') }}
+                                                                                </button>
+                                                                            </div>
+                                                                            <pre class="mb-0 p-3 text-white" style="font-size: 0.72rem; max-height: 250px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-family: 'JetBrains Mono', 'Fira Code', monospace;">{{ json_encode($log->response_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @empty
+                                                <div class="text-center py-5">
+                                                    <div class="d-flex align-items-center justify-content-center mb-3 mx-auto rounded-circle"
+                                                         style="width: 64px; height: 64px; background: rgba(245, 158, 11, 0.08);">
+                                                        <i class="ti ti-refresh" style="font-size: 28px; color: #f59e0b;"></i>
+                                                    </div>
+                                                    <p class="text-muted mb-1" style="font-size: 0.85rem;">{{ __('No sync history yet') }}</p>
+                                                    <small class="text-muted opacity-50">{{ __('Use the') }} <i class="ti ti-cloud-download text-warning"></i> {{ __('Fetch Orion EKYC button to sync data. All API requests & responses will be logged here.') }}</small>
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+
                         @endif
                     </div>
                     @stack('indiamart_div')
@@ -1625,6 +2610,15 @@
         </div>
     </div>
 
+    <!-- Orion Fullscreen Loading Overlay -->
+    @if($activeOrionRule)
+    <div class="orion-fetch-overlay d-none position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); z-index: 999999; color: #ffffff;">
+        <div class="orion-spinner-ring mb-4"></div>
+        <span class="fw-bold text-sm animate-pulse-text" style="color: #ffffff; letter-spacing: 0.5px; font-weight: 700;">{{ __('Fetching details from Orion API...') }}</span>
+        <span class="text-xs mt-1 status-msg" style="color: rgba(255, 255, 255, 0.65); min-height: 18px;">{{ __('Please wait, querying secure channels') }}</span>
+    </div>
+    @endif
+ 
 @endsection
 
 @push('scripts')
@@ -1632,6 +2626,65 @@
     
     <script>
         $(document).ready(function() {
+            // Click to change stage via stepper
+            $(document).on('click', '.btn-change-stage', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var stageId = $btn.data('stage-id');
+                var stageName = $btn.data('stage-name');
+                
+                Swal.fire({
+                    title: '{{ __("Move Stage?") }}',
+                    text: '{{ __("Are you sure you want to move this lead to") }} "' + stageName + '"?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '{{ __("Yes, Move") }}',
+                    cancelButtonText: '{{ __("Cancel") }}',
+                    customClass: {
+                        confirmButton: 'btn btn-primary px-4 py-2 rounded-pill shadow-sm me-2',
+                        cancelButton: 'btn btn-danger px-4 py-2 rounded-pill shadow-sm'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Show overlay loading if available
+                        if ($('.orion-fetch-overlay').length > 0) {
+                            $('.orion-fetch-overlay').removeClass('d-none');
+                            $('.orion-fetch-overlay .status-msg').text('{{ __("Moving lead to stage") }} "' + stageName + '"...');
+                        }
+                        
+                        $.ajax({
+                            url: "{{ route('leads.order') }}",
+                            type: 'POST',
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content'),
+                                lead_id: "{{ $lead->id }}",
+                                stage_id: stageId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    toastrs('Success', response.success, 'success');
+                                    setTimeout(function() {
+                                        location.reload();
+                                    }, 800);
+                                } else {
+                                    if ($('.orion-fetch-overlay').length > 0) {
+                                        $('.orion-fetch-overlay').addClass('d-none');
+                                    }
+                                    toastrs('Error', response.error || 'Failed to move stage', 'error');
+                                }
+                            },
+                            error: function(xhr) {
+                                if ($('.orion-fetch-overlay').length > 0) {
+                                    $('.orion-fetch-overlay').addClass('d-none');
+                                }
+                                var err = xhr.responseJSON ? xhr.responseJSON.error : 'Network error';
+                                toastrs('Error', err, 'error');
+                            }
+                        });
+                    }
+                });
+            });
             // Click to edit
             $(document).on('click', '.editable-field', function(e) {
                 // Ignore if clicked on buttons inside editor or if already editing
@@ -1763,7 +2816,7 @@
                             } else if (fieldName === 'email' && displayVal) {
                                 $span.html('<a href="mailto:' + displayVal + '" class="text-primary hover-underline">' + displayVal + '</a>');
                             } else if (fieldName === 'phone' && displayVal) {
-                                $span.html(displayVal + ' <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="' + displayVal + '" data-bs-toggle="tooltip" title="{{ __("Call") }}"><i class="ti ti-phone-call"></i></a>');
+                                $span.html(displayVal + ' <a href="javascript:void(0)" class="ms-1 text-primary click-to-call" data-phone="' + displayVal + '" data-bs-toggle="tooltip" title="{{ __("Call") }}"><i class="ti ti-phone-call"></i></a> <a href="/whatsapp-chats?lead_id={{ $lead->id }}" class="ms-1 text-success" data-bs-toggle="tooltip" title="{{ __("WhatsApp Chat") }}"><i class="ti ti-brand-whatsapp"></i></a>');
                             } else {
                                 $span.text(displayVal);
                             }
@@ -1831,6 +2884,26 @@
                     }
                 });
             });
+
+            // Secure Reveal Toggle
+            $(document).on('click', '.toggle-secure-reveal-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $wrapper = $(this).closest('.secure-reveal-wrapper');
+                var $revealed = $wrapper.find('.revealed-value');
+                var $masked = $wrapper.find('.masked-value');
+                var $icon = $(this).find('i');
+                
+                if ($revealed.hasClass('d-none')) {
+                    $revealed.removeClass('d-none');
+                    $masked.addClass('d-none');
+                    $icon.removeClass('ti-eye').addClass('ti-eye-off');
+                } else {
+                    $revealed.addClass('d-none');
+                    $masked.removeClass('d-none');
+                    $icon.removeClass('ti-eye-off').addClass('ti-eye');
+                }
+            });
         });
     </script>
     <style>
@@ -1841,6 +2914,325 @@
         .animate-spin {
             display: inline-block;
             animation: spin 1.5s linear infinite;
+        }
+        .toggle-secure-reveal-btn {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: var(--theme-emerald) !important;
+            padding: 2px !important;
+            display: inline-flex;
+            align-items: center;
+        }
+        .toggle-secure-reveal-btn:hover {
+            color: var(--primary-emerald-hover) !important;
+            transform: scale(1.1);
+        }
+        /* Orion Loader styles */
+        .orion-spinner-ring {
+            width: 52px;
+            height: 52px;
+            border: 3px solid rgba(245, 158, 11, 0.15);
+            border-top: 3px solid #f59e0b;
+            border-right: 3px solid #f59e0b;
+            border-radius: 50%;
+            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+        }
+        .animate-pulse-text {
+            animation: pulse-text 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-text {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.75; transform: scale(0.97); }
+        }
+        .orion-pulse-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+            border: none !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            animation: orion-pulse 2s infinite;
+        }
+        .orion-pulse-btn:hover {
+            transform: translateY(-2px) scale(1.08) !important;
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6) !important;
+            background: linear-gradient(135deg, #fbbf24 0%, #ea580c 100%) !important;
+        }
+        @keyframes orion-pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6), 0 4px 10px rgba(245, 158, 11, 0.3);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(245, 158, 11, 0), 0 4px 10px rgba(245, 158, 11, 0.3);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 4px 10px rgba(245, 158, 11, 0.3);
+            }
+        }
+        .orion-log-row:hover {
+            background-color: rgba(248, 250, 252, 0.9) !important;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .orion-log-row {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .orion-log-toggle-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .orion-log-toggle-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        .orion-log-toggle-btn[data-bs-target*="req"]:hover {
+            background: #0d6efd !important;
+            color: #fff !important;
+            border-color: #0d6efd !important;
+        }
+        .orion-log-toggle-btn[data-bs-target*="res"]:hover {
+            background: #198754 !important;
+            color: #fff !important;
+            border-color: #198754 !important;
+        }
+        .orion-copy-btn {
+            transition: all 0.2s ease;
+        }
+        .orion-copy-btn:hover {
+            color: #ffffff !important;
+            transform: scale(1.05);
+        }
+        .orion-copy-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+
+    @if($activeOrionRule)
+    <script>
+        $(document).ready(function() {
+            $('#btn-orion-ekyc-fetch, .btn-orion-ekyc-fetch-trigger').on('click', function(e) {
+                e.preventDefault();
+                
+                const clientCode = $(this).attr('data-client-code');
+                const ruleId = $(this).attr('data-rule-id');
+                
+                if (!clientCode) {
+                    toastrs('Error', '{{ __("Client Code / Mobile / PAN is required to fetch.") }}', 'error');
+                    return;
+                }
+                
+                // Show fullscreen loading overlay
+                $('.orion-fetch-overlay').removeClass('d-none');
+                
+                // Start status log cycle
+                const messages = [
+                    "Establishing connection to Orion gateway...",
+                    "Authenticating secure API credentials...",
+                    "Querying client details by PAN/Mobile...",
+                    "Retrieving backoffice details...",
+                    "Verifying financial years records...",
+                    "Mapping response fields to CRM schema..."
+                ];
+                let msgIdx = 0;
+                $('.orion-fetch-overlay .status-msg').text(messages[0]);
+                const statusInterval = setInterval(() => {
+                    msgIdx++;
+                    if (msgIdx < messages.length) {
+                        $('.orion-fetch-overlay .status-msg').fadeOut(150, function() {
+                            $(this).text(messages[msgIdx]).fadeIn(150);
+                        });
+                    }
+                }, 1200);
+
+                // Disable the trigger button
+                const btn = $(this);
+                const origHtml = btn.html();
+                btn.html('<i class="ti ti-loader animate-spin"></i>').addClass('disabled');
+
+                $.ajax({
+                    url: '{{ route("leads.orion-fetch", $lead->id) }}',
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        client_code: clientCode,
+                        rule_id: ruleId
+                    },
+                    success: function(response) {
+                        clearInterval(statusInterval);
+                        // Hide loading overlay
+                        $('.orion-fetch-overlay').addClass('d-none');
+                        btn.html(origHtml).removeClass('disabled');
+
+                        if (response.success) {
+                            // Compile updated fields into a premium HTML view
+                            let fieldsHtml = '<div class="text-start mt-2" style="text-align: left; max-height: 250px; overflow-y: auto; font-family: inherit;">';
+                            fieldsHtml += '<p class="text-muted small mb-2">' + 'The following lead fields were successfully synced from Orion:' + '</p>';
+                            fieldsHtml += '<div class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm" style="font-size: 0.82rem;">';
+                            
+                            const fieldLabels = {
+                                'name': 'Lead Name',
+                                'email': 'Email Address',
+                                'phone': 'Phone Number',
+                                'pan_number': 'PAN Card Number',
+                                'aadhar_number': 'Aadhar Card Number',
+                                'dp_id': 'DP ID',
+                                'custom_31': 'CLIENT CODE',
+                                'custom_32': 'DP NO.',
+                                'custom_42': 'Father\'s Name',
+                                'custom_43': 'Mother\'s Name',
+                                'custom_44': 'Gender',
+                                'custom_45': 'Date of Birth',
+                                'custom_46': 'Marital Status',
+                                'custom_70': 'PANCARD NUMBER'
+                            };
+
+                            let hasFields = false;
+                            if (response.updated_fields) {
+                                for (let key in response.updated_fields) {
+                                    let label = fieldLabels[key] || key;
+                                    let val = response.updated_fields[key] || '-';
+                                    fieldsHtml += '<div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 bg-light">';
+                                    fieldsHtml += '<span class="text-secondary fw-semibold">' + label + '</span>';
+                                    fieldsHtml += '<span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2.5 py-1 fw-bold rounded-pill">' + val + '</span>';
+                                    fieldsHtml += '</div>';
+                                    hasFields = true;
+                                }
+                            }
+                            
+                            if (!hasFields) {
+                                fieldsHtml += '<div class="list-group-item text-center text-muted py-3">All fields were already up-to-date.</div>';
+                            }
+                            fieldsHtml += '</div></div>';
+
+                            // Show premium SweetAlert2 dialog
+                            Swal.fire({
+                                title: 'Orion Sync Completed!',
+                                html: fieldsHtml,
+                                icon: 'success',
+                                confirmButtonText: 'Refresh Page',
+                                customClass: {
+                                    confirmButton: 'btn btn-primary px-4 py-2 rounded-pill shadow-sm',
+                                    popup: 'rounded-4'
+                                },
+                                buttonsStyling: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Fetch Failed',
+                                text: response.message || 'No records found.',
+                                icon: 'error',
+                                confirmButtonText: 'Okay',
+                                customClass: {
+                                    confirmButton: 'btn btn-danger px-4 py-2 rounded-pill',
+                                    popup: 'rounded-4'
+                                },
+                                buttonsStyling: false
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        clearInterval(statusInterval);
+                        const err = xhr.responseJSON ? xhr.responseJSON.message : 'Connection failed';
+                        $('.orion-fetch-overlay').addClass('d-none');
+                        btn.html(origHtml).removeClass('disabled');
+
+                        Swal.fire({
+                            title: 'Orion Fetch Failed',
+                            text: err,
+                            icon: 'error',
+                            confirmButtonText: 'Understood',
+                            customClass: {
+                                confirmButton: 'btn btn-danger px-4 py-2 rounded-pill',
+                                popup: 'rounded-4'
+                            },
+                            buttonsStyling: false
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+    @endif
+
+    {{-- Orion Sync Logs - Copy to Clipboard & Hover Effects --}}
+    <script>
+        $(document).ready(function() {
+            // Copy payload to clipboard
+            $(document).on('click', '.orion-copy-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var payload = $(this).attr('data-payload');
+                var btn = $(this);
+                var origHTML = btn.html();
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(payload).then(function() {
+                        btn.html('<i class="ti ti-check me-1"></i>{{ __("Copied!") }}');
+                        btn.css('color', '#22c55e');
+                        setTimeout(function() {
+                            btn.html(origHTML);
+                            btn.css('color', '');
+                        }, 2000);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    var textarea = document.createElement('textarea');
+                    textarea.value = payload;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    btn.html('<i class="ti ti-check me-1"></i>{{ __("Copied!") }}');
+                    btn.css('color', '#22c55e');
+                    setTimeout(function() {
+                        btn.html(origHTML);
+                        btn.css('color', '');
+                    }, 2000);
+                }
+            });
+
+            // Toggle button active state
+            $(document).on('click', '.orion-log-toggle-btn', function() {
+                $(this).toggleClass('orion-log-btn-active');
+            });
+        });
+    </script>
+    <style>
+        /* Orion Sync Logs - Hover & Toggle Styles */
+        .orion-log-toggle-btn:hover {
+            filter: brightness(0.92);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .orion-log-btn-active {
+            filter: brightness(0.85) !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1) !important;
+        }
+        .orion-copy-btn:hover {
+            color: #fff !important;
+            text-decoration: underline;
+        }
+        #orion-sync-logs .list-group-item:hover {
+            background: var(--primary-emerald-light) !important;
+        }
+        /* Custom scrollbar for dark code blocks */
+        #orion-sync-logs pre::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        #orion-sync-logs pre::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+        #orion-sync-logs pre::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+        }
+        #orion-sync-logs pre::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.25);
         }
     </style>
 @endpush

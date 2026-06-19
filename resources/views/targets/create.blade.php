@@ -263,7 +263,13 @@
 
             <div class="col-md-12 form-group">
                 {{ Form::label('target_type', __('Target Tracking Type'), ['class' => 'col-form-label']) }}
-                {{ Form::select('target_type', ['manual' => __('Manual (Self Reported)'), 'lead_stage' => __('Lead Stage Transition (Automated)')], 'manual', ['class' => 'form-control select2', 'id' => 'target_type']) }}
+                {{ Form::select('target_type', [
+                    'manual' => __('Manual (Self Reported)'),
+                    'lead_stage' => __('Lead Stage Transition (Automated)'),
+                    'account' => __('Account Opening (Automated)'),
+                    'ftd' => __('FTD Count (Automated)'),
+                    'revenue' => __('Revenue Sum (Automated)'),
+                ], 'manual', ['class' => 'form-control select2', 'id' => 'target_type']) }}
             </div>
 
             <div class="col-md-6 form-group d-none" id="pipeline_field">
@@ -342,6 +348,13 @@
             $('#custom_date_field_group').removeClass('d-none');
             $('#pipeline_id').attr('required', 'required');
             $('#stage_id').attr('required', 'required');
+            $('#custom_date_field').attr('required', 'required');
+        } else if (['account', 'ftd', 'revenue'].includes(type)) {
+            $('#pipeline_field').addClass('d-none');
+            $('#stage_field').addClass('d-none');
+            $('#custom_date_field_group').removeClass('d-none');
+            $('#pipeline_id').removeAttr('required');
+            $('#stage_id').removeAttr('required');
             $('#custom_date_field').attr('required', 'required');
         } else {
             $('#pipeline_field').addClass('d-none');

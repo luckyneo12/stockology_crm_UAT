@@ -309,8 +309,8 @@
     <!-- Left Column: Template Summary -->
     <div class="col-xl-4 col-lg-5 mb-4">
         <div class="card template-detail-card">
-            <div class="{{ $template->target_type == 'lead_stage' ? 'template-header-gradient' : 'template-header-gradient-manual' }}">
-                <span class="badge bg-white-off text-xxs px-2 py-1 mb-2">{{ $template->target_type == 'lead_stage' ? __('Automated Tracking') : __('Manual Tracking') }}</span>
+            <div class="{{ in_array($template->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? 'template-header-gradient' : 'template-header-gradient-manual' }}">
+                <span class="badge bg-white-off text-xxs px-2 py-1 mb-2">{{ in_array($template->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? __('Automated Tracking') : __('Manual Tracking') }}</span>
                 <h4 class="text-white mb-0 font-weight-bold">{{ $template->name }}</h4>
             </div>
             <div class="card-body p-4">
@@ -320,7 +320,17 @@
                     <div class="d-flex justify-content-between border-bottom pb-2">
                         <span class="text-muted text-sm">{{ __('Type') }}</span>
                         <span class="text-dark font-weight-bold text-sm">
-                            {{ $template->target_type == 'lead_stage' ? __('Lead Stage Transition') : __('Self Reported') }}
+                            @if($template->target_type == 'lead_stage')
+                                {{ __('Lead Stage Transition') }}
+                            @elseif($template->target_type == 'account')
+                                {{ __('Account Opening') }}
+                            @elseif($template->target_type == 'ftd')
+                                {{ __('FTD Count') }}
+                            @elseif($template->target_type == 'revenue')
+                                {{ __('Revenue Sum') }}
+                            @else
+                                {{ __('Self Reported') }}
+                            @endif
                         </span>
                     </div>
 
@@ -332,6 +342,13 @@
                         <div class="d-flex justify-content-between border-bottom pb-2">
                             <span class="text-muted text-sm">{{ __('Lead Stage') }}</span>
                             <span class="text-primary font-weight-bold text-sm">{{ $template->stage ? $template->stage->name : __('N/A') }}</span>
+                        </div>
+                    @elseif(in_array($template->target_type, ['account', 'ftd', 'revenue']))
+                        <div class="d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted text-sm">{{ __('Date Scoping Field') }}</span>
+                            <span class="text-dark font-weight-bold text-sm">
+                                {{ $template->custom_date_field === 'created_at' ? __('Lead Creation Date') : ($template->custom_date_field ?? __('Lead Creation Date')) }}
+                            </span>
                         </div>
                     @endif
 

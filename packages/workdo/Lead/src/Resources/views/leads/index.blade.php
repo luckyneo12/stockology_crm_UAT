@@ -344,6 +344,7 @@
 @endsection
 
 @section('content')
+@include('lead::layouts.anti_screenshot')
 @include('lead::leads.filter_bar')
 @if ($pipeline)
 <div class="row">
@@ -389,6 +390,25 @@
         </div>
     </div>
 </div>
+@else
+<div class="row pt-5">
+    <div class="col-md-8 offset-md-2 text-center">
+        <div class="card p-5 shadow-sm border-0">
+            <div class="card-body">
+                <div class="text-warning mb-4">
+                    <i class="ti ti-alert-triangle" style="font-size: 3rem;"></i>
+                </div>
+                <h3 class="mb-3">{{ __('No Pipeline Found') }}</h3>
+                <p class="text-muted mb-4">
+                    {{ __('There are no pipelines or stages defined in your active workspace. Please go to System Setup to create one, or verify your workspace selection.') }}
+                </p>
+                <a href="{{ route('pipelines.index') }}" class="btn btn-primary">
+                    <i class="ti ti-plus me-2"></i>{{ __('Manage Pipelines') }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 @endif
 @endsection
 
@@ -417,6 +437,10 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
         }
 
+        .dash-container, .dash-content {
+            overflow: hidden !important;
+        }
+
         .kanban-wrapper {
             display: flex !important;
             flex-flow: row nowrap !important;
@@ -429,6 +453,10 @@
             gap: 0 !important;
             height: calc(100vh - 190px) !important;
             min-height: calc(100vh - 190px) !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
         }
 
         .kanban-wrapper > div {
@@ -534,6 +562,35 @@
 @push('scripts')
     <script>
         $(document).ready(function () {
+            // Dynamic Kanban height adjust logic to keep it responsive to viewport
+            function adjustKanbanHeight() {
+                var $wrapper = $('.kanban-wrapper');
+                if ($wrapper.length) {
+                    var offsetTop = $wrapper.offset().top;
+                    var windowHeight = $(window).height();
+                    var availableHeight = windowHeight - offsetTop - 70; // 70px safety gap for footer and padding
+                    
+                    if (availableHeight < 300) availableHeight = 300;
+                    
+                    $wrapper.attr('style', function(i, s) {
+                        return (s || '') + '; height: ' + availableHeight + 'px !important; min-height: ' + availableHeight + 'px !important;';
+                    });
+                    
+                    var $header = $wrapper.find('.card-list .card-header').first();
+                    var headerHeight = $header.length ? $header.outerHeight() : 45;
+                    var boxHeight = availableHeight - headerHeight - 10; // 10px offset for inner spacing
+                    
+                    $('.kanban-box').attr('style', function(i, s) {
+                        return (s || '') + '; height: ' + boxHeight + 'px !important; max-height: ' + boxHeight + 'px !important;';
+                    });
+                }
+            }
+
+            $(window).on('resize', adjustKanbanHeight);
+            adjustKanbanHeight();
+            setTimeout(adjustKanbanHeight, 400);
+            setTimeout(adjustKanbanHeight, 1000);
+
             // Load initial kanban column data sequentially to avoid overloading the server
             var columns = $('.kanban-box').toArray();
             function loadNextColumn(index) {
@@ -564,6 +621,7 @@
                                 });
                             }
                         }
+                        adjustKanbanHeight();
                         loadNextColumn(index + 1);
                     },
                     error: function () {

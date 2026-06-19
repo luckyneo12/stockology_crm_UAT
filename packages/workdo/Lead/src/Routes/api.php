@@ -44,3 +44,6 @@ Route::prefix('Lead')->group(function () {
 
         }
         );    });
+
+Route::post('whatsapp/incoming-webhook', [\Workdo\Lead\Http\Controllers\Api\WhatsAppWebhookController::class, 'handleIncoming']);
+

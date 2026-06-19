@@ -836,67 +836,143 @@
             background-color: var(--primary-theme-color) !important;
             color: #ffffff !important;
         }
+
+        /* ── Summary Metrics Widget Styles ── */
+        .summary-metrics-container {
+            transition: box-shadow 0.3s ease;
+        }
+        .sm-card {
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1), box-shadow 0.22s cubic-bezier(0.4,0,0.2,1), border-color 0.22s ease;
+        }
+        .sm-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.35) !important;
+            border-color: #2a2a2a !important;
+        }
+        .sm-main-val {
+            transition: opacity 0.18s ease;
+        }
+        .sm-toggle-btn {
+            outline: none !important;
+        }
+        .sm-toggle-btn:focus {
+            box-shadow: none !important;
+        }
     </style>
 @endpush
 
+@php
+    // Lakhs formatter for Summary Metrics
+    $smFormatLakhs = function($val) {
+        if ($val >= 10000000) { return '₹' . number_format($val / 10000000, 1) . 'Cr'; }
+        if ($val >= 100000)   { $l = $val / 100000; return '₹' . (floor($l) == $l ? number_format($l, 0) : number_format($l, 1)) . 'L'; }
+        if ($val >= 1000)     { return '₹' . number_format($val / 1000, 1) . 'K'; }
+        return '₹' . number_format($val);
+    };
+@endphp
 <div class="row">
-    <!-- Dashboard Stats Grid -->
-    <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
-        <div class="card premium-stat-card gradient-primary text-white mb-0">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="theme-avtar bg-white text-primary">
-                        <i class="ti ti-target"></i>
+    <!-- ═══ Premium "Summary Metrics" Widget ═══ -->
+    <div class="col-12 mb-4">
+        <div class="summary-metrics-container p-4" id="summaryMetricsWidget"
+             style="background: #141414; border-radius: 18px; border: 1px solid #222;">
+            {{-- Header row --}}
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;background:rgba(99,102,241,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                     </div>
-                    <div class="ms-3">
-                        <h6 class="text-white opacity-80 mb-1">{{ __('Total Targets') }}</h6>
-                        <h3 class="text-white mb-0 font-weight-bold">{{ $stats['total'] }}</h3>
-                    </div>
+                    <h6 class="mb-0 fw-bold text-white" style="font-size:1.05rem;letter-spacing:-0.2px;">{{ __('Summary Metrics') }}</h6>
+                </div>
+                <div class="d-flex gap-2" id="smToggleGroup">
+                    <button id="smBtnToday" onclick="smSetView('today')" class="sm-toggle-btn active"
+                            style="background:#1e1e1e;color:#ffffff;border:1.5px solid #333;border-radius:10px;padding:8px 22px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:all .2s;">
+                        {{ __('Today') }}
+                    </button>
+                    <button id="smBtnMonth" onclick="smSetView('month')"
+                            class="sm-toggle-btn"
+                            style="background:transparent;color:#6b6b6b;border:1.5px solid #252525;border-radius:10px;padding:8px 22px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:all .2s;">
+                        {{ __('This month') }}
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
-        <div class="card premium-stat-card gradient-success text-white mb-0">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="theme-avtar bg-white text-success">
-                        <i class="ti ti-circle-check"></i>
-                    </div>
-                    <div class="ms-3">
-                        <h6 class="text-white opacity-80 mb-1">{{ __('Completed') }}</h6>
-                        <h3 class="text-white mb-0 font-weight-bold">{{ $stats['completed'] }}</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
-        <div class="card premium-stat-card gradient-info text-white mb-0">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="theme-avtar bg-white text-info">
-                        <i class="ti ti-trending-up"></i>
-                    </div>
-                    <div class="ms-3">
-                        <h6 class="text-white opacity-80 mb-1">{{ __('Overall Progress') }}</h6>
-                        <h3 class="text-white mb-0 font-weight-bold">{{ $stats['target_total'] > 0 ? round(($stats['achieved_total'] / $stats['target_total']) * 100, 1) : 0 }}%</h3>
+
+            {{-- 4 Metric Cards --}}
+            <div class="row g-3">
+                {{-- Card 1: Total Accounts Open --}}
+                <div class="col-xl-3 col-md-6">
+                    <div class="sm-card p-4" style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:14px;">
+                        <div class="sm-icon-wrap mb-3"
+                             style="width:46px;height:46px;background:rgba(96,165,250,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <p class="text-muted mb-2" style="font-size:0.88rem;color:#888 !important;">{{ __('Total accounts open') }}</p>
+                        <div class="sm-main-val mb-1" style="font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1;">
+                            <span class="sm-val-today">{{ number_format($summaryMetrics['accounts_today']) }}</span>
+                            <span class="sm-val-month d-none">{{ number_format($summaryMetrics['accounts_this_month']) }}</span>
+                        </div>
+                        <div class="sm-delta" style="font-size:0.82rem;font-weight:600;color:#4ade80;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="vertical-align:middle;margin-right:3px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                            <span class="sm-delta-today">+{{ number_format($summaryMetrics['accounts_today']) }} {{ __('today') }}</span>
+                            <span class="sm-delta-month d-none">+{{ number_format($summaryMetrics['accounts_this_month']) }} {{ __('this month') }}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
-        <div class="card premium-stat-card gradient-warning text-white mb-0">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="theme-avtar bg-white text-warning">
-                        <i class="ti ti-calendar text-warning"></i>
+
+                {{-- Card 2: Total FTD --}}
+                <div class="col-xl-3 col-md-6">
+                    <div class="sm-card p-4" style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:14px;">
+                        <div class="sm-icon-wrap mb-3"
+                             style="width:46px;height:46px;background:rgba(52,211,153,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                        </div>
+                        <p class="text-muted mb-2" style="font-size:0.88rem;color:#888 !important;">{{ __('Total FTD') }}</p>
+                        <div class="sm-main-val mb-1" style="font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1;">
+                            <span class="sm-val-today">{{ number_format($summaryMetrics['ftd_today']) }}</span>
+                            <span class="sm-val-month d-none">{{ number_format($summaryMetrics['ftd_this_month']) }}</span>
+                        </div>
+                        <div class="sm-delta" style="font-size:0.82rem;font-weight:600;color:#4ade80;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="vertical-align:middle;margin-right:3px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                            <span class="sm-delta-today">+{{ number_format($summaryMetrics['ftd_today']) }} {{ __('today') }}</span>
+                            <span class="sm-delta-month d-none">+{{ number_format($summaryMetrics['ftd_this_month']) }} {{ __('this month') }}</span>
+                        </div>
                     </div>
-                    <div class="ms-3">
-                        <h6 class="text-white opacity-80 mb-1">{{ __('Last 30 Days') }}</h6>
-                        <h3 class="text-white mb-0 font-weight-bold">{{ $stats['last30_target'] > 0 ? round(($stats['last30_achieved'] / $stats['last30_target']) * 100, 1) : 0 }}%</h3>
-                        <small class="text-white opacity-80">{{ __('Done: ') }}<strong>{{ $stats['last30_achieved'] }}</strong> / {{ $stats['last30_target'] }}</small>
+                </div>
+
+                {{-- Card 3: Total Revenue --}}
+                <div class="col-xl-3 col-md-6">
+                    <div class="sm-card p-4" style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:14px;">
+                        <div class="sm-icon-wrap mb-3"
+                             style="width:46px;height:46px;background:rgba(251,191,36,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>
+                        </div>
+                        <p class="text-muted mb-2" style="font-size:0.88rem;color:#888 !important;">{{ __('Total revenue') }}</p>
+                        <div class="sm-main-val mb-1" style="font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1;">
+                            <span class="sm-val-today">{{ $smFormatLakhs($summaryMetrics['revenue_today']) }}</span>
+                            <span class="sm-val-month d-none">{{ $smFormatLakhs($summaryMetrics['revenue_this_month']) }}</span>
+                        </div>
+                        <div class="sm-delta" style="font-size:0.82rem;font-weight:600;color:#4ade80;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="vertical-align:middle;margin-right:3px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                            <span class="sm-delta-today">+{{ $smFormatLakhs($summaryMetrics['revenue_today']) }} {{ __('today') }}</span>
+                            <span class="sm-delta-month d-none">+{{ $smFormatLakhs($summaryMetrics['revenue_this_month']) }} {{ __('this month') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Card 4: Dormant Accounts --}}
+                <div class="col-xl-3 col-md-6">
+                    <div class="sm-card p-4" style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:14px;">
+                        <div class="sm-icon-wrap mb-3"
+                             style="width:46px;height:46px;background:rgba(248,113,113,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                        </div>
+                        <p class="text-muted mb-2" style="font-size:0.88rem;color:#888 !important;">{{ __('Dormant accounts') }}</p>
+                        <div class="sm-main-val mb-1" style="font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-1px;line-height:1;">
+                            {{ number_format($summaryMetrics['dormant_count']) }}
+                        </div>
+                        <div style="font-size:0.82rem;font-weight:600;color:#f87171;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" style="vertical-align:middle;margin-right:3px;"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+                            {{ __('needs follow-up') }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1004,107 +1080,443 @@
             
             <!-- TAB 1: OVERVIEW & ANALYTICS -->
             <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
-                <div class="row">
-                    <!-- Monthly Trend Chart -->
-                    <div class="col-xl-8 col-lg-12 col-md-12 mb-4">
-                        <div class="card h-100 shadow-sm border-0" style="border-radius: 16px;">
-                            <div class="card-header border-0 bg-transparent py-3">
-                                <h5 class="mb-0 font-weight-bold text-dark">{{ __('Monthly Quota Trends (Current Year)') }}</h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="monthly-trends-chart"></div>
-                                
-                                <div class="table-responsive mt-3 border-top pt-3">
-                                    <table class="table table-sm table-hover mb-0">
-                                        <thead>
-                                            <tr class="text-muted text-xxs uppercase">
-                                                <th>{{ __('Target Name / Period') }}</th>
-                                                <th class="text-center">{{ __('Quota Assigned') }}</th>
-                                                <th class="text-center">{{ __('Quota Achieved') }}</th>
-                                                <th class="text-center">{{ __('Achievement Rate') }}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @php
-                                                $hasAnyTargets = false;
-                                            @endphp
-                                            @foreach($stats['monthly_labels'] as $idx => $monthLabel)
-                                                @php
-                                                    $mNumber = $idx + 1;
-                                                    $mTargets = $monthlyTargetsList[$mNumber] ?? [];
-                                                    $monthTotalTarget = count($mTargets) > 0 ? collect($mTargets)->sum('target_value') : 0;
-                                                    $monthTotalAchieved = count($mTargets) > 0 ? collect($mTargets)->sum('achieved_value') : 0;
-                                                @endphp
-                                                @if(count($mTargets) > 0)
-                                                    @php
-                                                        $hasAnyTargets = true;
-                                                    @endphp
-                                                    <!-- Month Header Row -->
-                                                    <tr class="table-month-header-row" style="background-color: #fafbfc; border-top: 1.5px solid #edf2f7; border-bottom: 1.5px solid #edf2f7;">
-                                                        <td style="padding: 12px 24px;">
-                                                            <div class="d-flex align-items-center gap-2">
-                                                                <span class="badge bg-light-primary text-primary rounded-circle p-1.5 d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                                                                    <i class="ti ti-calendar" style="font-size: 14px;"></i>
-                                                                </span>
-                                                                <span class="text-dark font-weight-bold" style="font-size: 0.95rem;">{{ $monthLabel }} {{ date('Y') }}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td class="text-center font-weight-bold" style="vertical-align: middle;">{{ $monthTotalTarget }}</td>
-                                                        <td class="text-center text-success font-weight-bold" style="vertical-align: middle;">{{ $monthTotalAchieved }}</td>
-                                                        <td class="text-center" style="vertical-align: middle;">
-                                                            @php
-                                                                $monthRate = $monthTotalTarget > 0 ? round(($monthTotalAchieved / $monthTotalTarget) * 100, 1) : 0;
-                                                            @endphp
-                                                            <span class="badge {{ $monthRate >= 80 ? 'bg-light-success text-success' : ($monthRate >= 45 ? 'bg-light-primary text-primary' : 'bg-light-danger text-danger') }}">
-                                                                {{ $monthRate }}%
-                                                            </span>
-                                                        </td>
-                                                    </tr>
+                
+                <!-- Premium Dark-Themed "My Targets" Dashboard Widget -->
+                @php
+                    $accExists = !empty($myAccountTarget);
+                    $accAchieved = $accExists ? $myAccountTarget->achieved_value : 0;
+                    $accTargetVal = $accExists ? $myAccountTarget->target_value : 0;
+                    $accPercent = $accTargetVal > 0 ? min(100, round(($accAchieved / $accTargetVal) * 100)) : 0;
+                    $accRemaining = max(0, $accTargetVal - $accAchieved);
 
-                                                    <!-- Month Targets Rows -->
-                                                    @foreach($mTargets as $t)
-                                                        @php
-                                                            $tVal = $t->target_value;
-                                                            $aVal = $t->achieved_value;
-                                                            $rate = $tVal > 0 ? round(($aVal / $tVal) * 100, 1) : 0;
-                                                            $tStatusBadge = $t->status == 'Completed' ? 'bg-light-success text-success' : 'bg-light-warning text-warning';
-                                                        @endphp
-                                                        <tr class="text-xs">
-                                                            <td class="font-weight-bold text-dark" style="padding-left: 48px; vertical-align: middle;">
-                                                                <div class="d-flex align-items-center gap-2">
-                                                                    <i class="ti ti-target text-muted fs-6"></i>
-                                                                    <span class="text-truncate" style="max-width: 250px;">{{ $t->target_name }}</span>
-                                                                    <span class="badge {{ $tStatusBadge }} text-xxs px-2 py-0.5" style="border-radius: 6px;">{{ __($t->status) }}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td class="text-center font-weight-bold" style="vertical-align: middle;">{{ $tVal }}</td>
-                                                            <td class="text-center text-success font-weight-bold" style="vertical-align: middle;">{{ $aVal }}</td>
-                                                            <td class="text-center" style="vertical-align: middle;">
-                                                                <div class="d-flex align-items-center justify-content-center gap-2">
-                                                                    <div class="progress" style="width: 70px; height: 6px; border-radius: 3px; margin-bottom: 0;">
-                                                                        <div class="progress-bar {{ $rate >= 80 ? 'bg-success' : ($rate >= 45 ? 'bg-primary' : 'bg-danger') }}" role="progressbar" style="width: {{ $rate }}%;"></div>
-                                                                    </div>
-                                                                    <span class="badge {{ $rate >= 80 ? 'bg-light-success text-success' : ($rate >= 45 ? 'bg-light-primary text-primary' : 'bg-light-danger text-danger') }}">
-                                                                        {{ $rate }}%
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                @endif
-                                            @endforeach
+                    $ftdExists = !empty($myFtdTarget);
+                    $ftdAchieved = $ftdExists ? $myFtdTarget->achieved_value : 0;
+                    $ftdTargetVal = $ftdExists ? $myFtdTarget->target_value : 0;
+                    $ftdPercent = $ftdTargetVal > 0 ? min(100, round(($ftdAchieved / $ftdTargetVal) * 100)) : 0;
+                    $ftdRemaining = max(0, $ftdTargetVal - $ftdAchieved);
 
-                                            @if(!$hasAnyTargets)
-                                                <tr>
-                                                    <td colspan="4" class="text-center py-5 text-muted">
-                                                        <i class="ti ti-calendar-off fs-1"></i>
-                                                        <p class="mt-2 text-sm">{{ __('No targets found for the current year.') }}</p>
-                                                    </td>
-                                                </tr>
-                                            @endif
-                                        </tbody>
-                                    </table>
+                    $revExists = !empty($myRevenueTarget);
+                    $revAchieved = $revExists ? $myRevenueTarget->achieved_value : 0;
+                    $revTargetVal = $revExists ? $myRevenueTarget->target_value : 0;
+                    $revPercent = $revTargetVal > 0 ? min(100, round(($revAchieved / $revTargetVal) * 100)) : 0;
+                    $revRemaining = max(0, $revTargetVal - $revAchieved);
+                    
+                    // Lakhs formatter helper
+                    $formatLakhs = function($val) {
+                        if ($val >= 100000) {
+                            $lakhs = $val / 100000;
+                            return '₹' . (floor($lakhs) == $lakhs ? number_format($lakhs, 0) : number_format($lakhs, 1)) . 'L';
+                        }
+                        return '₹' . number_format($val);
+                    };
+                @endphp
+                <div class="my-targets-widget-container p-4 mb-4" style="background-color: #1a1a1a; border-radius: 16px; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="ti ti-target me-2" style="color: #ff5e36; font-size: 24px; font-weight: bold;"></i>
+                            <h5 class="text-white mb-0 fw-bold" style="letter-spacing: -0.3px; font-size: 1.25rem;">{{ __('My Targets') }}</h5>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <span class="btn-this-month" style="background-color: transparent; color: #ffffff; border: 1.5px solid #3d3d3d; border-radius: 8px; padding: 8px 18px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                                {{ __('This month') }}
+                            </span>
+                            <span class="btn-date-range" style="background-color: transparent; color: #a1a1a1; border: 1.5px solid #2d2d2d; border-radius: 8px; padding: 8px 18px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                                {{ __('Date range') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Card 1: Account Target -->
+                        <div class="col-md-4 col-sm-12">
+                            <div class="my-target-card p-4" style="background-color: #111111; border: 1px solid #222222; border-radius: 14px; position: relative;">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="text-muted fw-medium" style="font-size: 0.95rem; color: #a1a1a1 !important;">{{ __('Account target') }}</span>
+                                    <span class="badge px-3 py-1 rounded-pill" style="background-color: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 0.78rem;">
+                                        {{ $accPercent }}%
+                                    </span>
                                 </div>
+                                <div class="d-flex align-items-baseline gap-1 mt-2 mb-3">
+                                    <h3 class="text-white mb-0 fw-bold" style="font-size: 2.1rem; letter-spacing: -0.5px; font-family: 'Plus Jakarta Sans', sans-serif;">{{ $accAchieved }}</h3>
+                                    <span class="text-muted" style="font-size: 1.25rem; color: #555555 !important;">/ {{ $accTargetVal }}</span>
+                                </div>
+                                <div class="progress-track" style="height: 6px; background-color: #1e1e1e; border-radius: 100px; overflow: hidden; margin-bottom: 14px;">
+                                    <div class="progress-bar-fill" style="width: {{ $accPercent }}%; height: 100%; background-color: #3b82f6; border-radius: 100px;"></div>
+                                </div>
+                                <span class="text-muted" style="font-size: 0.85rem; color: #7f7f7f !important;">
+                                    @if($accExists)
+                                        @if($accRemaining > 0)
+                                            {{ __(':count more needed', ['count' => $accRemaining]) }}
+                                        @else
+                                            {{ __('Goal Achieved!') }}
+                                        @endif
+                                    @else
+                                        {{ __('No active target') }}
+                                    @endif
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: FTD Target -->
+                        <div class="col-md-4 col-sm-12">
+                            <div class="my-target-card p-4" style="background-color: #111111; border: 1px solid #222222; border-radius: 14px; position: relative;">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="text-muted fw-medium" style="font-size: 0.95rem; color: #a1a1a1 !important;">{{ __('FTD target') }}</span>
+                                    <span class="badge px-3 py-1 rounded-pill" style="background-color: #d1fae5; color: #065f46; font-weight: 700; font-size: 0.78rem;">
+                                        {{ $ftdPercent }}%
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-baseline gap-1 mt-2 mb-3">
+                                    <h3 class="text-white mb-0 fw-bold" style="font-size: 2.1rem; letter-spacing: -0.5px; font-family: 'Plus Jakarta Sans', sans-serif;">{{ $ftdAchieved }}</h3>
+                                    <span class="text-muted" style="font-size: 1.25rem; color: #555555 !important;">/ {{ $ftdTargetVal }}</span>
+                                </div>
+                                <div class="progress-track" style="height: 6px; background-color: #1e1e1e; border-radius: 100px; overflow: hidden; margin-bottom: 14px;">
+                                    <div class="progress-bar-fill" style="width: {{ $ftdPercent }}%; height: 100%; background-color: #10b981; border-radius: 100px;"></div>
+                                </div>
+                                <span class="text-muted" style="font-size: 0.85rem; color: #7f7f7f !important;">
+                                    @if($ftdExists)
+                                        @if($ftdRemaining > 0)
+                                            {{ __(':count more needed', ['count' => $ftdRemaining]) }}
+                                        @else
+                                            {{ __('Goal Achieved!') }}
+                                        @endif
+                                    @else
+                                        {{ __('No active target') }}
+                                    @endif
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Revenue Target -->
+                        <div class="col-md-4 col-sm-12">
+                            <div class="my-target-card p-4" style="background-color: #111111; border: 1px solid #222222; border-radius: 14px; position: relative;">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="text-muted fw-medium" style="font-size: 0.95rem; color: #a1a1a1 !important;">{{ __('Revenue target') }}</span>
+                                    <span class="badge px-3 py-1 rounded-pill" style="background-color: #fef3c7; color: #92400e; font-weight: 700; font-size: 0.78rem;">
+                                        {{ $revPercent }}%
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-baseline gap-1 mt-2 mb-3">
+                                    <h3 class="text-white mb-0 fw-bold" style="font-size: 2.1rem; letter-spacing: -0.5px; font-family: 'Plus Jakarta Sans', sans-serif;">{{ $formatLakhs($revAchieved) }}</h3>
+                                    <span class="text-muted" style="font-size: 1.25rem; color: #555555 !important;">/ {{ $formatLakhs($revTargetVal) }}</span>
+                                </div>
+                                <div class="progress-track" style="height: 6px; background-color: #1e1e1e; border-radius: 100px; overflow: hidden; margin-bottom: 14px;">
+                                    <div class="progress-bar-fill" style="width: {{ $revPercent }}%; height: 100%; background-color: #f59e0b; border-radius: 100px;"></div>
+                                </div>
+                                <span class="text-muted" style="font-size: 0.85rem; color: #7f7f7f !important;">
+                                    @if($revExists)
+                                        @if($revRemaining > 0)
+                                            {{ __(':count more needed', ['count' => $formatLakhs($revRemaining)]) }}
+                                        @else
+                                            {{ __('Goal Achieved!') }}
+                                        @endif
+                                    @else
+                                        {{ __('No active target') }}
+                                    @endif
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Monthly Targets Overview — Premium Redesign -->
+                    <div class="col-xl-8 col-lg-12 col-md-12 mb-4">
+                        <div class="card h-100 shadow-sm border-0" style="border-radius: 16px; overflow: hidden;">
+                            <div class="card-header border-0 bg-transparent pt-4 pb-2 px-4 d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h5 class="mb-0 fw-bold text-dark">{{ __('Monthly Target Trends') }}</h5>
+                                    <small class="text-muted">{{ date('Y') }} — {{ __('All months overview') }}</small>
+                                </div>
+                                <span class="badge bg-light text-secondary fw-semibold rounded-pill px-3 py-2 border" style="font-size: 0.75rem;">
+                                    <i class="ti ti-calendar-stats me-1"></i>{{ date('Y') }}
+                                </span>
+                            </div>
+
+                            {{-- Compact chart --}}
+                            <div class="px-4 pb-0">
+                                <div id="monthly-trends-chart" style="min-height: 180px;"></div>
+                            </div>
+
+                            {{-- Month cards --}}
+                            <div class="card-body px-4 pt-2 pb-4">
+                                @php
+                                    $monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                                    $hasAnyTargets = false;
+                                @endphp
+
+                                @foreach($monthNames as $mIdx => $mShort)
+                                    @php
+                                        $mNumber   = $mIdx + 1;
+                                        $mLabel    = date('F', mktime(0,0,0,$mNumber,1));
+                                        $mTargets  = $monthlyTargetsList[$mNumber] ?? [];
+                                        $mTotal    = collect($mTargets)->sum('target_value');
+                                        $mAchieved = collect($mTargets)->sum('achieved_value');
+                                        $mRate     = $mTotal > 0 ? round(($mAchieved / $mTotal) * 100, 1) : 0;
+                                        $hasTargets = count($mTargets) > 0;
+                                        if ($hasTargets) $hasAnyTargets = true;
+                                        $isCurrentMonth = ($mNumber == (int)date('n'));
+                                        $isPast = ($mNumber < (int)date('n'));
+                                        $isFuture = ($mNumber > (int)date('n'));
+                                        $rateColor = $mRate >= 80 ? '#16a34a' : ($mRate >= 45 ? '#2563eb' : '#dc2626');
+                                        $rateBg    = $mRate >= 80 ? 'rgba(22,163,74,0.07)' : ($mRate >= 45 ? 'rgba(37,99,235,0.07)' : 'rgba(220,38,38,0.07)');
+                                        $accentColor = $isCurrentMonth ? '#198754' : ($hasTargets ? '#334155' : '#cbd5e1');
+                                    @endphp
+
+                                    <div class="month-accordion mb-2" id="month-block-{{ $mNumber }}">
+                                        {{-- Month header bar --}}
+                                        <button
+                                            class="month-header-btn w-100 d-flex align-items-center justify-content-between px-3 py-2 border-0 text-start"
+                                            style="background: {{ $isCurrentMonth ? 'linear-gradient(90deg,rgba(25,135,84,0.07) 0%,rgba(25,135,84,0.02) 100%)' : ($hasTargets ? '#f8fafc' : '#fafafa') }};
+                                                   border-radius: 10px; cursor: {{ $hasTargets ? 'pointer' : 'default' }};
+                                                   border: 1.5px solid {{ $isCurrentMonth ? 'rgba(25,135,84,0.2)' : ($hasTargets ? '#e2e8f0' : '#f1f5f9') }} !important;"
+                                            {{ $hasTargets ? 'data-bs-toggle=collapse data-bs-target=#month-body-'.$mNumber.' aria-expanded='.($isCurrentMonth ? 'true' : 'false') : '' }}>
+
+                                            <div class="d-flex align-items-center gap-3">
+                                                {{-- Month pill --}}
+                                                <span class="month-pill fw-bold"
+                                                      style="width: 42px; height: 42px; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size:0.72rem; letter-spacing:0.3px;
+                                                             background: {{ $isCurrentMonth ? 'rgba(25,135,84,0.12)' : ($hasTargets ? 'rgba(51,65,85,0.07)' : '#f1f5f9') }};
+                                                             color: {{ $isCurrentMonth ? '#198754' : ($hasTargets ? '#334155' : '#94a3b8') }};">
+                                                    {{ strtoupper($mShort) }}
+                                                </span>
+                                                <div>
+                                                    <span class="d-block fw-bold" style="font-size: 0.92rem; color: {{ $accentColor }};">
+                                                        {{ $mLabel }} {{ date('Y') }}
+                                                        @if($isCurrentMonth)
+                                                            <span class="badge ms-1 rounded-pill" style="font-size:0.65rem; background:rgba(25,135,84,0.1); color:#198754; border:1px solid rgba(25,135,84,0.2);">{{ __('Current') }}</span>
+                                                        @endif
+                                                    </span>
+                                                    <span class="text-muted" style="font-size: 0.75rem;">
+                                                        @if($hasTargets)
+                                                            {{ count($mTargets) }} {{ count($mTargets) == 1 ? __('target') : __('targets') }}
+                                                        @else
+                                                            <span style="color:#cbd5e1;">{{ __('No targets') }}</span>
+                                                        @endif
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            @if($hasTargets)
+                                                <div class="d-flex align-items-center gap-3">
+                                                    {{-- Stats summary --}}
+                                                    <div class="text-end d-none d-md-block">
+                                                        <span class="d-block fw-bold text-dark" style="font-size: 0.85rem;">{{ $mTotal }}</span>
+                                                        <span class="text-muted" style="font-size: 0.7rem;">{{ __('Target') }}</span>
+                                                    </div>
+                                                    <div class="text-end d-none d-md-block">
+                                                        <span class="d-block fw-bold" style="font-size: 0.85rem; color: #198754;">{{ $mAchieved }}</span>
+                                                        <span class="text-muted" style="font-size: 0.7rem;">{{ __('Achieved') }}</span>
+                                                    </div>
+                                                    {{-- Rate badge --}}
+                                                    <span class="fw-bold px-3 py-1 rounded-pill" style="font-size: 0.8rem; background: {{ $rateBg }}; color: {{ $rateColor }}; min-width: 52px; text-align: center; border: 1px solid {{ $rateBg }};">
+                                                        {{ $mRate }}%
+                                                    </span>
+                                                    <i class="ti ti-chevron-down text-muted" style="font-size: 0.85rem; transition: transform 0.2s;"></i>
+                                                </div>
+                                            @endif
+                                        </button>
+
+                                        {{-- Expanded target rows — grouped by Dept / Team / Member --}}
+                                        @if($hasTargets)
+                                            @php
+                                                $mTargetsC = collect($mTargets);
+                                                $grpDept   = $mTargetsC->filter(fn($t) => $t->department_id > 0);
+                                                $grpTeam   = $mTargetsC->filter(fn($t) => $t->team_id > 0 && !($t->department_id > 0));
+                                                $grpMember = $mTargetsC->filter(fn($t) => $t->assigned_to > 0 && !($t->team_id > 0) && !($t->department_id > 0));
+                                                $deptGroups = []; $teamGroups = []; $memberGroups = [];
+                                                foreach ($grpDept as $t) { $d=$t->department_id; if(!isset($deptGroups[$d])){$deptGroups[$d]=['name'=>$t->department?$t->department->name:'Dept#'.$d,'target'=>0,'achieved'=>0,'count'=>0];} $deptGroups[$d]['target']+=$t->target_value; $deptGroups[$d]['achieved']+=$t->achieved_value; $deptGroups[$d]['count']++; }
+                                                foreach ($grpTeam as $t) { $d=$t->team_id; if(!isset($teamGroups[$d])){$teamGroups[$d]=['name'=>$t->team?$t->team->name:'Team#'.$d,'target'=>0,'achieved'=>0,'count'=>0];} $teamGroups[$d]['target']+=$t->target_value; $teamGroups[$d]['achieved']+=$t->achieved_value; $teamGroups[$d]['count']++; }
+                                                foreach ($grpMember as $t) { $d=$t->assigned_to; if(!isset($memberGroups[$d])){$memberGroups[$d]=['name'=>$t->assignedToUser?$t->assignedToUser->name:'User#'.$d,'target'=>0,'achieved'=>0,'count'=>0];} $memberGroups[$d]['target']+=$t->target_value; $memberGroups[$d]['achieved']+=$t->achieved_value; $memberGroups[$d]['count']++; }
+                                                $hasDrill = count($deptGroups) > 0 || count($teamGroups) > 0 || count($memberGroups) > 0;
+                                                $pct = fn($a,$b) => $b > 0 ? min(round($a/$b*100,1),100) : 0;
+                                                $clr = fn($r) => $r >= 80 ? ['#16a34a','rgba(22,163,74,0.1)'] : ($r >= 45 ? ['#2563eb','rgba(37,99,235,0.1)'] : ['#dc2626','rgba(220,38,38,0.1)']);
+                                            @endphp
+
+                                            <div class="collapse {{ $isCurrentMonth ? 'show' : '' }}" id="month-body-{{ $mNumber }}">
+                                                <div class="pt-2 pb-1">
+                                                @if($hasDrill)
+                                                <div class="dn-container" id="drill-{{ $mNumber }}">
+
+                                                {{-- ═══ LEVEL 0: Overview ═══ --}}
+                                                <div class="drill-level" data-level="0" data-month="{{ $mNumber }}">
+                                                    @foreach($deptGroups as $did => $dg)
+                                                        @php $r=$pct($dg['achieved'],$dg['target']); [$fg,$bg]=$clr($r); @endphp
+                                                        <div class="dn-card dept-row" data-drill-dept="{{ $did }}" data-month="{{ $mNumber }}">
+                                                            <div class="dn-avatar-wrap" style="background:{{ $bg }};">
+                                                                <span class="dn-initials" style="color:{{ $fg }};">{{ strtoupper(substr($dg['name'],0,2)) }}</span>
+                                                            </div>
+                                                            <div class="dn-body">
+                                                                <span class="dn-name">{{ $dg['name'] }}</span>
+                                                                <span class="dn-sub">{{ $dg['count'] }} {{ __('target(s)') }}</span>
+                                                                <div class="dn-bar-track"><div class="dn-bar-fill" style="width:{{ $r }}%;background:{{ $fg }};"></div></div>
+                                                            </div>
+                                                            <div class="dn-meta">
+                                                                <div class="dn-kv"><span>{{ number_format($dg['target']) }}</span><small>{{ __('Target') }}</small></div>
+                                                                <div class="dn-sep-v"></div>
+                                                                <div class="dn-kv green"><span>{{ number_format($dg['achieved']) }}</span><small>{{ __('Achieved') }}</small></div>
+                                                                <div class="dn-pct-pill" style="background:{{ $bg }};color:{{ $fg }};">{{ $r }}%</div>
+                                                            </div>
+                                                            <i class="ti ti-chevron-right dn-arrow"></i>
+                                                        </div>
+                                                    @endforeach
+                                                    @foreach($teamGroups as $tid => $tg)
+                                                        @php $r=$pct($tg['achieved'],$tg['target']); [$fg,$bg]=$clr($r); @endphp
+                                                        <div class="dn-card team-row" data-drill-team="{{ $tid }}" data-month="{{ $mNumber }}">
+                                                            <div class="dn-avatar-wrap" style="background:rgba(245,158,11,0.1);">
+                                                                <span class="dn-initials" style="color:#d97706;">{{ strtoupper(substr($tg['name'],0,2)) }}</span>
+                                                            </div>
+                                                            <div class="dn-body">
+                                                                <span class="dn-name">{{ $tg['name'] }}</span>
+                                                                <span class="dn-sub">{{ $tg['count'] }} {{ __('target(s)') }}</span>
+                                                                <div class="dn-bar-track"><div class="dn-bar-fill" style="width:{{ $r }}%;background:{{ $fg }};"></div></div>
+                                                            </div>
+                                                            <div class="dn-meta">
+                                                                <div class="dn-kv"><span>{{ number_format($tg['target']) }}</span><small>{{ __('Target') }}</small></div>
+                                                                <div class="dn-sep-v"></div>
+                                                                <div class="dn-kv green"><span>{{ number_format($tg['achieved']) }}</span><small>{{ __('Achieved') }}</small></div>
+                                                                <div class="dn-pct-pill" style="background:{{ $bg }};color:{{ $fg }};">{{ $r }}%</div>
+                                                            </div>
+                                                            <i class="ti ti-chevron-right dn-arrow"></i>
+                                                        </div>
+                                                    @endforeach
+                                                    @foreach($memberGroups as $uid => $mg)
+                                                        @php $r=$pct($mg['achieved'],$mg['target']); [$fg,$bg]=$clr($r); @endphp
+                                                        <div class="dn-card dn-leaf">
+                                                            <div class="dn-avatar-wrap" style="background:{{ $bg }};">
+                                                                <span class="dn-initials" style="color:{{ $fg }};">{{ strtoupper(substr($mg['name'],0,2)) }}</span>
+                                                            </div>
+                                                            <div class="dn-body">
+                                                                <span class="dn-name">{{ $mg['name'] }}</span>
+                                                                <span class="dn-sub">{{ $mg['count'] }} {{ __('target(s)') }}</span>
+                                                                <div class="dn-bar-track"><div class="dn-bar-fill" style="width:{{ $r }}%;background:{{ $fg }};"></div></div>
+                                                            </div>
+                                                            <div class="dn-meta">
+                                                                <div class="dn-kv"><span>{{ number_format($mg['target']) }}</span><small>{{ __('Target') }}</small></div>
+                                                                <div class="dn-sep-v"></div>
+                                                                <div class="dn-kv green"><span>{{ number_format($mg['achieved']) }}</span><small>{{ __('Achieved') }}</small></div>
+                                                                <div class="dn-pct-pill" style="background:{{ $bg }};color:{{ $fg }};">{{ $r }}%</div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+
+                                                {{-- ═══ LEVEL 1: Teams under Dept ═══ --}}
+                                                @foreach($deptGroups as $did => $dg)
+                                                    @php $dr=$pct($dg['achieved'],$dg['target']); [$dfg,$dbg]=$clr($dr); @endphp
+                                                    <div class="drill-level" data-level="1" data-dept="{{ $did }}" data-month="{{ $mNumber }}" style="display:none;">
+                                                        <div class="dn-crumb">
+                                                            <button class="dn-back-btn drill-back" data-back-to="0" data-month="{{ $mNumber }}"><i class="ti ti-arrow-left"></i> {{ __('Back') }}</button>
+                                                            <span class="dn-crumb-sep">›</span>
+                                                            <span class="dn-crumb-cur">{{ $dg['name'] }}</span>
+                                                        </div>
+                                                        <div class="dn-summary-card mb-3" style="background:{{ $dbg }};border-left:3px solid {{ $dfg }};">
+                                                            <div class="dn-avatar-wrap sm" style="background:{{ $dbg }};">
+                                                                <span class="dn-initials" style="color:{{ $dfg }};font-size:0.65rem;">{{ strtoupper(substr($dg['name'],0,2)) }}</span>
+                                                            </div>
+                                                            <div style="flex:1;min-width:0;">
+                                                                <span style="font-weight:700;font-size:0.85rem;color:#1e293b;display:block;">{{ $dg['name'] }}</span>
+                                                                <span style="font-size:0.7rem;color:#64748b;">{{ __('Department Overview') }}</span>
+                                                            </div>
+                                                            <div class="dn-meta" style="gap:12px;">
+                                                                <div class="dn-kv"><span>{{ number_format($dg['target']) }}</span><small>{{ __('Target') }}</small></div>
+                                                                <div class="dn-kv green"><span>{{ number_format($dg['achieved']) }}</span><small>{{ __('Achieved') }}</small></div>
+                                                                <div class="dn-pct-pill" style="background:{{ $dbg }};color:{{ $dfg }};border:1px solid {{ $dfg }}40;">{{ $dr }}%</div>
+                                                            </div>
+                                                        </div>
+                                                        @forelse($teamGroups as $tid => $tg)
+                                                            @php $r=$pct($tg['achieved'],$tg['target']); [$fg,$bg]=$clr($r); @endphp
+                                                            <div class="dn-card team-row" data-drill-team="{{ $tid }}" data-month="{{ $mNumber }}">
+                                                                <div class="dn-avatar-wrap" style="background:rgba(245,158,11,0.1);">
+                                                                    <span class="dn-initials" style="color:#d97706;">{{ strtoupper(substr($tg['name'],0,2)) }}</span>
+                                                                </div>
+                                                                <div class="dn-body">
+                                                                    <span class="dn-name">{{ $tg['name'] }}</span>
+                                                                    <span class="dn-sub">{{ $tg['count'] }} {{ __('target(s)') }}</span>
+                                                                    <div class="dn-bar-track"><div class="dn-bar-fill" style="width:{{ $r }}%;background:{{ $fg }};"></div></div>
+                                                                </div>
+                                                                <div class="dn-meta">
+                                                                    <div class="dn-kv"><span>{{ number_format($tg['target']) }}</span><small>{{ __('Target') }}</small></div>
+                                                                    <div class="dn-sep-v"></div>
+                                                                    <div class="dn-kv green"><span>{{ number_format($tg['achieved']) }}</span><small>{{ __('Achieved') }}</small></div>
+                                                                    <div class="dn-pct-pill" style="background:{{ $bg }};color:{{ $fg }};">{{ $r }}%</div>
+                                                                </div>
+                                                                <i class="ti ti-chevron-right dn-arrow"></i>
+                                                            </div>
+                                                        @empty
+                                                            <div class="dn-empty-msg"><i class="ti ti-users-off"></i> {{ __('No teams found') }}</div>
+                                                        @endforelse
+                                                    </div>
+                                                @endforeach
+
+                                                {{-- ═══ LEVEL 2: Members of Team ═══ --}}
+                                                @foreach($teamGroups as $tid => $tg)
+                                                    @php $tr=$pct($tg['achieved'],$tg['target']); [$tfg,$tbg]=$clr($tr); @endphp
+                                                    <div class="drill-level" data-level="2" data-team="{{ $tid }}" data-month="{{ $mNumber }}" style="display:none;">
+                                                        <div class="dn-crumb">
+                                                            <button class="dn-back-btn drill-back" data-back-to="0" data-month="{{ $mNumber }}"><i class="ti ti-arrow-left"></i> {{ __('Back') }}</button>
+                                                            <span class="dn-crumb-sep">›</span>
+                                                            <button class="dn-back-btn drill-back-to-dept" data-back-to="1" data-month="{{ $mNumber }}" style="color:#2563eb;">{{ __('Dept') }}</button>
+                                                            <span class="dn-crumb-sep">›</span>
+                                                            <span class="dn-crumb-cur">{{ $tg['name'] }}</span>
+                                                        </div>
+                                                        <div class="dn-summary-card mb-3" style="background:rgba(245,158,11,0.07);border-left:3px solid #d97706;">
+                                                            <div class="dn-avatar-wrap sm" style="background:rgba(245,158,11,0.15);">
+                                                                <span class="dn-initials" style="color:#d97706;font-size:0.65rem;">{{ strtoupper(substr($tg['name'],0,2)) }}</span>
+                                                            </div>
+                                                            <div style="flex:1;min-width:0;">
+                                                                <span style="font-weight:700;font-size:0.85rem;color:#1e293b;display:block;">{{ $tg['name'] }}</span>
+                                                                <span style="font-size:0.7rem;color:#64748b;">{{ __('Team Overview') }}</span>
+                                                            </div>
+                                                            <div class="dn-meta" style="gap:12px;">
+                                                                <div class="dn-kv"><span>{{ number_format($tg['target']) }}</span><small>{{ __('Target') }}</small></div>
+                                                                <div class="dn-kv green"><span>{{ number_format($tg['achieved']) }}</span><small>{{ __('Achieved') }}</small></div>
+                                                                <div class="dn-pct-pill" style="background:{{ $tbg }};color:{{ $tfg }};border:1px solid {{ $tfg }}40;">{{ $tr }}%</div>
+                                                            </div>
+                                                        </div>
+                                                        @forelse($memberGroups as $uid => $mg)
+                                                            @php $r=$pct($mg['achieved'],$mg['target']); [$fg,$bg]=$clr($r); @endphp
+                                                            <div class="dn-card dn-leaf">
+                                                                <div class="dn-avatar-wrap" style="background:{{ $bg }};">
+                                                                    <span class="dn-initials" style="color:{{ $fg }};">{{ strtoupper(substr($mg['name'],0,2)) }}</span>
+                                                                </div>
+                                                                <div class="dn-body">
+                                                                    <span class="dn-name">{{ $mg['name'] }}</span>
+                                                                    <span class="dn-sub">{{ $mg['count'] }} {{ __('target(s)') }}</span>
+                                                                    <div class="dn-bar-track"><div class="dn-bar-fill" style="width:{{ $r }}%;background:{{ $fg }};"></div></div>
+                                                                </div>
+                                                                <div class="dn-meta">
+                                                                    <div class="dn-kv"><span>{{ number_format($mg['target']) }}</span><small>{{ __('Target') }}</small></div>
+                                                                    <div class="dn-sep-v"></div>
+                                                                    <div class="dn-kv green"><span>{{ number_format($mg['achieved']) }}</span><small>{{ __('Achieved') }}</small></div>
+                                                                    <div class="dn-pct-pill" style="background:{{ $bg }};color:{{ $fg }};">{{ $r }}%</div>
+                                                                </div>
+                                                            </div>
+                                                        @empty
+                                                            <div class="dn-empty-msg"><i class="ti ti-user-off"></i> {{ __('No members found') }}</div>
+                                                        @endforelse
+                                                    </div>
+                                                @endforeach
+
+                                                </div>{{-- /dn-container --}}
+                                                @else
+                                                    <div class="dn-empty-msg"><i class="ti ti-inbox"></i> {{ __('No targets for this period') }}</div>
+                                                @endif
+                                                </div>
+                                            </div>
+
+                                        @endif
+                                    </div>
+                                @endforeach
+
+                                @if(!$hasAnyTargets)
+                                    <div class="text-center py-5">
+                                        <div style="width: 60px; height: 60px; background: rgba(100,116,139,0.07); border-radius: 16px; display:flex; align-items:center; justify-content:center; margin: 0 auto 12px;">
+                                            <i class="ti ti-calendar-off" style="font-size: 1.8rem; color: #94a3b8;"></i>
+                                        </div>
+                                        <p class="text-muted mb-0" style="font-size: 0.85rem;">{{ __('No targets found for the current year.') }}</p>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -2115,6 +2527,45 @@
 @push('scripts')
 <script src="{{ asset('assets/js/plugins/apexcharts.min.js') }}"></script>
 <script>
+    /* ── Summary Metrics Toggle (Today / This month) ─────────────────── */
+    function smSetView(mode) {
+        var isToday = mode === 'today';
+
+        // Toggle button styles
+        var btnToday = document.getElementById('smBtnToday');
+        var btnMonth = document.getElementById('smBtnMonth');
+        if (isToday) {
+            btnToday.style.background  = '#1e1e1e';
+            btnToday.style.color       = '#ffffff';
+            btnToday.style.borderColor = '#333';
+            btnMonth.style.background  = 'transparent';
+            btnMonth.style.color       = '#6b6b6b';
+            btnMonth.style.borderColor = '#252525';
+        } else {
+            btnMonth.style.background  = '#1e1e1e';
+            btnMonth.style.color       = '#ffffff';
+            btnMonth.style.borderColor = '#333';
+            btnToday.style.background  = 'transparent';
+            btnToday.style.color       = '#6b6b6b';
+            btnToday.style.borderColor = '#252525';
+        }
+
+        // Swap value + delta spans
+        document.querySelectorAll('.sm-val-today').forEach(function(el) {
+            el.classList.toggle('d-none', !isToday);
+        });
+        document.querySelectorAll('.sm-val-month').forEach(function(el) {
+            el.classList.toggle('d-none', isToday);
+        });
+        document.querySelectorAll('.sm-delta-today').forEach(function(el) {
+            el.classList.toggle('d-none', !isToday);
+        });
+        document.querySelectorAll('.sm-delta-month').forEach(function(el) {
+            el.classList.toggle('d-none', isToday);
+        });
+    }
+</script>
+<script>
     // Toggle hierarchy view folders
     $(document).on('click', '.tree-toggle', function(e) {
         e.stopPropagation();
@@ -2199,41 +2650,47 @@
     $(document).ready(function() {
         var options = {
             chart: {
-                height: 350,
+                height: 180,
                 type: 'area',
                 toolbar: { show: false },
-                fontFamily: 'Inter, sans-serif'
+                fontFamily: 'Inter, sans-serif',
+                sparkline: { enabled: false }
             },
-            colors: [getComputedStyle(document.body).getPropertyValue('--primary-theme-color').trim() || '#5e72e4', '#2dce89'],
+            colors: ['#5e72e4', '#2dce89'],
             fill: {
                 type: 'gradient',
                 gradient: {
                     shadeIntensity: 1,
-                    opacityFrom: 0.4,
-                    opacityTo: 0.1,
+                    opacityFrom: 0.35,
+                    opacityTo: 0.05,
                     stops: [0, 90, 100]
                 }
             },
             dataLabels: { enabled: false },
-            stroke: { curve: 'smooth', width: 3 },
+            stroke: { curve: 'smooth', width: 2.5 },
             series: [
-                { name: "{{ __('Quota Assigned') }}", data: @json($stats['monthly_target']) },
-                { name: "{{ __('Quota Achieved') }}", data: @json($stats['monthly_achieved']) }
+                { name: "{{ __('Target Assigned') }}", data: @json($stats['monthly_target']) },
+                { name: "{{ __('Target Achieved') }}", data: @json($stats['monthly_achieved']) }
             ],
             xaxis: {
                 categories: @json($stats['monthly_labels']),
-                labels: {
-                    style: { colors: '#8898aa', fontWeight: 500 }
-                }
+                labels: { style: { colors: '#94a3b8', fontSize: '10px', fontWeight: 500 } },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
             },
             yaxis: {
-                labels: {
-                    style: { colors: '#8898aa', fontWeight: 500 }
-                }
+                labels: { style: { colors: '#94a3b8', fontSize: '10px' } }
             },
             grid: {
-                borderColor: '#e9ecef',
-                strokeDashArray: 5
+                borderColor: '#f1f5f9',
+                strokeDashArray: 4,
+                padding: { top: 0, bottom: 0 }
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                fontSize: '11px',
+                markers: { radius: 4, width: 10, height: 10 }
             },
             tooltip: {
                 theme: 'light',
@@ -2242,6 +2699,16 @@
         };
         var chart = new ApexCharts(document.querySelector("#monthly-trends-chart"), options);
         chart.render();
+
+        // Chevron rotation for month accordion
+        $(document).on('show.bs.collapse', '.collapse[id^="month-body-"]', function() {
+            var id = $(this).attr('id').replace('month-body-', '');
+            $('#month-block-' + id + ' .ti-chevron-down').css('transform', 'rotate(180deg)');
+        });
+        $(document).on('hide.bs.collapse', '.collapse[id^="month-body-"]', function() {
+            var id = $(this).attr('id').replace('month-body-', '');
+            $('#month-block-' + id + ' .ti-chevron-down').css('transform', 'rotate(0deg)');
+        });
     });
 
     // HTML5 Drag and Drop logic
@@ -2499,5 +2966,161 @@
             });
         }
     }
+    // ─── Drill-Down Navigation ───────────────────────────────────────────────
+    var activeDeptPerMonth = {};
+
+    $(document).on('click', '.dept-row[data-drill-dept]', function () {
+        var did   = $(this).data('drill-dept');
+        var month = $(this).data('month');
+        var container = $('#drill-' + month);
+        activeDeptPerMonth[month] = did;
+        container.find('.drill-level').hide();
+        container.find('.drill-level[data-level="1"][data-dept="' + did + '"]').show();
+    });
+
+    $(document).on('click', '.team-row[data-drill-team]', function () {
+        var tid   = $(this).data('drill-team');
+        var month = $(this).data('month');
+        var container = $('#drill-' + month);
+        container.find('.drill-level').hide();
+        container.find('.drill-level[data-level="2"][data-team="' + tid + '"]').show();
+    });
+
+    $(document).on('click', '.dn-back-btn.drill-back[data-back-to="0"]', function (e) {
+        e.stopPropagation();
+        var month = $(this).data('month');
+        var container = $('#drill-' + month);
+        container.find('.drill-level').hide();
+        container.find('.drill-level[data-level="0"]').show();
+    });
+
+    $(document).on('click', '.dn-back-btn.drill-back-to-dept', function (e) {
+        e.stopPropagation();
+        var month = $(this).data('month');
+        var container = $('#drill-' + month);
+        var did = activeDeptPerMonth[month];
+        container.find('.drill-level').hide();
+        if (did) {
+            container.find('.drill-level[data-level="1"][data-dept="' + did + '"]').show();
+        } else {
+            container.find('.drill-level[data-level="0"]').show();
+        }
+    });
 </script>
+
+<style>
+/* ═══ Drill-Down Card System ═══════════════════════════════════════════════ */
+.dn-container { padding: 4px 0; }
+
+.dn-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    background: #fff;
+    border: 1.5px solid #f1f5f9;
+    border-radius: 12px;
+    transition: border-color 0.18s, box-shadow 0.18s, transform 0.12s;
+}
+.dn-card.dept-row, .dn-card.team-row { cursor: pointer; }
+.dn-card.dept-row:hover, .dn-card.team-row:hover {
+    border-color: #e2e8f0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+    transform: translateY(-1px);
+}
+.dn-card.dept-row:hover { border-color: #2563eb40; }
+.dn-card.team-row:hover { border-color: #d9770640; }
+
+.dn-avatar-wrap {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.dn-avatar-wrap.sm { width: 30px; height: 30px; border-radius: 8px; }
+.dn-initials { font-size: 0.82rem; font-weight: 700; line-height: 1; }
+
+.dn-body { flex: 1; min-width: 0; }
+.dn-name {
+    display: block;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+.dn-sub { font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 5px; }
+.dn-bar-track {
+    height: 5px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    overflow: hidden;
+    max-width: 120px;
+}
+.dn-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; }
+
+.dn-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.dn-kv { text-align: center; }
+.dn-kv span { display: block; font-weight: 700; font-size: 0.9rem; color: #1e293b; }
+.dn-kv.green span { color: #198754; }
+.dn-kv small { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
+.dn-sep-v { width: 1px; height: 24px; background: #e2e8f0; }
+.dn-pct-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+    min-width: 42px;
+    text-align: center;
+}
+.dn-arrow { font-size: 0.9rem; color: #cbd5e1; flex-shrink: 0; }
+
+/* Breadcrumb */
+.dn-crumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.dn-back-btn {
+    background: none; border: none; padding: 4px 8px; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 500; color: #64748b; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+.dn-back-btn:hover { background: #f1f5f9; color: #1e293b; }
+.dn-crumb-sep { color: #cbd5e1; font-size: 0.85rem; }
+.dn-crumb-cur { font-size: 0.75rem; font-weight: 600; color: #1e293b; }
+
+/* Summary card (shown at top of level 1/2) */
+.dn-summary-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+}
+
+/* Empty state */
+.dn-empty-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    padding: 20px;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+.dn-empty-msg i { font-size: 1.1rem; }
+</style>
 @endpush

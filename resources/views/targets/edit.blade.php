@@ -71,15 +71,21 @@
         </div>
         <div class="col-md-6 form-group" id="edit_achieved_field">
             {{ Form::label('achieved_value', __('Achieved Quantity'), ['class' => 'col-form-label']) }}
-            {{ Form::number('achieved_value', null, ['class' => 'form-control', 'required' => 'required', 'min' => '0', ($target->target_type == 'lead_stage' ? 'readonly' : '')]) }}
-            @if($target->target_type == 'lead_stage')
-                <small class="text-info" id="edit_achieved_note">{{ __('Automatically calculated based on lead movements.') }}</small>
+            {{ Form::number('achieved_value', null, ['class' => 'form-control', 'required' => 'required', 'min' => '0', ((in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue'])) ? 'readonly' : '')]) }}
+            @if(in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue']))
+                <small class="text-info" id="edit_achieved_note">{{ __('Automatically calculated based on lead data.') }}</small>
             @endif
         </div>
         
         <div class="col-md-12 form-group">
             {{ Form::label('target_type', __('Target Tracking Type'), ['class' => 'col-form-label']) }}
-            {{ Form::select('target_type', ['manual' => __('Manual (Self Reported)'), 'lead_stage' => __('Lead Stage Transition (Automated)')], null, ['class' => 'form-control select2', 'id' => 'edit_target_type', (!$canChangeResponsible ? 'disabled' : '')]) }}
+            {{ Form::select('target_type', [
+                'manual' => __('Manual (Self Reported)'),
+                'lead_stage' => __('Lead Stage Transition (Automated)'),
+                'account' => __('Account Opening (Automated)'),
+                'ftd' => __('FTD Count (Automated)'),
+                'revenue' => __('Revenue Sum (Automated)'),
+            ], null, ['class' => 'form-control select2', 'id' => 'edit_target_type', (!$canChangeResponsible ? 'disabled' : '')]) }}
             @if(!$canChangeResponsible) {{ Form::hidden('target_type', $target->target_type) }} @endif
         </div>
 
@@ -95,7 +101,7 @@
             @if(!$canChangeResponsible) {{ Form::hidden('stage_id', $target->stage_id) }} @endif
         </div>
 
-        <div class="col-md-12 form-group {{ $target->target_type == 'lead_stage' ? '' : 'd-none' }}" id="edit_custom_date_field_group">
+        <div class="col-md-12 form-group {{ in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? '' : 'd-none' }}" id="edit_custom_date_field_group">
             {{ Form::label('custom_date_field', __('Select Date Field for Scoping'), ['class' => 'col-form-label']) }}
             {{ Form::select('custom_date_field', ['created_at' => __('Lead Creation Date (created_at)')] + $customDateFields, null, ['class' => 'form-control select2', 'id' => 'edit_custom_date_field', (!$canChangeResponsible ? 'disabled' : '')]) }}
             @if(!$canChangeResponsible) {{ Form::hidden('custom_date_field', $target->custom_date_field) }} @endif
@@ -148,6 +154,23 @@
             $('#edit_achieved_field input').attr('readonly', 'readonly');
             if ($('#edit_achieved_note').length == 0) {
                 $('#edit_achieved_field').append('<small class="text-info" id="edit_achieved_note">' + "{{ __('Automatically calculated based on lead movements.') }}" + '</small>');
+            } else {
+                $('#edit_achieved_note').text("{{ __('Automatically calculated based on lead movements.') }}");
+            }
+        } else if (['account', 'ftd', 'revenue'].includes(type)) {
+            $('#edit_pipeline_field').addClass('d-none');
+            $('#edit_stage_field').addClass('d-none');
+            $('#edit_custom_date_field_group').removeClass('d-none');
+            $('#edit_pipeline_id').removeAttr('required');
+            $('#edit_stage_id').removeAttr('required');
+            $('#edit_custom_date_field').attr('required', 'required');
+            
+            // Make achieved value read-only
+            $('#edit_achieved_field input').attr('readonly', 'readonly');
+            if ($('#edit_achieved_note').length == 0) {
+                $('#edit_achieved_field').append('<small class="text-info" id="edit_achieved_note">' + "{{ __('Automatically calculated based on lead data.') }}" + '</small>');
+            } else {
+                $('#edit_achieved_note').text("{{ __('Automatically calculated based on lead data.') }}");
             }
         } else {
             $('#edit_pipeline_field').addClass('d-none');

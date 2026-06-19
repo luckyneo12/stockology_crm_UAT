@@ -254,6 +254,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         BlueSnapPaymentStatus::class => [
             ReferralTransactionLis::class,
+        ],
+        \App\Events\CreateMetaWebhook::class => [
+            \App\Listeners\MetaWebhookListener::class,
         ]
     ];
 

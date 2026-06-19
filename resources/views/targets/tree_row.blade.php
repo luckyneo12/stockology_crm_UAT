@@ -46,6 +46,25 @@
                             <span class="ms-1 fw-bold text-dark" style="font-size: 10px; color: #1e293b !important;">({{ $dateField ? $dateField->name : __('Custom Date') }})</span>
                         @endif
                     </span>
+                @elseif(in_array($target->target_type, ['account', 'ftd', 'revenue']))
+                    <span class="mt-1 d-flex align-items-center flex-wrap gap-1" style="font-size: 11px; color: #475569; font-weight: 500;">
+                        <i class="{{ $target->target_type == 'account' ? 'ti ti-plug' : ($target->target_type == 'ftd' ? 'ti ti-coin' : 'ti ti-currency-dollar') }} text-primary" style="font-size: 12px;"></i>
+                        <span class="badge rounded-pill py-0.5 px-2" style="font-size: 10px; font-weight: 600; background-color: #e0f2fe !important; color: #0369a1 !important;">
+                            @if($target->target_type == 'account')
+                                {{ __('Account Opening') }}
+                            @elseif($target->target_type == 'ftd')
+                                {{ __('FTD Count') }}
+                            @elseif($target->target_type == 'revenue')
+                                {{ __('Revenue Sum') }}
+                            @endif
+                        </span>
+                        @if($target->custom_date_field && $target->custom_date_field !== 'created_at')
+                            @php
+                                $dateField = \DB::table('lead_custom_fields')->where('workspace_id', getActiveWorkSpace())->where('id', $target->custom_date_field)->first();
+                            @endphp
+                            <span class="ms-1 fw-bold text-dark" style="font-size: 10px; color: #1e293b !important;">({{ $dateField ? $dateField->name : __('Custom Date') }})</span>
+                        @endif
+                    </span>
                 @endif
             </div>
         </div>
@@ -53,9 +72,9 @@
 
     <!-- Target Type Badge -->
     <td style="vertical-align: middle;">
-        <span class="premium-badge {{ $target->target_type == 'lead_stage' ? 'premium-badge-automated' : 'premium-badge-manual' }}">
-            <i class="{{ $target->target_type == 'lead_stage' ? 'ti ti-cpu' : 'ti ti-user-edit' }} me-0.5" style="font-size: 12px;"></i>
-            {{ $target->target_type == 'lead_stage' ? __('Automated') : __('Manual') }}
+        <span class="premium-badge {{ in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? 'premium-badge-automated' : 'premium-badge-manual' }}">
+            <i class="{{ in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? 'ti ti-cpu' : 'ti ti-user-edit' }} me-0.5" style="font-size: 12px;"></i>
+            {{ in_array($target->target_type, ['lead_stage', 'account', 'ftd', 'revenue']) ? __('Automated') : __('Manual') }}
         </span>
     </td>
 

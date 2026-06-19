@@ -216,15 +216,19 @@
                             <i class="ti ti-chevron-down drp-arrow nocolor ms-1" style="font-size: 0.75rem;"></i>
                         </a>
                         <div class="dropdown-menu dash-h-dropdown dropdown-menu-end shadow border-0" aria-labelledby="pipelineDropdown" style="border-radius: 12px; z-index: 1050; min-width: 140px; padding: 8px 0;">
-                            @foreach($pipelines as $id => $name)
-                                <a class="dropdown-item switch-pipeline-btn d-flex align-items-center justify-content-between py-2 px-3 {{ $pipeline->id == $id ? 'active bg-success text-white' : '' }}"
-                                    href="javascript:void(0)" onclick="event.preventDefault(); document.getElementById('pipeline_form_{{ $id }}').submit();">
-                                    <span><strong>{{ $name }}</strong></span>
-                                    @if($pipeline->id == $id) <i class="ti ti-check ms-2"></i> @endif
+                            @foreach($pipelines as $key => $value)
+                                @php
+                                    $pId = is_object($value) ? $value->id : $key;
+                                    $pName = is_object($value) ? $value->name : $value;
+                                @endphp
+                                <a class="dropdown-item switch-pipeline-btn d-flex align-items-center justify-content-between py-2 px-3 {{ $pipeline->id == $pId ? 'active bg-success text-white' : '' }}"
+                                    href="javascript:void(0)" onclick="event.preventDefault(); document.getElementById('pipeline_form_{{ $pId }}').submit();">
+                                    <span><strong>{{ $pName }}</strong></span>
+                                    @if($pipeline->id == $pId) <i class="ti ti-check ms-2"></i> @endif
                                 </a>
-                                <form id="pipeline_form_{{ $id }}" action="{{ route('deals.change.pipeline') }}" method="POST" style="display: none;">
+                                <form id="pipeline_form_{{ $pId }}" action="{{ route('deals.change.pipeline') }}" method="POST" style="display: none;">
                                     @csrf
-                                    <input type="hidden" name="default_pipeline_id" value="{{ $id }}">
+                                    <input type="hidden" name="default_pipeline_id" value="{{ $pId }}">
                                 </form>
                             @endforeach
                         </div>
@@ -447,10 +451,10 @@
     <style>
         /* Responsive Header Filters */
         @media (max-width: 1750px) {
-            .leads-header-filters-container span {
+            .leads-header-filters-container .dash-head-link > span {
                 display: none !important;
             }
-            .leads-header-filters-container i {
+            .leads-header-filters-container .dash-head-link > i {
                 margin-right: 0 !important;
             }
         }
@@ -643,6 +647,7 @@
                 'lead_assigned': { icon: 'ti-user-plus', bg: '#198754', light: 'rgba(25,135,84,0.12)', label: '{{ __('Lead Assigned') }}' },
                 'kyc_comment': { icon: 'ti-shield-check', bg: '#0dcaf0', light: 'rgba(13,202,240,0.12)', label: '{{ __('KYC Comment') }}' },
                 'task_assignment': { icon: 'ti-list-check', bg: '#0d6efd', light: 'rgba(13,110,253,0.12)', label: '{{ __('Task Assigned') }}' },
+                'duplicate_webhook_lead': { icon: 'ti-copy', bg: '#dc3545', light: 'rgba(220,53,69,0.12)', label: '{{ __('Duplicate Lead') }}' },
             };
             const defaultConfig = { icon: 'ti-bell', bg: '#6c757d', light: 'rgba(108,117,125,0.12)', label: '{{ __('Notification') }}' };
 
@@ -668,6 +673,8 @@
                     return (d.created_by_name || '{{ __('Someone') }}') + ' {{ __('added a KYC comment') }}';
                 } else if (noti.type === 'task_assignment') {
                     return (d.assigned_by_name || '{{ __('Someone') }}') + ' {{ __('assigned a task') }}: ' + (d.task_name || '');
+                } else if (noti.type === 'duplicate_webhook_lead') {
+                    return d.message || '{{ __('Duplicate lead attempt blocked') }}';
                 }
                 return d.message || '{{ __('New notification') }}';
             }

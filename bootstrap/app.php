@@ -16,7 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
-        $schedule->command('stockmarket:check-signals')->everyMinute();
+        $schedule->command('stockmarket:check-signals')->everyMinute()->withoutOverlapping();
+        $schedule->command('facebook:fetch-leads')->everyFifteenMinutes()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([

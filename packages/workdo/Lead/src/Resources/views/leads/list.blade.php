@@ -30,15 +30,32 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
         }
 
-        /* Card Hover Effects */
+        /* Premium Card Styles */
         .card-modern {
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            background: linear-gradient(145deg, #ffffff, #fcfcfc);
-            border-radius: 12px;
+            background: #ffffff;
+            border-radius: 16px !important;
+            border: 1px solid rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
         }
         .card-modern:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08) !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        
+        /* Table & Funnel Container Cards Cohesive Styles */
+        #table-container-col .card,
+        #funnel-container-col .card {
+            border-radius: 16px !important;
+            border: 1px solid rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        #table-container-col .card:hover,
+        #funnel-container-col .card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04) !important;
         }
         
         /* Icon Shapes */
@@ -51,15 +68,16 @@
         
         /* Funnel Items */
         .hover-glow {
-            transition: all 0.2s ease-in-out;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: #ffffff;
+            border-radius: 12px !important;
+            border: 1px solid rgba(0, 0, 0, 0.04) !important;
         }
         .hover-glow:hover {
             background: #ffffff;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transform: scale(1.02);
-            border-color: #dee2e6 !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            transform: translateY(-2px) scale(1.01);
+            border-color: rgba(0, 0, 0, 0.08) !important;
         }
         
         /* Progress bars */
@@ -109,6 +127,344 @@
             from { background-position: 1rem 0; }
             to { background-position: 0 0; }
         }
+
+        .transition-all {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+
+        /* Custom Premium Table & UI Styles */
+        #leads-table {
+            width: 100% !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        #leads-table thead th {
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            color: #525f7f !important;
+            background-color: #f8f9fa !important;
+            border-bottom: 2px solid #e9ecef !important;
+            padding: 14px 16px !important;
+            vertical-align: middle !important;
+            border-top: none !important;
+        }
+        #leads-table tbody tr {
+            transition: all 0.2s ease;
+        }
+        #leads-table tbody tr:hover {
+            background-color: rgba(94, 114, 228, 0.02) !important;
+        }
+        #leads-table tbody td {
+            padding: 14px 16px !important;
+            vertical-align: middle !important;
+            border-bottom: 1px solid #f1f3f9 !important;
+            color: #495057 !important;
+            font-size: 0.82rem !important;
+        }
+        
+        /* Checkbox styling */
+        #leads-table .form-check-input {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #leads-table .form-check-input:checked {
+            background-color: #5e72e4;
+            border-color: #5e72e4;
+        }
+        
+        /* Table Action Buttons */
+        #leads-table .action-btn {
+            margin: 0 !important;
+            display: inline-block !important;
+        }
+        #leads-table .action-btn a,
+        #leads-table .action-btn button {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            margin: 0 3px !important;
+            font-size: 0.9rem !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+            transition: all 0.2s ease !important;
+            border: none !important;
+        }
+        
+        /* High-specificity overrides for soft transparent action buttons */
+        html body #leads-table .action-btn a.bg-primary,
+        table#leads-table .action-btn a.bg-primary {
+            background: rgba(40, 167, 69, 0.1) !important;
+            background-color: rgba(40, 167, 69, 0.1) !important;
+            color: #28a745 !important;
+        }
+        html body #leads-table .action-btn a.bg-primary:hover,
+        table#leads-table .action-btn a.bg-primary:hover {
+            background: #28a745 !important;
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2) !important;
+        }
+
+        html body #leads-table .action-btn a.bg-success,
+        table#leads-table .action-btn a.bg-success {
+            background-color: rgba(45, 206, 137, 0.1) !important;
+            color: #2dce89 !important;
+        }
+        html body #leads-table .action-btn a.bg-success:hover,
+        table#leads-table .action-btn a.bg-success:hover {
+            background-color: #2dce89 !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(45, 206, 137, 0.2) !important;
+        }
+
+        html body #leads-table .action-btn a.bg-warning,
+        table#leads-table .action-btn a.bg-warning {
+            background-color: rgba(251, 99, 64, 0.1) !important;
+            color: #fb6340 !important;
+        }
+        html body #leads-table .action-btn a.bg-warning:hover,
+        table#leads-table .action-btn a.bg-warning:hover {
+            background-color: #fb6340 !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(251, 99, 64, 0.2) !important;
+        }
+
+        html body #leads-table .action-btn a.bg-info,
+        table#leads-table .action-btn a.bg-info {
+            background-color: rgba(17, 205, 239, 0.1) !important;
+            color: #11cdef !important;
+        }
+        html body #leads-table .action-btn a.bg-info:hover,
+        table#leads-table .action-btn a.bg-info:hover {
+            background-color: #11cdef !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(17, 205, 239, 0.2) !important;
+        }
+
+        html body #leads-table .action-btn a.bg-danger,
+        table#leads-table .action-btn a.bg-danger {
+            background-color: rgba(245, 54, 92, 0.1) !important;
+            color: #f5365c !important;
+        }
+        html body #leads-table .action-btn a.bg-danger:hover,
+        table#leads-table .action-btn a.bg-danger:hover {
+            background-color: #f5365c !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(245, 54, 92, 0.2) !important;
+        }
+
+        /* Ensure nested text-white icons inherit color from parent anchor tag */
+        html body #leads-table .action-btn a i,
+        html body #leads-table .action-btn a span,
+        html body #leads-table .action-btn a span i {
+            color: inherit !important;
+        }
+        html body #leads-table .action-btn a:hover i,
+        html body #leads-table .action-btn a:hover span,
+        html body #leads-table .action-btn a:hover span i {
+            color: #ffffff !important;
+        }
+        
+        /* Modernized Badge for users */
+        html body #leads-table td span.badge.bg-primary,
+        table#leads-table td span.badge.bg-primary,
+        #leads-table td .badge {
+            background: rgba(40, 167, 69, 0.1) !important;
+            background-color: rgba(40, 167, 69, 0.1) !important;
+            color: #28a745 !important;
+            border: 1px solid rgba(40, 167, 69, 0.15) !important;
+            font-weight: 600 !important;
+            border-radius: 30px !important;
+            padding: 6px 14px !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+            font-size: 0.78rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }
+
+        /* Lead Name Link styling */
+        .lead-name-link {
+            color: #28a745 !important;
+            font-weight: 600 !important;
+            text-decoration: none !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        .lead-name-link:hover {
+            color: #218838 !important;
+            text-decoration: underline !important;
+        }
+        
+        /* Progress bars inside table */
+        #leads-table td .progress {
+            height: 6px !important;
+            margin-top: 6px !important;
+            background-color: rgba(0, 0, 0, 0.05) !important;
+            box-shadow: none !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+        }
+        #leads-table td .progress-bar {
+            border-radius: 10px !important;
+            box-shadow: none !important;
+            background-image: none !important;
+        }
+        
+        /* Entries drop-down and Search wrapper styling */
+        .dataTable-top {
+            padding: 16px 24px !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #f1f3f9 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+        }
+        .dataTable-dropdown select,
+        select.dataTable-selector {
+            border-radius: 8px !important;
+            border: 1px solid #e9ecef !important;
+            padding: 6px 32px 6px 12px !important;
+            font-size: 0.85rem !important;
+            background-color: #f8f9fa !important;
+            height: 38px !important;
+            line-height: 1.5 !important;
+            min-width: 70px !important;
+            cursor: pointer !important;
+            display: inline-block !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            background-position: right 12px center !important;
+            background-repeat: no-repeat !important;
+        }
+        .dataTable-search input {
+            border-radius: 8px !important;
+            border: 1px solid #e9ecef !important;
+            padding: 8px 16px !important;
+            font-size: 0.85rem !important;
+            background-color: #f8f9fa !important;
+            transition: all 0.2s !important;
+            height: 38px !important;
+            width: 220px !important;
+        }
+        .dataTable-search input:focus {
+            background-color: #ffffff !important;
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1) !important;
+            outline: none !important;
+        }
+        
+        /* Datatable Buttons */
+        .dataTable-botton.table-btn {
+            display: flex !important;
+            gap: 6px !important;
+            align-items: center !important;
+        }
+        .dataTable-botton .btn {
+            border-radius: 8px !important;
+            font-size: 0.85rem !important;
+            padding: 0 16px !important;
+            height: 38px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+            transition: all 0.2s !important;
+            border: 1px solid transparent !important;
+        }
+        .dataTable-botton .btn:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05) !important;
+        }
+        .dataTable-botton .btn-light-secondary {
+            background-color: rgba(40, 167, 69, 0.08) !important;
+            color: #28a745 !important;
+            border-color: rgba(40, 167, 69, 0.15) !important;
+        }
+        .dataTable-botton .btn-light-secondary:hover {
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+        }
+        .dataTable-botton .btn-light-danger {
+            background-color: rgba(245, 54, 92, 0.08) !important;
+            color: #f5365c !important;
+            border-color: rgba(245, 54, 92, 0.15) !important;
+        }
+        .dataTable-botton .btn-light-danger:hover {
+            background-color: #f5365c !important;
+            color: #ffffff !important;
+        }
+        .dataTable-botton .btn-light-warning {
+            background-color: rgba(251, 99, 64, 0.08) !important;
+            color: #fb6340 !important;
+            border-color: rgba(251, 99, 64, 0.15) !important;
+        }
+        .dataTable-botton .btn-light-warning:hover {
+            background-color: #fb6340 !important;
+            color: #ffffff !important;
+        }
+        
+        /* Bottom Pagination Styling */
+        .dataTable-bottom {
+            padding: 16px 24px !important;
+            background: #ffffff !important;
+            border-top: 1px solid #f1f3f9 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            font-size: 0.85rem !important;
+            color: #8898aa !important;
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+        }
+        .pagination {
+            margin: 0 !important;
+            display: flex !important;
+            gap: 4px !important;
+        }
+        .pagination li a {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: 1px solid #e9ecef !important;
+            color: #525f7f !important;
+            font-weight: 600 !important;
+            font-size: 0.82rem !important;
+            transition: all 0.2s !important;
+            padding: 0 !important;
+        }
+        .pagination li.active a {
+            background-color: #5e72e4 !important;
+            border-color: #5e72e4 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 10px rgba(94, 114, 228, 0.25) !important;
+        }
+        .pagination li a:hover:not(.active) {
+            background-color: #f8f9fa !important;
+            color: #5e72e4 !important;
+            border-color: #e9ecef !important;
+        }
     </style>
 @endpush
 
@@ -117,6 +473,7 @@
 @endsection
 
 @section('content')
+    @include('lead::layouts.anti_screenshot')
     @include('lead::leads.filter_bar')
 
     @php
@@ -393,36 +750,42 @@
     @if ($pipeline)
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0 text-muted fw-bold">{{ __('Pipeline Statistics') }}</h5>
-            <button type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#configureStatsModal" title="{{ __('Configure Metrics Cards') }}">
-                <i class="ti ti-settings fs-6"></i>
-                <span class="d-none d-sm-inline">{{ __('Configure Cards') }}</span>
-            </button>
+            <div class="d-flex gap-2">
+                <button type="button" id="toggle-funnel-master-btn" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 shadow-sm px-3" title="{{ __('Toggle Stage Funnel') }}">
+                    <i class="ti ti-eye fs-6" id="funnel-toggle-icon"></i>
+                    <span class="d-none d-sm-inline" id="funnel-toggle-text">{{ __('Hide Funnel') }}</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#configureStatsModal" title="{{ __('Configure Metrics Cards') }}">
+                    <i class="ti ti-settings fs-6"></i>
+                    <span class="d-none d-sm-inline">{{ __('Configure Cards') }}</span>
+                </button>
+            </div>
         </div>
         <!-- Advanced Metrics Dashboard -->
         <div class="row mb-3">
             @foreach($cardsData as $index => $card)
                 <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                    <div class="card card-modern border-0 shadow-sm h-100 overflow-hidden position-relative hover-glow" style="border-left: 3px solid {{ $card['colors']['border'] }} !important;">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                <span class="text-muted text-uppercase fw-bold text-xs" style="letter-spacing: 0.5px; font-size: 0.72rem;" title="{{ $card['title'] }}">{{ $card['title'] }}</span>
-                                <div class="icon-shape {{ $card['colors']['bg'] }} {{ $card['colors']['text'] }} rounded-circle" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="{{ $card['icon'] }} fs-6"></i>
+                    <div class="card card-modern border-0 shadow-sm h-100 overflow-hidden position-relative hover-glow" style="border-left: 4px solid {{ $card['colors']['border'] }} !important; background: linear-gradient(135deg, #ffffff 70%, {{ $card['colors']['border'] }}08 100%);">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="text-muted text-uppercase fw-bold text-xs" style="letter-spacing: 0.8px; font-size: 0.72rem;" title="{{ $card['title'] }}">{{ $card['title'] }}</span>
+                                <div class="icon-shape {{ $card['colors']['bg'] }} {{ $card['colors']['text'] }} rounded-circle" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                                    <i class="{{ $card['icon'] }} fs-5"></i>
                                 </div>
                             </div>
-                            <h4 class="mb-1 fw-bold text-dark" style="font-size: 1.35rem;">{{ $card['value'] }}</h4>
-                            <div class="d-flex align-items-center text-xs mt-1.5 w-100">
+                            <h3 class="mb-1 fw-bold text-dark" style="font-size: 1.5rem; letter-spacing: -0.5px;">{{ $card['value'] }}</h3>
+                            <div class="d-flex align-items-center text-xs mt-2 w-100">
                                 @if($card['progressPercent'] !== null)
                                     <div class="w-100">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="text-muted" style="font-size: 0.7rem;">{{ $card['subText'] }}</span>
+                                            <span class="text-muted" style="font-size: 0.72rem;">{{ $card['subText'] }}</span>
                                         </div>
-                                        <div class="progress" style="height: 4px; border-radius: 10px;">
-                                            <div class="progress-bar {{ $card['colors']['progress_bg'] }}" role="progressbar" style="width: {{ $card['progressPercent'] }}%" aria-valuenow="{{ $card['progressPercent'] }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress" style="height: 5px; border-radius: 10px; background-color: rgba(0,0,0,0.04);">
+                                            <div class="progress-bar {{ $card['colors']['progress_bg'] }}" role="progressbar" style="width: {{ $card['progressPercent'] }}%; border-radius: 10px;" aria-valuenow="{{ $card['progressPercent'] }}" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                 @else
-                                    <span class="{{ $card['colors']['text'] }} fw-bold me-1" style="font-size: 0.72rem;">
+                                    <span class="{{ $card['colors']['text'] }} fw-semibold me-1" style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
                                         <i class="ti ti-arrow-right"></i> {{ $card['subText'] }}
                                     </span>
                                 @endif
@@ -434,23 +797,31 @@
         </div>
 
         <div class="row">
-            <div class="col-xl-9 col-lg-8 mb-4">
+            <div class="col-xl-9 col-lg-8 mb-4 transition-all" id="table-container-col">
                 <div class="card border-0 shadow-sm">
                     <div class="card-body table-border-style">
-                        <h5></h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 fw-bold text-dark">{{ __('Leads') }}</h5>
+                            <button type="button" id="show-funnel-table-btn" class="btn btn-sm btn-outline-primary d-none align-items-center gap-1 shadow-sm px-3" title="{{ __('Show Stage Funnel') }}">
+                                <i class="ti ti-chart-bar fs-6"></i> {{ __('Show Stage Funnel') }}
+                            </button>
+                        </div>
                         <div class="table-responsive">
+                            {{-- Hidden field with server-resolved pipeline ID (avoids stale URL/dropdown issues) --}}
+                            <input type="hidden" id="list_pipeline_id" value="{{ $pipeline->id }}">
                             {{ $dataTable->table(['width' => '100%']) }}
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div class="col-xl-3 col-lg-4 mb-4">
+            <div class="col-xl-3 col-lg-4 mb-4 transition-all" id="funnel-container-col">
                 <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header border-bottom bg-transparent py-3">
-                        <h5 class="mb-0 fw-bold text-dark d-flex align-items-center">
+                    <div class="card-header border-bottom bg-transparent py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-dark d-flex align-items-center mb-0">
                             <i class="ti ti-chart-bar me-2 text-primary fs-4"></i>{{ __('Stage Funnel') }}
                         </h5>
+                        <button type="button" class="btn-close" id="close-funnel-btn" aria-label="Close" title="{{ __('Hide Funnel') }}"></button>
                     </div>
                     <div class="card-body p-3">
                         @php
@@ -481,16 +852,18 @@
                         @if(!empty($stageData))
                             <div class="d-flex flex-column gap-3">
                                 @foreach($stageData as $sd)
-                                    <div class="p-2 rounded border border-light bg-light-subtle hover-glow transition-all">
-                                        <div class="d-flex justify-content-between align-items-center mb-1 text-xs">
-                                            <span class="fw-bold text-muted text-truncate" style="max-width: 65%;" title="{{ $sd['name'] }}">
-                                                <span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background-color: {{ $sd['color'] }};"></span>
+                                    <div class="p-3 rounded border hover-glow transition-all" style="border-color: rgba(0,0,0,0.04) !important; background: linear-gradient(135deg, #ffffff 80%, {{ $sd['color'] }}08 100%);">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 text-xs">
+                                            <span class="fw-bold text-dark text-truncate" style="max-width: 65%; font-size: 0.8rem; letter-spacing: -0.2px;" title="{{ $sd['name'] }}">
+                                                <span class="d-inline-block rounded-circle me-1.5" style="width: 8px; height: 8px; background-color: {{ $sd['color'] }}; box-shadow: 0 0 6px {{ $sd['color'] }}80;"></span>
                                                 {{ $sd['name'] }}
                                             </span>
-                                            <span class="badge bg-light text-dark fw-bold border">{{ $sd['count'] }} ({{ $sd['pct'] }}%)</span>
+                                            <span class="badge fw-bold" style="background-color: {{ $sd['color'] }}15; color: {{ $sd['color'] }}; border: 1px solid {{ $sd['color'] }}25; font-size: 0.72rem; padding: 4px 8px;">
+                                                {{ $sd['count'] }} ({{ $sd['pct'] }}%)
+                                            </span>
                                         </div>
-                                        <div class="progress" style="height: 6px; border-radius: 3px; background-color: #e9ecef;">
-                                            <div class="progress-bar" role="progressbar" style="width: {{ $sd['pct'] }}%; background-color: {{ $sd['color'] }};" aria-valuenow="{{ $sd['pct'] }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress" style="height: 5px; border-radius: 10px; background-color: rgba(0,0,0,0.05); overflow: visible;">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ $sd['pct'] }}%; background-color: {{ $sd['color'] }}; border-radius: 10px; box-shadow: 0 1px 4px {{ $sd['color'] }}50;" aria-valuenow="{{ $sd['pct'] }}" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                 @endforeach
@@ -866,6 +1239,15 @@
 
     <script src="{{ asset('assets/js/plugins/summernote-0.8.18-dist/summernote-lite.min.js') }}"></script>
     <script>
+        // Clean stale pipeline ID from URL — server-resolved hidden field handles this correctly
+        (function() {
+            var url = new URL(window.location.href);
+            if (url.searchParams.has('default_pipeline_id')) {
+                url.searchParams.delete('default_pipeline_id');
+                window.history.replaceState({}, document.title, url.toString());
+            }
+        })();
+
         var selectedLeads = [];
         var selectAllMatching = false;
         var totalRecordsOnPage = 0;
@@ -877,7 +1259,10 @@
                 this.action = options.action; // 'delete', 'change_stage', etc.
                 this.value = options.value || null; // target stage ID, owner ID, etc.
                 this.ids = options.ids; // Array of IDs
-                this.chunkSize = 50;
+                
+                // Set a safe chunk size of 100 to prevent MariaDB optimizer crash on large IN queries
+                this.chunkSize = 100;
+                
                 this.currentIndex = 0;
                 this.onComplete = options.onComplete || ((msg, report) => {});
                 this.lastMessage = null;
@@ -899,10 +1284,38 @@
                 };
             }
 
+            resetUI() {
+                // Restore spinner
+                const spinnerContainer = this.modal.find('.spinner-border').parent();
+                if (spinnerContainer.length > 0) {
+                    spinnerContainer.html('<div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;"><span class="visually-hidden">Processing...</span></div>');
+                }
+                
+                // Restore title
+                this.modal.find('h5').text('{{ __("Processing Bulk Action") }}');
+                
+                // Restore progress bar styling
+                this.bar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+                this.bar.style.width = '0%';
+                
+                // Restore percent text styling
+                this.percentText.className = 'fw-bold text-primary';
+                this.percentText.innerText = '0%';
+                
+                // Restore status text
+                this.status.innerText = '{{ __("Initializing...") }}';
+                
+                // Remove success buttons
+                this.modal.find('.export-success-buttons').remove();
+            }
+
             async start() {
                 const showModal = this.ids.length > 1;
                 if (showModal) {
-                    this.modal.modal('show');
+                    this.resetUI();
+                    if (!this.modal.hasClass('show')) {
+                        this.modal.modal('show');
+                    }
                     this.updateUI(0);
                 }
                 
@@ -912,7 +1325,6 @@
                         const response = await this.processChunk(chunk);
                         if (!response.success) {
                              if (showModal) {
-                                 // Add a small delay to ensure Bootstrap 'shown' transition finished
                                  setTimeout(() => this.modal.modal('hide'), 300);
                              }
                              toastrs('error', response.message || 'Unknown error', 'error');
@@ -950,11 +1362,64 @@
                 }
 
                 if (showModal) {
-                    setTimeout(() => {
-                        this.modal.modal('hide');
-                        this.onComplete(this.lastMessage, this.accumulatedReport);
-                    }, 500);
+                    if (this.action === 'export') {
+                        this.showExportSuccess();
+                    } else {
+                        setTimeout(() => {
+                            this.modal.modal('hide');
+                            this.onComplete(this.lastMessage, this.accumulatedReport);
+                        }, 500);
+                    }
                 } else {
+                    this.onComplete(this.lastMessage, this.accumulatedReport);
+                }
+            }
+
+            showExportSuccess() {
+                // Update progress bar to 100% green
+                this.bar.className = 'progress-bar bg-success';
+                this.bar.style.width = '100%';
+                this.percentText.innerText = '100%';
+                this.percentText.className = 'fw-bold text-success';
+                
+                // Update status text
+                this.status.innerHTML = `<span class="text-success fw-bold">${this.currentIndex} leads exported successfully!</span>`;
+                
+                // Replace spinner with checkmark
+                const spinnerContainer = this.modal.find('.spinner-border').parent();
+                if (spinnerContainer.length > 0) {
+                    spinnerContainer.html('<i class="ti ti-circle-check text-success" style="font-size: 3.5rem; display: inline-block;"></i>');
+                }
+                
+                // Update title
+                this.modal.find('h5').text('Export Complete');
+                
+                // Add Download and Close buttons
+                const downloadUrl = '{{ route("leads.bulk.export.download") }}?export_id=' + this.extraData.export_id;
+                
+                let btnContainer = this.modal.find('.export-success-buttons');
+                if (btnContainer.length === 0) {
+                    btnContainer = $('<div class="export-success-buttons mt-4 d-flex gap-2 justify-content-center"></div>');
+                    this.modal.find('.modal-body').append(btnContainer);
+                }
+                
+                btnContainer.html(`
+                    <a href="${downloadUrl}" class="btn btn-success px-4" id="btn-download-csv">
+                        <i class="ti ti-download me-1"></i> Download CSV
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Close</button>
+                `);
+
+                // Auto-trigger the download programmatically
+                const tempLink = document.createElement('a');
+                tempLink.href = downloadUrl;
+                tempLink.setAttribute('download', '');
+                document.body.appendChild(tempLink);
+                tempLink.click();
+                document.body.removeChild(tempLink);
+
+                // Run completion handler to reset selection states
+                if (this.onComplete) {
                     this.onComplete(this.lastMessage, this.accumulatedReport);
                 }
             }
@@ -972,7 +1437,7 @@
                     url: this.url,
                     type: 'POST',
                     data: $.extend({
-                        ids: chunkIds,
+                        ids: JSON.stringify(chunkIds),
                         action: this.action,
                         value: this.value,
                         _token: $('meta[name="csrf-token"]').attr('content')
@@ -1184,7 +1649,7 @@
                             }
                         });
 
-                        var pipeline = $("#default_pipeline_id").val();
+                        var pipeline = $("#list_pipeline_id").val() || $("select[name=default_pipeline_id]").val();
                         if (pipeline) filterData.default_pipeline_id = pipeline;
 
                         // Show initial loader
@@ -1199,15 +1664,15 @@
                                 type: 'POST',
                                 data: filterData
                             });
-                            progModal.modal('hide');
                             if (response.success) {
                                 idsToProcess = response.ids;
                             } else {
+                                progModal.modal('hide');
                                 toastrs('error', response.message, 'error');
                                 return;
                             }
                         } catch (e) {
-                            progModal.hide();
+                            progModal.modal('hide');
                             toastrs('error', 'Failed to fetch lead IDs', 'error');
                             return;
                         }
@@ -1305,7 +1770,7 @@
                         }
                     });
 
-                    var pipeline = $("#default_pipeline_id").val();
+                    var pipeline = $("#list_pipeline_id").val() || $("select[name=default_pipeline_id]").val();
                     if (pipeline) filterData.default_pipeline_id = pipeline;
 
                     $('#bulk-progress-status').text('{{ __("Fetching matching leads...") }}');
@@ -1319,10 +1784,10 @@
                             type: 'POST',
                             data: filterData
                         });
-                        progModal.modal('hide');
                         if (response.success) {
                             idsToProcess = response.ids;
                         } else {
+                            progModal.modal('hide');
                             toastrs('error', response.message, 'error');
                             return;
                         }
@@ -1339,7 +1804,6 @@
                     extraData: { export_id: exportId, export_columns: selectedCols },
                     onComplete: function() {
                         toastrs('success', '{{ __("Export completed successfully.") }}', 'success');
-                        window.location.href = '{{ route("leads.bulk.export.download") }}?export_id=' + exportId;
                         selectedLeads = [];
                         selectAllMatching = false;
                         pendingExportIds = [];
@@ -1440,7 +1904,7 @@
                     url: '{{ route("leads.bulk.task.reminder.create") }}',
                     type: 'POST',
                     data: {
-                        ids: selectAllMatching ? 'all' : selectedLeads,
+                        ids: selectAllMatching ? 'all' : JSON.stringify(selectedLeads),
                         _token: $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function (response) {
@@ -1481,7 +1945,7 @@
                                         }
                                     });
 
-                                    var pipeline = $("#default_pipeline_id").val();
+                                    var pipeline = $("#list_pipeline_id").val() || $("select[name=default_pipeline_id]").val();
                                     if (pipeline) filterData.default_pipeline_id = pipeline;
 
                                     const resp = await $.ajax({
@@ -1580,7 +2044,7 @@
                 url.searchParams.append("visible_columns[]", col);
             });
             
-            var pipeline = $("select[name=default_pipeline_id]").val();
+            var pipeline = $("#list_pipeline_id").val() || $("select[name=default_pipeline_id]").val();
             if (pipeline) url.searchParams.set("default_pipeline_id", pipeline);
             
             // Redirect to download
@@ -1690,5 +2154,141 @@
                 });
             });
         }
+
+        // Stage Funnel Toggle Logic
+        function updateFunnelVisibility(hide, adjustTable = true) {
+            const tableCol = $('#table-container-col');
+            const funnelCol = $('#funnel-container-col');
+            const masterBtn = $('#toggle-funnel-master-btn');
+            const toggleIcon = $('#funnel-toggle-icon');
+            const toggleText = $('#funnel-toggle-text');
+            const tableToggleBtn = $('#show-funnel-table-btn');
+
+            if (hide) {
+                funnelCol.addClass('d-none');
+                tableCol.removeClass('col-xl-9 col-lg-8').addClass('col-xl-12 col-lg-12');
+                toggleIcon.removeClass('ti-eye').addClass('ti-eye-off');
+                toggleText.text("{{ __('Show Funnel') }}");
+                tableToggleBtn.removeClass('d-none').addClass('d-flex');
+                localStorage.setItem('hide_stage_funnel', 'true');
+            } else {
+                funnelCol.removeClass('d-none');
+                tableCol.removeClass('col-xl-12 col-lg-12').addClass('col-xl-9 col-lg-8');
+                toggleIcon.removeClass('ti-eye-off').addClass('ti-eye');
+                toggleText.text("{{ __('Hide Funnel') }}");
+                tableToggleBtn.removeClass('d-flex').addClass('d-none');
+                localStorage.setItem('hide_stage_funnel', 'false');
+            }
+
+            if (adjustTable && window.LaravelDataTables && window.LaravelDataTables["leads-table"]) {
+                setTimeout(function() {
+                    window.LaravelDataTables["leads-table"].columns.adjust().draw(false);
+                }, 150);
+            }
+        }
+
+        // Initialize funnel visibility based on localStorage
+        $(document).ready(function() {
+            const isHidden = localStorage.getItem('hide_stage_funnel') === 'true';
+            updateFunnelVisibility(isHidden, false);
+
+            $('#leads-table').on('init.dt', function () {
+                setTimeout(function() {
+                    window.LaravelDataTables["leads-table"].columns.adjust();
+                }, 200);
+            });
+        });
+
+        $(document).on('click', '#toggle-funnel-master-btn', function() {
+            const isCurrentlyHidden = $('#funnel-container-col').hasClass('d-none');
+            updateFunnelVisibility(!isCurrentlyHidden);
+        });
+
+        $(document).on('click', '#close-funnel-btn', function() {
+            updateFunnelVisibility(true);
+        });
+
+        $(document).on('click', '#show-funnel-table-btn', function() {
+            updateFunnelVisibility(false);
+        });
+
+        // ============================================================
+        // BACK NAVIGATION: Preserve DataTable state when going to lead
+        // detail and coming back, so the page does not reload/re-fetch.
+        // ============================================================
+        (function() {
+            var STATE_KEY = 'leads_list_dt_state_' + (document.getElementById('list_pipeline_id') ? document.getElementById('list_pipeline_id').value : '0');
+
+            // Save state before navigating to a lead detail page
+            $(document).on('click', 'a[href*="/leads/"]', function(e) {
+                var href = $(this).attr('href');
+                if (!href || href.indexOf('/leads/') === -1) return;
+                // Only intercept lead detail links (numeric ID), not action links
+                if (!/\/leads\/\d+$/.test(href)) return;
+
+                var dt = window.LaravelDataTables && window.LaravelDataTables['leads-table'];
+                if (!dt) return;
+
+                try {
+                    var info = dt.page.info();
+                    var state = {
+                        page: info.page,
+                        search: dt.search(),
+                        scrollY: window.scrollY,
+                        order: dt.order(),
+                        ts: Date.now()
+                    };
+                    sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
+                } catch(ex) {}
+            });
+
+            // Restore state when page becomes visible again (back navigation)
+            window.addEventListener('pageshow', function(e) {
+                // e.persisted = true means page came from bfcache (instant back)
+                // Also handle normal back (page re-renders from server)
+                var saved = sessionStorage.getItem(STATE_KEY);
+                if (!saved) return;
+
+                try {
+                    var state = JSON.parse(saved);
+                    // Only restore if the state is recent (within 30 minutes)
+                    if (!state || (Date.now() - state.ts) > 30 * 60 * 1000) {
+                        sessionStorage.removeItem(STATE_KEY);
+                        return;
+                    }
+
+                    // Don't clear the state yet — wait for the DataTable to be ready
+                    var restoreInterval = setInterval(function() {
+                        var dt = window.LaravelDataTables && window.LaravelDataTables['leads-table'];
+                        if (!dt) return;
+
+                        clearInterval(restoreInterval);
+
+                        // Suppress the draw event temporarily, then restore state
+                        dt.one('draw', function() {
+                            // After data loads, jump to saved page and scroll
+                            dt.page(state.page).draw('page');
+                            setTimeout(function() {
+                                window.scrollTo({ top: state.scrollY, behavior: 'instant' });
+                            }, 100);
+                        });
+
+                        if (state.search) {
+                            dt.search(state.search);
+                        }
+                        if (state.order && state.order.length) {
+                            dt.order(state.order);
+                        }
+                        dt.ajax.reload(null, false);
+
+                        // Clear state after one restore so refreshing the page starts fresh
+                        sessionStorage.removeItem(STATE_KEY);
+                    }, 120);
+
+                } catch(ex) {
+                    sessionStorage.removeItem(STATE_KEY);
+                }
+            });
+        })();
     </script>
 @endpush

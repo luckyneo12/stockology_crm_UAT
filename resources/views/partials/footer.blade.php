@@ -1,19 +1,3 @@
-<footer class="mt-5 dash-footer">
-    <div class="footer-wrapper">
-        <div class="py-1">
-            <span class="text-muted">
-                @if (isset($company_settings['footer_text']))
-                    {{ $company_settings['footer_text'] }}
-                @elseif(isset($admin_settings['footer_text']))
-                    {{ $admin_settings['footer_text'] }}
-                @else
-                    {{ __('Copyright') }} &copy; {{ config('app.name', 'Stockology') }}
-                @endif
-                {{ date('Y') }}
-            </span>
-        </div>
-    </div>
-</footer>
 
 @if (Route::currentRouteName() !== 'chatify')
     <div id="commonModal" class="modal" tabindex="-1" aria-labelledby="exampleModalLongTitle" aria-modal="true"

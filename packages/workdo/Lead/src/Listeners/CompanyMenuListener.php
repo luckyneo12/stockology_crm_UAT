@@ -58,6 +58,19 @@ class CompanyMenuListener
             'permission' => 'lead manage'
         ]);
         $menu->add([
+            'category' => 'General',
+            'title' => __('Sheets'),
+            'icon' => 'table',
+            'name' => 'crm-sheets',
+            'parent' => null,
+            'order' => 3,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'crm.sheets.index',
+            'module' => $module,
+            'permission' => 'lead manage'
+        ]);
+        $menu->add([
             'category' => 'Sales',
             'title' => __('My Tasks'),
             'icon' => '',
@@ -138,6 +151,20 @@ class CompanyMenuListener
         ]);
         $menu->add([
             'category' => 'Sales',
+            'title' => __('WhatsApp Chat'),
+            'icon' => '',
+            'name' => 'whatsapp-chats',
+            'parent' => 'crm',
+            'order' => 26,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'whatsapp.chat.index',
+            'module' => $module,
+            'permission' => 'lead manage'
+        ]);
+
+        $menu->add([
+            'category' => 'Sales',
             'title' => __('System Setup'),
             'icon' => '',
             'name' => 'system-setup',
@@ -160,22 +187,6 @@ class CompanyMenuListener
                 ->orWhere('created_by', $user->id)->exists();
         }
 
-        if ($canSeeEndpoints) {
-            $menu->add([
-                'category' => 'Sales',
-                'title' => __('Webhook Endpoints'),
-                'icon' => '',
-                'name' => 'webhook-endpoints',
-                'parent' => 'crm',
-                'order' => 26,
-                'ignore_if' => [],
-                'depend_on' => [],
-                'route' => 'webhook-endpoints.index',
-                'module' => $module,
-                'permission' => '' // Conditional access managed above
-            ]);
-        }
-
         $canSeeData = false;
         if ($isCompany) {
             $canSeeData = true;
@@ -186,6 +197,59 @@ class CompanyMenuListener
             if (!$canSeeData) {
                 $canSeeData = WebhookData::where('assigned_user_id', $user->id)->exists();
             }
+        }
+
+        $canSeeFbData = $isCompany || Auth::user()->isAbleTo('crm manage');
+        $canSeeOrionData = $isCompany || Auth::user()->isAbleTo('crm manage');
+
+        // Automation top-level parent menu condition
+        $canSeeAutomation = $canSeeEndpoints || $canSeeOrionData || ($isCompany || Auth::user()->isAbleTo('crm manage'));
+        if ($canSeeAutomation) {
+            $menu->add([
+                'category' => 'Sales',
+                'title' => __('Automation'),
+                'icon' => 'cpu',
+                'name' => 'automation',
+                'parent' => null,
+                'order' => 502,
+                'ignore_if' => [],
+                'depend_on' => [],
+                'route' => '',
+                'module' => $module,
+                'permission' => '' // Dynamically checked via child visibility
+            ]);
+        }
+
+        if ($canSeeEndpoints) {
+            $menu->add([
+                'category' => 'Sales',
+                'title' => __('Webhook Endpoints'),
+                'icon' => '',
+                'name' => 'webhook-endpoints',
+                'parent' => 'automation',
+                'order' => 50,
+                'ignore_if' => [],
+                'depend_on' => [],
+                'route' => 'webhook-endpoints.index',
+                'module' => $module,
+                'permission' => '' // Conditional access managed above
+            ]);
+        }
+
+        if ($isCompany) {
+            $menu->add([
+                'category' => 'Sales',
+                'title' => __('WhatsApp Settings'),
+                'icon' => '',
+                'name' => 'whatsapp-config',
+                'parent' => 'automation',
+                'order' => 60,
+                'ignore_if' => [],
+                'depend_on' => [],
+                'route' => 'whatsapp-config.index',
+                'module' => $module,
+                'permission' => ''
+            ]);
         }
 
         if ($canSeeData) {
@@ -201,6 +265,38 @@ class CompanyMenuListener
                 'route' => 'webhook-data.index',
                 'module' => $module,
                 'permission' => '' // We are manually checking permission above
+            ]);
+        }
+
+        if ($canSeeFbData) {
+            $menu->add([
+                'category' => 'Sales',
+                'title' => __('Facebook Lead Data'),
+                'icon' => '',
+                'name' => 'facebook-lead-data',
+                'parent' => 'crm',
+                'order' => 28,
+                'ignore_if' => [],
+                'depend_on' => [],
+                'route' => 'facebook-lead-data.index',
+                'module' => $module,
+                'permission' => '' // Checked manually above
+            ]);
+        }
+
+        if ($canSeeOrionData) {
+            $menu->add([
+                'category' => 'Sales',
+                'title' => __('Orion EKYC Logs'),
+                'icon' => '',
+                'name' => 'orion-lead-logs',
+                'parent' => 'automation',
+                'order' => 40,
+                'ignore_if' => [],
+                'depend_on' => [],
+                'route' => 'orion-lead-logs.index',
+                'module' => $module,
+                'permission' => ''
             ]);
         }
 
@@ -251,11 +347,25 @@ class CompanyMenuListener
         ]);
         $menu->add([
             'category' => 'Sales',
+            'title' => __('E-Sign Templates'),
+            'icon' => '',
+            'name' => 'esign-templates',
+            'parent' => 'automation',
+            'order' => 30,
+            'ignore_if' => [],
+            'depend_on' => [],
+            'route' => 'esign-templates.index',
+            'module' => $module,
+            'permission' => 'crm manage',
+            'is_admin' => true
+        ]);
+        $menu->add([
+            'category' => 'Sales',
             'title' => __('Automations'),
             'icon' => '',
             'name' => 'crm-automations',
-            'parent' => 'crm',
-            'order' => 27,
+            'parent' => 'automation',
+            'order' => 10,
             'ignore_if' => [],
             'depend_on' => [],
             'route' => 'crm.automations.index',

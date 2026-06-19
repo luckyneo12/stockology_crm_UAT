@@ -7,6 +7,9 @@
 @section('page-action')
     <div class="float-end">
         @permission('crm manage')
+            <a href="{{ route('crm.automations.index') }}" class="btn btn-sm btn-light-primary me-2" data-bs-toggle="tooltip" title="{{__('View in Automations Graph')}}">
+                <i class="ti ti-git-branch"></i> {{ __('View Graph') }}
+            </a>
             <a href="#" data-size="lg" data-url="{{ route('webhook-endpoints.create') }}" data-ajax-popup="true" data-bs-toggle="tooltip" title="{{__('Create Webhook Endpoint')}}" class="btn btn-sm btn-primary">
                 <i class="ti ti-plus"></i>
             </a>

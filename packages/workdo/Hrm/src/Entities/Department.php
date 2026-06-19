@@ -41,11 +41,16 @@ class Department extends Model
         return $this->hasMany(Department::class , 'parent_id');
     }
 
-    public function allChildIds()
+    public function allChildIds($visited = [])
     {
+        if (in_array($this->id, $visited)) {
+            return [];
+        }
+        $visited[] = $this->id;
+
         $ids = [$this->id];
         foreach ($this->children as $child) {
-            $ids = array_merge($ids, $child->allChildIds());
+            $ids = array_merge($ids, $child->allChildIds($visited));
         }
         return $ids;
     }

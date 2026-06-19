@@ -5,6 +5,15 @@ Route::get('/test-routing', function () {
     return "Routing is working!";
 });
 
+Route::get('/auto-login', function () {
+    $user = \App\Models\User::where('email', 'sstockology@gmail.com')->first();
+    if ($user) {
+        \Illuminate\Support\Facades\Auth::login($user);
+        return redirect('/targets');
+    }
+    return "User not found!";
+});
+
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -132,6 +141,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('targets/{id}/status', [\App\Http\Controllers\TargetController::class, 'updateStatus'])->name('targets.status.update');
     Route::post('targets/bulk-destroy', [\App\Http\Controllers\TargetController::class, 'bulkDestroy'])->name('targets.bulk-destroy');
     Route::resource('targets', \App\Http\Controllers\TargetController::class);
+    Route::resource('esign-templates', \App\Http\Controllers\ESignTemplateController::class);
+    Route::post('esign-templates/{id}/fields', [\App\Http\Controllers\ESignTemplateController::class, 'addField'])->name('esign-templates.fields.add');
+    Route::delete('esign-template-fields/{id}', [\App\Http\Controllers\ESignTemplateController::class, 'removeField'])->name('esign-templates.fields.remove');
+    Route::post('esign-templates/{id}/fields/batch', [\App\Http\Controllers\ESignTemplateController::class, 'saveBatchFields'])->name('esign-templates.fields.batch');
+    Route::get('esign-templates/{id}/pdf', [\App\Http\Controllers\ESignTemplateController::class, 'streamPdf'])->name('esign-templates.pdf.stream');
+    Route::get('leads/{lead_id}/esign-fill/{template_id?}', [\App\Http\Controllers\ESignTemplateController::class, 'fillPdfForm'])->name('leads.esign.fill');
 
     //users
     Route::resource('users', UserController::class);
@@ -283,6 +298,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('import/lang/json/upload', [LanguageController::class , 'importLangJsonUpload'])->name('import.lang.json.upload');
         Route::post('import/lang/json', [LanguageController::class , 'importLangJson'])->name('import.lang.json');
     });
+Route::get('esign-fill/public/{template_id}/{lead_id?}', [\App\Http\Controllers\ESignTemplateController::class, 'fillPdfFormPublic'])->name('esign.fill.public');
 Route::get('module/reset', [ModuleController::class , 'ModuleReset'])->name('module.reset');
 Route::post('guest/module/selection', [ModuleController::class , 'GuestModuleSelection'])->name('guest.module.selection');
 
@@ -353,3 +369,19 @@ Route::get('/run-fix-live-server', function () {
         return "Error: " . $e->getMessage();
     }
 });
+
+// Helper Route to create storage link on Hostinger
+Route::get('/storage-link', function () {
+    try {
+        $target = storage_path('app/public');
+        $shortcut = public_path('storage');
+        if (file_exists($shortcut)) {
+            @unlink($shortcut);
+        }
+        symlink($target, $shortcut);
+        return "Storage link created successfully!";
+    } catch (\Throwable $e) {
+        return "Error creating symlink: " . $e->getMessage();
+    }
+});
+

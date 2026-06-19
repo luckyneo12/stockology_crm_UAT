@@ -8,6 +8,7 @@ use Workdo\Lead\Entities\WebhookEndpoint;
 use Workdo\Lead\Entities\Pipeline;
 use Workdo\Lead\Entities\LeadStage;
 use Workdo\Lead\Entities\LeadCustomField;
+use Workdo\Lead\Entities\Source;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -71,8 +72,9 @@ class WebhookEndpointController extends Controller
             }
 
             $customFields = LeadCustomField::where('workspace_id', getActiveWorkSpace())->get();
+            $sources = Source::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
 
-            return view('lead::webhook_endpoints.create', compact('pipelines', 'users', 'stages', 'customFields'));
+            return view('lead::webhook_endpoints.create', compact('pipelines', 'users', 'stages', 'customFields', 'sources'));
         }
         else {
             return response()->json(['error' => __('Permission denined.')], 401);
@@ -101,13 +103,19 @@ class WebhookEndpointController extends Controller
             $endpoint->assign_to = $request->assign_to;
             $endpoint->pipeline_id = $request->pipeline_id;
             $endpoint->stage_id = $request->stage_id;
+            $endpoint->source_id = $request->source_id;
+            $endpoint->auto_convert = $request->auto_convert;
             $endpoint->view_permissions = $request->view_permissions ?? [];
             $endpoint->edit_permissions = $request->edit_permissions ?? [];
             $endpoint->field_mapping = $this->processFieldMapping($request);
             $endpoint->workspace_id = getActiveWorkSpace();
             $endpoint->save();
 
-            return redirect()->route('webhook-endpoints.index')->with('success', __('Webhook Endpoint created successfully.'));
+            $redirectTo = route('webhook-endpoints.index');
+            if (strpos(url()->previous(), 'crm/automations') !== false) {
+                $redirectTo = route('crm.automations.index');
+            }
+            return redirect()->to($redirectTo)->with('success', __('Webhook Endpoint created successfully.'));
         }
         else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -123,8 +131,9 @@ class WebhookEndpointController extends Controller
                 $users = User::where('workspace_id', getActiveWorkSpace())->where('type', '!=', 'client')->get()->pluck('name', 'id');
                 $stages = LeadStage::where('pipeline_id', $webhookEndpoint->pipeline_id)->where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id')->toArray();
                 $customFields = LeadCustomField::where('workspace_id', getActiveWorkSpace())->get();
+                $sources = Source::where('workspace_id', getActiveWorkSpace())->get()->pluck('name', 'id');
 
-                return view('lead::webhook_endpoints.edit', compact('webhookEndpoint', 'pipelines', 'users', 'stages', 'customFields'));
+                return view('lead::webhook_endpoints.edit', compact('webhookEndpoint', 'pipelines', 'users', 'stages', 'customFields', 'sources'));
             }
             else {
                 return response()->json(['error' => __('Permission denined.')], 401);
@@ -156,12 +165,60 @@ class WebhookEndpointController extends Controller
                 $webhookEndpoint->assign_to = $request->assign_to;
                 $webhookEndpoint->pipeline_id = $request->pipeline_id;
                 $webhookEndpoint->stage_id = $request->stage_id;
+                $webhookEndpoint->source_id = $request->source_id;
+                $webhookEndpoint->auto_convert = $request->auto_convert;
                 $webhookEndpoint->view_permissions = $request->view_permissions ?? [];
                 $webhookEndpoint->edit_permissions = $request->edit_permissions ?? [];
                 $webhookEndpoint->field_mapping = $this->processFieldMapping($request);
                 $webhookEndpoint->save();
 
-                return redirect()->route('webhook-endpoints.index')->with('success', __('Webhook Endpoint updated successfully.'));
+                // Sync already converted leads
+                if (!empty($webhookEndpoint->source_id)) {
+                    try {
+                        $convertedLogs = \Workdo\Lead\Entities\WebhookData::where('webhook_endpoint_id', $webhookEndpoint->id)
+                            ->where('status', 'converted')
+                            ->get();
+
+                        $mapping = $webhookEndpoint->field_mapping ?? [];
+
+                        foreach ($convertedLogs as $log) {
+                            $payload = $log->payload ?? [];
+                            if (empty($payload)) continue;
+
+                            $phone = $payload[$mapping['phone'] ?? ''] ?? $payload['phone'] ?? $payload['mobile'] ?? '';
+                            $cleanedPhone = preg_replace('/[^0-9]/', '', $phone);
+
+                            $lead = null;
+                            if (!empty($cleanedPhone) && strlen($cleanedPhone) === 10) {
+                                $lead = \Workdo\Lead\Entities\Lead::where('workspace_id', $webhookEndpoint->workspace_id)
+                                    ->where('phone', $cleanedPhone)
+                                    ->first();
+                            }
+
+                            if (!$lead) {
+                                $email = $payload[$mapping['email'] ?? ''] ?? $payload['email'] ?? '';
+                                if (!empty($email)) {
+                                    $lead = \Workdo\Lead\Entities\Lead::where('workspace_id', $webhookEndpoint->workspace_id)
+                                        ->where('email', $email)
+                                        ->first();
+                                }
+                            }
+
+                            if ($lead) {
+                                $lead->sources = (string)$webhookEndpoint->source_id;
+                                $lead->save();
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to sync converted leads sources: ' . $e->getMessage());
+                    }
+                }
+
+                $redirectTo = route('webhook-endpoints.index');
+                if (strpos(url()->previous(), 'crm/automations') !== false) {
+                    $redirectTo = route('crm.automations.index');
+                }
+                return redirect()->to($redirectTo)->with('success', __('Webhook Endpoint updated successfully.'));
             }
             else {
                 return redirect()->back()->with('error', __('Permission denied.'));
@@ -178,7 +235,11 @@ class WebhookEndpointController extends Controller
         if ($this->canEditSpecific($webhookEndpoint)) {
             if ($webhookEndpoint->workspace_id == getActiveWorkSpace()) {
                 $webhookEndpoint->delete();
-                return redirect()->route('webhook-endpoints.index')->with('success', __('Webhook Endpoint deleted successfully.'));
+                $redirectTo = route('webhook-endpoints.index');
+                if (strpos(url()->previous(), 'crm/automations') !== false) {
+                    $redirectTo = route('crm.automations.index');
+                }
+                return redirect()->to($redirectTo)->with('success', __('Webhook Endpoint deleted successfully.'));
             }
             else {
                 return redirect()->back()->with('error', __('Permission denied.'));

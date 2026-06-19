@@ -10,6 +10,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/app-react.jsx',
+                'resources/js/whatsapp-chat/WhatsAppChatApp.jsx',
             ],
             refresh: true,
         }),

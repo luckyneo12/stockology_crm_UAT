@@ -13,6 +13,52 @@
         .comp-card {
             height: 140px;
         }
+        .dash-container, .dash-content {
+            overflow: hidden !important;
+        }
+        .kanban-wrapper {
+            display: flex !important;
+            flex-flow: row nowrap !important;
+            overflow-x: auto !important;
+            padding-bottom: 10px;
+            align-items: stretch;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f1f5f9;
+            gap: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+        .kanban-wrapper > div {
+            flex: 0 0 310px !important;
+            min-width: 310px !important;
+            max-width: 310px !important;
+            margin-right: 0 !important;
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-list {
+            background: #f8f9fd !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(0, 0, 0, 0.05) !important;
+            box-shadow: none !important;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: visible !important;
+        }
+        .kanban-box {
+            flex: 1 1 auto;
+            overflow-y: auto !important;
+            overflow-x: visible !important;
+            padding: 6px !important;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
     </style>
 @endpush
 @push('scripts')
@@ -92,7 +138,38 @@
     <script>
         $(document).on("change", "#change-pipeline select[name=default_pipeline_id]", function() {
             $('#change-pipeline').submit();
-        })
+        });
+
+        $(document).ready(function () {
+            // Dynamic Kanban height adjust logic to keep it responsive to viewport
+            function adjustKanbanHeight() {
+                var $wrapper = $('.kanban-wrapper');
+                if ($wrapper.length) {
+                    var offsetTop = $wrapper.offset().top;
+                    var windowHeight = $(window).height();
+                    var availableHeight = windowHeight - offsetTop - 70; // 70px safety gap for footer and padding
+                    
+                    if (availableHeight < 300) availableHeight = 300;
+                    
+                    $wrapper.attr('style', function(i, s) {
+                        return (s || '') + '; height: ' + availableHeight + 'px !important; min-height: ' + availableHeight + 'px !important;';
+                    });
+                    
+                    var $header = $wrapper.find('.card-list .card-header').first();
+                    var headerHeight = $header.length ? $header.outerHeight() : 45;
+                    var boxHeight = availableHeight - headerHeight - 10; // 10px offset for inner spacing
+                    
+                    $('.kanban-box').attr('style', function(i, s) {
+                        return (s || '') + '; height: ' + boxHeight + 'px !important; max-height: ' + boxHeight + 'px !important;';
+                    });
+                }
+            }
+
+            $(window).on('resize', adjustKanbanHeight);
+            adjustKanbanHeight();
+            setTimeout(adjustKanbanHeight, 400);
+            setTimeout(adjustKanbanHeight, 1000);
+        });
     </script>
 
 

@@ -30,6 +30,17 @@ Route::prefix('{module}')->group(function () {
 
 });
 
+use App\Http\Controllers\ESignController;
+
+Route::get('/esign-templates/{id}/config', [ESignController::class, 'getTemplateConfig']);
+Route::post('/esign/callback', [ESignController::class, 'saveSignedDocument']);
+Route::get('/ekyc-fetch/{application_id}', [ESignController::class, 'fetchEkycDataDirectly']);
 
 
+
+// ── WhatsApp Node.js Callback Routes (no auth middleware — verified by NODE_SECRET) ──
+// These endpoints are called by the Node.js whatsapp service, not by the browser.
+Route::post('/whatsapp/incoming-webhook', [\Workdo\Lead\Http\Controllers\WhatsAppSessionController::class, 'handleWebhook']);
+Route::post('/whatsapp/session-status',   [\Workdo\Lead\Http\Controllers\WhatsAppSessionController::class, 'updateSessionStatus']);
+Route::post('/whatsapp/message-ack',      [\Workdo\Lead\Http\Controllers\WhatsAppSessionController::class, 'messageAck']);
 

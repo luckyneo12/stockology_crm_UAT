@@ -45,7 +45,17 @@ class LeadDataTable extends DataTable
                         </div>';
             })
             ->editColumn('name', function (Lead $lead) use ($isExport) {
-                return LeadUtility::getFieldDisplay($lead, 'name', $lead->name, $isExport);
+                $name = LeadUtility::getFieldDisplay($lead, 'name', $lead->name, $isExport);
+                if ($isExport) {
+                    return $name;
+                }
+                $user = \Auth::user();
+                if ($user->isAbleTo('lead show') && $lead->is_active) {
+                    if (strpos($name, 'reveal-link') === false) {
+                        return '<a href="' . route('leads.show', $lead->id) . '" class="lead-name-link">' . e($name) . '</a>';
+                    }
+                }
+                return $name;
             })
             ->editColumn('subject', function (Lead $lead) use ($isExport) {
                 return LeadUtility::getFieldDisplay($lead, 'subject', $lead->subject, $isExport);
@@ -229,7 +239,10 @@ class LeadDataTable extends DataTable
         
         $accessibleUserIds = $user->getAccessibleUserIds();
 
-        if ($isExport) {
+        if ($request->action == 'get_ids') {
+            $query = $model->where('leads.pipeline_id', '=', $pipeline_id)
+                ->where('leads.workspace_id', '=', getActiveWorkSpace());
+        } elseif ($isExport) {
             ini_set('memory_limit', '4096M');
             set_time_limit(0);
             $query = $model->where('leads.pipeline_id', '=', $pipeline_id)
@@ -456,9 +469,6 @@ class LeadDataTable extends DataTable
                 ],
                 'data' => 'function(d) {
                     try {
-                        var pipeline = $("select[name=default_pipeline_id]").val();
-                        d.default_pipeline_id = pipeline;
-                        
                         // Ensure selectedLeads is properly initialized
                         if (typeof window.selectedLeads === "undefined") {
                             window.selectedLeads = [];
@@ -486,7 +496,8 @@ class LeadDataTable extends DataTable
                                         d[cleanKey].push(value);
                                     }
                                 }
-                            } else if (!arrayKeys.includes(key)) {
+                            } else if (!arrayKeys.includes(key) && key !== "default_pipeline_id") {
+                                // Skip default_pipeline_id from URL — managed by server-resolved hidden field below
                                 d[key] = value;
                             }
                         });
@@ -497,6 +508,10 @@ class LeadDataTable extends DataTable
                                 delete d[key];
                             }
                         });
+
+                        // Set pipeline LAST so it always overrides any stale URL param
+                        var pipeline = $("#list_pipeline_id").val() || $("select[name=default_pipeline_id]").val();
+                        if (pipeline) d.default_pipeline_id = pipeline;
                     } catch (error) {
                         console.error(\'DataTable AJAX Error:\', error);
                         // Return empty data on error to prevent further issues
@@ -595,7 +610,7 @@ class LeadDataTable extends DataTable
         ]);
 
         $dataTable->parameters([
-            "stateSave" => true,
+            "stateSave" => false,
             "lengthMenu" => [[10, 25, 50, 100, 500, -1], [10, 25, 50, 100, 500, "All"]],
             "dom" => "
         <'dataTable-top'<'dataTable-dropdown page-dropdown'l><'dataTable-botton table-btn dataTable-search tb-search  d-flex justify-content-end gap-2'Bf>>

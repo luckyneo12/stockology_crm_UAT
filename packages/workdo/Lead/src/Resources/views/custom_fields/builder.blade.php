@@ -23,6 +23,49 @@
 @endsection
 
 @section('content')
+<style>
+    .segmented-control {
+        display: inline-flex;
+        background-color: #f1f3f9;
+        border-radius: 50px;
+        padding: 3px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .segmented-control .btn-segment {
+        font-size: 0.72rem !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+        background: transparent !important;
+        transition: all 0.15s ease-in-out;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .segmented-control .btn-segment:hover {
+        color: #334155 !important;
+        background-color: rgba(0,0,0,0.04) !important;
+    }
+
+    /* Active States */
+    .segmented-control[data-active-val="visible"] .btn-segment[data-value="visible"] {
+        background-color: #d1e7dd !important;
+        color: #0f5132 !important;
+        box-shadow: 0 2px 4px rgba(15, 81, 50, 0.15) !important;
+    }
+
+    .segmented-control[data-active-val="hidden"] .btn-segment[data-value="hidden"] {
+        background-color: #f8d7da !important;
+        color: #842029 !important;
+        box-shadow: 0 2px 4px rgba(132, 32, 41, 0.15) !important;
+    }
+
+    .segmented-control[data-active-val="eye_toggle"] .btn-segment[data-value="eye_toggle"] {
+        background-color: #e0e6ff !important;
+        color: #2b46b8 !important;
+        box-shadow: 0 2px 4px rgba(43, 70, 184, 0.15) !important;
+    }
+</style>
     @if(isset($pipelines) && $pipelines->count() > 0)
         <div class="card mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #fbfcfd 0%, #f1f5f9 100%); border-radius: 12px;">
             <div class="card-body p-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
@@ -295,7 +338,8 @@
                                     data-api-url="{{ $section->api_url }}"
                                     data-api-method="{{ $section->api_method }}"
                                     data-api-trigger-stage-id="{{ $section->api_trigger_stage_id }}"
-                                    data-api-response-mapping="{{ htmlspecialchars($section->api_response_mapping, ENT_QUOTES, 'UTF-8') }}">
+                                    data-api-response-mapping="{{ htmlspecialchars($section->api_response_mapping, ENT_QUOTES, 'UTF-8') }}"
+                                    data-visible-stages="{{ json_encode($section->visible_stages) }}">
                                     <i class="ti ti-pencil"></i>
                                 </button>
                                 <button class="btn btn-sm btn-secondary copy-section-btn" 
@@ -434,6 +478,44 @@
                                 <option value="card">{{ __('Premium Card') }}</option>
                                 <option value="bento">{{ __('Bento Grid') }}</option>
                             </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold d-block mb-1">{{ __('Stage Visibility & Security Configuration') }}</label>
+                            <small class="text-muted d-block mb-3">{{ __('Configure visibility and data masking behavior for this card/section per stage.') }}</small>
+                            
+                            <div class="rounded-3 border mb-3 p-3 bg-light bg-opacity-50" style="max-height: 250px; overflow-y: auto;">
+                                @if(isset($selectedPipeline) && $selectedPipeline->leadStages)
+                                    @foreach($selectedPipeline->leadStages as $stage)
+                                        <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-light" style="border-bottom-style: dashed !important;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="icon-circle rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background-color: #e2e8f0; color: #475569;">
+                                                    <i class="ti ti-git-commit fs-6"></i>
+                                                </div>
+                                                <span class="fw-semibold text-dark" style="font-size: 0.85rem;">{{ $stage->name }}</span>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <select name="visible_stages[{{ $stage->id }}]" class="section-stage-select d-none" data-stage-id="{{ $stage->id }}">
+                                                    <option value="visible" selected>visible</option>
+                                                    <option value="hidden">hidden</option>
+                                                    <option value="eye_toggle">eye_toggle</option>
+                                                </select>
+                                                
+                                                <div class="segmented-control bg-light p-1 rounded-pill border d-flex gap-1" data-target-stage-id="{{ $stage->id }}" data-active-val="visible">
+                                                    <button type="button" class="btn btn-xs rounded-pill px-3 py-1 btn-segment d-flex align-items-center gap-1 border-0" data-value="visible" style="font-size: 0.72rem; font-weight: 600; padding: 3px 10px;">
+                                                        <i class="ti ti-eye"></i> <span>{{ __('Visible') }}</span>
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs rounded-pill px-3 py-1 btn-segment d-flex align-items-center gap-1 border-0" data-value="hidden" style="font-size: 0.72rem; font-weight: 600; padding: 3px 10px;">
+                                                        <i class="ti ti-eye-off"></i> <span>{{ __('Hidden') }}</span>
+                                                    </button>
+                                                    <button type="button" class="btn btn-xs rounded-pill px-3 py-1 btn-segment d-flex align-items-center gap-1 border-0" data-value="eye_toggle" style="font-size: 0.72rem; font-weight: 600; padding: 3px 10px;">
+                                                        <i class="ti ti-lock"></i> <span>{{ __('Secure') }}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            </div>
                         </div>
                         
                         <hr class="my-4">
@@ -896,6 +978,21 @@
                     // Render visual mapping board
                     renderMappingBoard(apiMapping);
 
+                    // Checkboxes for visible stages
+                    var visibleStages = {};
+                    try {
+                        visibleStages = JSON.parse(this.getAttribute('data-visible-stages') || '{}') || {};
+                    } catch(e) {
+                        visibleStages = {};
+                    }
+                    
+                    document.querySelectorAll('.section-stage-select').forEach(select => {
+                        var stageId = select.getAttribute('data-stage-id');
+                        select.value = visibleStages[stageId] || 'visible';
+                    });
+                    
+                    syncSegmentedControls();
+
                     var bsModal = new bootstrap.Modal(modal);
                     bsModal.show();
                 });
@@ -926,7 +1023,43 @@
                 apiMappingInput.value = '';
                 document.getElementById('apiSampleJson').value = '';
                 document.getElementById('visualMappingContainer').style.display = 'none';
+                document.querySelectorAll('.section-stage-select').forEach(select => {
+                    select.value = 'visible';
+                });
+                syncSegmentedControls();
             });
+
+            // Sync custom segmented controls function
+            function syncSegmentedControls() {
+                document.querySelectorAll('.section-stage-select').forEach(select => {
+                    var stageId = select.getAttribute('data-stage-id');
+                    var val = select.value || 'visible';
+                    var control = document.querySelector(`.segmented-control[data-target-stage-id="${stageId}"]`);
+                    if (control) {
+                        control.setAttribute('data-active-val', val);
+                    }
+                });
+            }
+
+            // Click handler for segmented control buttons
+            $(document).on('click', '.btn-segment', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var val = $btn.attr('data-value') || $btn.data('value');
+                var stageId = $btn.parent().attr('data-target-stage-id') || $btn.parent().data('target-stage-id');
+                
+                // Update hidden select
+                var $select = $(`.section-stage-select[data-stage-id="${stageId}"]`);
+                if ($select.length) {
+                    $select.val(val).trigger('change');
+                }
+                
+                // Update parent active attribute
+                $btn.parent().attr('data-active-val', val);
+            });
+
+            // Initial sync on page load
+            syncSegmentedControls();
 
             // Pipeline change listener
             var pipelineSelect = document.getElementById('builder_pipeline_select');

@@ -35,5 +35,10 @@
             class="list-group-item list-group-item-action border-0 {{ (request()->is('crm/settings*') ? 'active' : '')}}">{{__('CRM Settings')}}
             <div class="float-end"><i class="ti ti-chevron-right"></i></div>
         </a>
+
+        <a href="{{ route('crm.automations.index') }}"
+            class="list-group-item list-group-item-action border-0 {{ (request()->is('crm/automations*') ? 'active' : '')}}">{{__('Workflow Automations')}}
+            <div class="float-end"><i class="ti ti-chevron-right"></i></div>
+        </a>
     </div>
 </div>

@@ -74,12 +74,17 @@ class Employee extends Model
         return $this->hasMany(Employee::class, 'parent_id');
     }
 
-    public function allSubordinateIds()
+    public function allSubordinateIds($visited = [])
     {
+        if (in_array($this->id, $visited)) {
+            return [];
+        }
+        $visited[] = $this->id;
+
         $ids = [];
         foreach ($this->subordinates as $subordinate) {
             $ids[] = $subordinate->user_id;
-            $ids = array_merge($ids, $subordinate->allSubordinateIds());
+            $ids = array_merge($ids, $subordinate->allSubordinateIds($visited));
         }
         return $ids;
     }
