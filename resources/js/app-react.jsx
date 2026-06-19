@@ -1,5 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { MantineProvider } from '@mantine/core';
+import '@mantine/core/styles.css';
 import Dashboard from './components/Dashboard';
 import LeadsTable from './components/LeadsTable';
 import LiveNotifications from './components/LiveNotifications';
@@ -42,7 +44,11 @@ if (listMount) {
 // ── Mount: React Header ────────────────────────────────────────────────────
 const headerMount = document.getElementById('react-header');
 if (headerMount) {
-  createRoot(headerMount).render(<ReactHeader />);
+  createRoot(headerMount).render(
+    <MantineProvider>
+      <ReactHeader />
+    </MantineProvider>
+  );
 }
 
 // ── Mount: Lead Details Full Page ──────────────────────────────────────────
@@ -52,11 +58,13 @@ if (detailsMount) {
   const workspaceId = detailsMount.getAttribute('data-workspace-id');
   const currentUserId = detailsMount.getAttribute('data-current-user-id');
   createRoot(detailsMount).render(
-    <LeadDetails 
-      leadId={leadId} 
-      workspaceId={workspaceId} 
-      currentUserId={currentUserId}
-      isFullPage={true}
-    />
+    <MantineProvider>
+      <LeadDetails 
+        leadId={leadId} 
+        workspaceId={workspaceId} 
+        currentUserId={currentUserId}
+        isFullPage={true}
+      />
+    </MantineProvider>
   );
 }
