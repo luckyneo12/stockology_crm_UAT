@@ -83,6 +83,7 @@ Route::group(['middleware' => ['web', 'auth', 'verified']], function () {
 
     Route::get('/leads/kanban-data', [LeadController::class, 'kanbanData'])->name('leads.kanban.data');
     Route::get('/leads/{id}/details-json', [LeadController::class, 'detailsJson'])->name('leads.details.json');
+    Route::get('/leads/{lead}/details', [LeadController::class, 'show'])->name('leads.details.show');
     Route::resource('leads', LeadController::class);
     Route::get('dashboard/crm', [LeadController::class, 'dashboard'])->name('lead.dashboard');
 

@@ -93,7 +93,7 @@ const AddButton = ({ url, title, label }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
-export default function LeadDetails({ leadId, onClose, workspaceId, currentUserId }) {
+export default function LeadDetails({ leadId, onClose, workspaceId, currentUserId, isFullPage = false }) {
   const [loading, setLoading] = useState(true);
   const [lead, setLead] = useState(null);
   const [stages, setStages] = useState([]);
@@ -247,6 +247,57 @@ export default function LeadDetails({ leadId, onClose, workspaceId, currentUserI
     } catch (err) { console.error(err); }
   };
 
+  const handleOrionFetch = async (clientCode, ruleId) => {
+    try {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      Swal.fire({
+        title: 'Fetching Orion eKYC...',
+        text: 'Please wait while we connect to Orion Integration and fetch data...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const response = await fetch(`/leads/${lead.id}/orion-fetch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrf
+        },
+        body: JSON.stringify({
+          client_code: clientCode,
+          rule_id: ruleId
+        })
+      });
+      const res = await response.json();
+      Swal.close();
+
+      if (res.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'eKYC Synced!',
+          text: 'The lead eKYC variables have been synced successfully from Orion.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        fetchDetails();
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Fetch Failed',
+          text: res.message || 'Error occurred while syncing Orion eKYC.'
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Network error or connection lost.'
+      });
+    }
+  };
+
   const normalizeTitle = (name) => {
     if (!name) return '';
     return name.toLowerCase().split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
@@ -297,6 +348,52 @@ export default function LeadDetails({ leadId, onClose, workspaceId, currentUserI
       {/* ── HEADER STRIP ─────────────────────────────────────────────────────── */}
       <div className="ld-header">
         <div className="ld-header-meta">
+          {isFullPage ? (
+            <button
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = '/leads';
+                }
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.15)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '2px 10px',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: 'inherit'
+              }}
+            >
+              <i className="ti ti-arrow-left" /> Back
+            </button>
+          ) : (
+            onClose && (
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '2px 10px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                Close
+              </button>
+            )
+          )}
           <div className="ld-header-id-badge">#{lead.id}</div>
           <div className="ld-header-pipeline">{lead.pipeline_name}</div>
         </div>
@@ -530,8 +627,7 @@ export default function LeadDetails({ leadId, onClose, workspaceId, currentUserI
                 section.name.toLowerCase().includes('client summary') && lead.client_code_value && lead.active_orion_rule_id ? (
                   <button
                     className="ld-fetch-btn btn-orion-ekyc-fetch-trigger"
-                    data-client-code={lead.client_code_value}
-                    data-rule-id={lead.active_orion_rule_id}
+                    onClick={() => handleOrionFetch(lead.client_code_value, lead.active_orion_rule_id)}
                   >
                     <Icon name="ti-cloud-download" style={{ fontSize: 12 }} />
                     Fetch eKYC

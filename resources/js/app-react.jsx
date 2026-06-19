@@ -5,6 +5,8 @@ import LeadsTable from './components/LeadsTable';
 import LiveNotifications from './components/LiveNotifications';
 import LeadsBoard from './components/LeadsBoard';
 import LeadsList from './components/LeadsList';
+import ReactHeader from './components/ReactHeader';
+import LeadDetails from './components/LeadDetails';
 import './crm-react.css';
 
 // ── Mount: Live Notifications (global, injected in layout) ─────────────────
@@ -35,4 +37,26 @@ if (boardMount) {
 const listMount = document.getElementById('react-leads-list');
 if (listMount) {
   createRoot(listMount).render(<LeadsList />);
+}
+
+// ── Mount: React Header ────────────────────────────────────────────────────
+const headerMount = document.getElementById('react-header');
+if (headerMount) {
+  createRoot(headerMount).render(<ReactHeader />);
+}
+
+// ── Mount: Lead Details Full Page ──────────────────────────────────────────
+const detailsMount = document.getElementById('react-lead-details');
+if (detailsMount) {
+  const leadId = detailsMount.getAttribute('data-lead-id');
+  const workspaceId = detailsMount.getAttribute('data-workspace-id');
+  const currentUserId = detailsMount.getAttribute('data-current-user-id');
+  createRoot(detailsMount).render(
+    <LeadDetails 
+      leadId={leadId} 
+      workspaceId={workspaceId} 
+      currentUserId={currentUserId}
+      isFullPage={true}
+    />
+  );
 }
