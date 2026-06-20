@@ -1531,14 +1531,7 @@ class LeadController extends Controller
         $accessibleUserIds = $usr->getAccessibleUserIds();
 
         $query = Lead::where('leads.pipeline_id', $pipeline_id)
-            ->where('leads.workspace_id', $wsId)
-            ->with(['users', 'stage', 'owner', 'createdBy'])
-            ->withCount([
-                'tasks',
-                'complete_tasks',
-                'reminders as reminders_count' => fn($q) => $q->whereIn('user_id', $accessibleUserIds),
-                'reminders as today_reminders_count' => fn($q) => $q->whereIn('user_id', $accessibleUserIds)->whereDate('remind_at', date('Y-m-d')),
-            ]);
+            ->where('leads.workspace_id', $wsId);
 
         // Visibility restriction
         if ($usr->type !== 'company' && $usr->visibility_level !== 'all') {
@@ -1599,7 +1592,23 @@ class LeadController extends Controller
             'reminders_today' => (clone $statsQuery)->whereHas('reminders', fn($q) => $q->whereIn('user_id', $accessibleUserIds)->whereDate('remind_at', date('Y-m-d')))->count(),
         ];
 
-        $paginated = $query->paginate($perPage, ['leads.*'], 'page', $page);
+        // Execute optimized clean count query before adding subqueries for pagination
+        $total = (clone $query)->count();
+
+        $query->with(['users', 'stage', 'owner', 'createdBy'])
+            ->withCount([
+                'tasks',
+                'complete_tasks',
+                'reminders as reminders_count' => fn($q) => $q->whereIn('user_id', $accessibleUserIds),
+                'reminders as today_reminders_count' => fn($q) => $q->whereIn('user_id', $accessibleUserIds)->whereDate('remind_at', date('Y-m-d')),
+            ]);
+
+        $items = $query->forPage($page, $perPage)->get(['leads.*']);
+        
+        $paginated = new \Illuminate\Pagination\LengthAwarePaginator($items, $total, $perPage, $page, [
+            'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+            'pageName' => 'page',
+        ]);
 
         $stagesCache = LeadStage::where('pipeline_id', $pipeline_id)->orderBy('order')->get();
         $totalStages = $stagesCache->count();
@@ -4658,8 +4667,8 @@ class LeadController extends Controller
                 $user = $lead->owner ?? $lead->users->first();
                 $teamName = '';
                 if ($user && module_is_active('Hrm')) {
-                    if ($user->relationLoaded('employee') && $user->employee) {
-                        $teamName = $user->employee->department ? $user->employee->department->name : '';
+                    if ($user->relationLoaded('employee')) {
+                        $teamName = ($user->employee && $user->employee->department) ? $user->employee->department->name : '';
                     } else if (class_exists('\Workdo\Hrm\Entities\Employee')) {
                         $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
                         $teamName = $emp && $emp->department ? $emp->department->name : '';
@@ -4727,8 +4736,8 @@ class LeadController extends Controller
                 $user = $lead->owner ?? $lead->users->first();
                 $teamName = '';
                 if ($user && module_is_active('Hrm')) {
-                    if ($user->relationLoaded('employee') && $user->employee) {
-                        $teamName = $user->employee->department ? $user->employee->department->name : '';
+                    if ($user->relationLoaded('employee')) {
+                        $teamName = ($user->employee && $user->employee->department) ? $user->employee->department->name : '';
                     } else if (class_exists('\Workdo\Hrm\Entities\Employee')) {
                         $emp = \Workdo\Hrm\Entities\Employee::where('user_id', $user->id)->first();
                         $teamName = $emp && $emp->department ? $emp->department->name : '';
